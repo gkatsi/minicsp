@@ -297,6 +297,7 @@ int main(int argc, char** argv)
     solver = &S;
     signal(SIGINT,SIGINT_handler);
     signal(SIGHUP,SIGINT_handler);
+    signal(SIGXCPU,SIGINT_handler);
 
     if (argc == 1)
         reportf("Reading from standard input... Use '-h' or '--help' for help.\n");
