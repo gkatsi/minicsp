@@ -203,7 +203,7 @@ static void SIGINT_handler(int signum) {
     reportf("\n"); reportf("*** INTERRUPTED ***\n");
     printStats(*solver);
     reportf("\n"); reportf("*** INTERRUPTED ***\n");
-    exit(1); }
+    exit(0); }
 
 
 //=================================================================================================
