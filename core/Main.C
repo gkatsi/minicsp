@@ -214,6 +214,7 @@ void printUsage(char** argv)
     reportf("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n\n", argv[0]);
     reportf("OPTIONS:\n\n");
     reportf("  -polarity-mode = {true,false,rnd}\n");
+    reportf("  -base-restart  = <int>\n");
     reportf("  -phase-save    = {0,1}\n");
     reportf("  -decay         = <num> [ 0 - 1 ]\n");
     reportf("  -rnd-freq      = <num> [ 0 - 1 ]\n");
@@ -247,6 +248,12 @@ int main(int argc, char** argv)
                 reportf("ERROR! illegal phase-saving %s\n", value);
                 exit(0); }
             S.phase_saving = phase_saving;
+        }else if ((value = hasPrefix(argv[i], "-base-restart="))){
+            int base_restart = (int)strtol(value, NULL, 10);
+            if (base_restart == 0 && errno == EINVAL){
+                reportf("ERROR! illegal base restart %s\n", value);
+                exit(0); }
+            S.restart_first = base_restart;
         }else if ((value = hasPrefix(argv[i], "-polarity-mode="))){
             if (strcmp(value, "true") == 0)
                 S.polarity_mode = Solver::polarity_true;
