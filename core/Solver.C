@@ -30,14 +30,14 @@ Solver::Solver() :
 
     // Parameters: (formerly in 'SearchParams')
     var_decay(1 / 0.95), clause_decay(1 / 0.999), random_var_freq(0.02)
-  , restart_first(100), restart_inc(1.5), learntsize_factor((double)1/(double)3), learntsize_inc(1.1)
+  , restart_first(32), restart_inc(1.5), learntsize_factor((double)1/(double)3), learntsize_inc(1.1)
 
     // More parameters:
     //
   , expensive_ccmin  (true)
   , polarity_mode    (polarity_false)
   , verbosity        (0)
-
+  , phase_saving     (false)
     // Statistics: (formerly in 'SolverStats')
     //
   , starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0)
@@ -83,6 +83,8 @@ Var Solver::newVar(bool sign, bool dvar)
 
     polarity    .push((char)sign);
     decision_var.push((char)dvar);
+
+    phase.push(l_Undef);
 
     insertVarOrder(v);
     return v;
@@ -159,6 +161,8 @@ void Solver::cancelUntil(int level) {
     if (decisionLevel() > level){
         for (int c = trail.size()-1; c >= trail_lim[level]; c--){
             Var     x  = var(trail[c]);
+            if( phase_saving )
+              phase[x]   = toLbool(assigns[x]);
             assigns[x] = toInt(l_Undef);
             insertVarOrder(x); }
         qhead = trail_lim[level];
@@ -197,6 +201,11 @@ Lit Solver::pickBranchLit(int polarity_mode, double random_var_freq)
     case polarity_rnd:   sign = irand(random_seed, 2); break;
     default: assert(false); }
 
+    if( phase_saving && phase[next] != l_Undef ) {
+      sign = (phase[next] == l_True);
+      phase[next] = l_Undef;
+    }
+
     return next == var_Undef ? lit_Undef : Lit(next, sign);
 }
 
@@ -204,17 +213,17 @@ Lit Solver::pickBranchLit(int polarity_mode, double random_var_freq)
 /*_________________________________________________________________________________________________
 |
 |  analyze : (confl : Clause*) (out_learnt : vec<Lit>&) (out_btlevel : int&)  ->  [void]
-|  
+|
 |  Description:
 |    Analyze conflict and produce a reason clause.
-|  
+|
 |    Pre-conditions:
 |      * 'out_learnt' is assumed to be cleared.
 |      * Current decision level must be greater than root level.
-|  
+|
 |    Post-conditions:
 |      * 'out_learnt[0]' is the asserting literal at level 'out_btlevel'.
-|  
+|
 |  Effect:
 |    Will undo part of the trail, upto but not beyond the assumption of the current decision level.
 |________________________________________________________________________________________________@*/
@@ -342,7 +351,7 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
 /*_________________________________________________________________________________________________
 |
 |  analyzeFinal : (p : Lit)  ->  [void]
-|  
+|
 |  Description:
 |    Specialized analysis procedure to express the final conflict in terms of assumptions.
 |    Calculates the (possibly empty) set of assumptions that led to the assignment of 'p', and
@@ -391,11 +400,11 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
 /*_________________________________________________________________________________________________
 |
 |  propagate : [void]  ->  [Clause*]
-|  
+|
 |  Description:
 |    Propagates all enqueued facts. If a conflict arises, the conflicting clause is returned,
 |    otherwise NULL.
-|  
+|
 |    Post-conditions:
 |      * the propagation queue is empty, even if there was a conflict.
 |________________________________________________________________________________________________@*/
@@ -456,7 +465,7 @@ Clause* Solver::propagate()
 /*_________________________________________________________________________________________________
 |
 |  reduceDB : ()  ->  [void]
-|  
+|
 |  Description:
 |    Remove half of the learnt clauses, minus the clauses locked by the current assignment. Locked
 |    clauses are clauses that are reason to some assignment. Binary clauses are never removed.
@@ -500,7 +509,7 @@ void Solver::removeSatisfied(vec<Clause*>& cs)
 /*_________________________________________________________________________________________________
 |
 |  simplify : [void]  ->  [bool]
-|  
+|
 |  Description:
 |    Simplify the clause database according to the current top-level assigment. Currently, the only
 |    thing done here is the removal of satisfied clauses, but more things can be put here.
@@ -533,18 +542,18 @@ bool Solver::simplify()
 /*_________________________________________________________________________________________________
 |
 |  search : (nof_conflicts : int) (nof_learnts : int) (params : const SearchParams&)  ->  [lbool]
-|  
+|
 |  Description:
 |    Search for a model the specified number of conflicts, keeping the number of learnt clauses
 |    below the provided limit. NOTE! Use negative value for 'nof_conflicts' or 'nof_learnts' to
 |    indicate infinity.
-|  
+|
 |  Output:
 |    'l_True' if a partial assigment that is consistent with respect to the clauseset is found. If
 |    all variables are decision variables, this means that the clause set is satisfiable. 'l_False'
 |    if the clause set is unsatisfiable. 'l_Undef' if the bound on number of conflicts is reached.
 |________________________________________________________________________________________________@*/
-lbool Solver::search(int nof_conflicts, int nof_learnts)
+lbool Solver::search(int nof_conflicts, double* nof_learnts)
 {
     assert(ok);
     int         backtrack_level;
@@ -595,9 +604,11 @@ lbool Solver::search(int nof_conflicts, int nof_learnts)
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
 
-            if (nof_learnts >= 0 && learnts.size()-nAssigns() >= nof_learnts)
+            if (*nof_learnts >= 0 && learnts.size()-nAssigns() >= *nof_learnts) {
                 // Reduce the set of learnt clauses:
                 reduceDB();
+                *nof_learnts   *= learntsize_inc;
+            }
 
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()){
@@ -669,13 +680,25 @@ bool Solver::solve(const vec<Lit>& assumps)
         reportf("===============================================================================\n");
     }
 
+    int lubycounter = 0;
+    int lubybits = 0;
+    int lubymult = 1;
+
     // Search:
     while (status == l_Undef){
         if (verbosity >= 1)
             reportf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", (int)conflicts, order_heap.size(), nClauses(), (int)clauses_literals, (int)nof_learnts, nLearnts(), (double)learnts_literals/nLearnts(), progress_estimate*100), fflush(stdout);
-        status = search((int)nof_conflicts, (int)nof_learnts);
-        nof_conflicts *= restart_inc;
-        nof_learnts   *= learntsize_inc;
+        if( !lubybits ) {
+          ++lubycounter;
+          lubybits = lubycounter ^ (lubycounter-1);
+          lubymult = 1;
+        }
+        //printf("lubymult %d, nof_learnts %f\n", lubymult, nof_learnts);
+        nof_conflicts = lubymult * restart_first;
+        //nof_conflicts *= restart_inc;
+        lubybits >>= 1;
+        lubymult <<= 1;
+        status = search((int)nof_conflicts, &nof_learnts);
     }
 
     if (verbosity >= 1)
