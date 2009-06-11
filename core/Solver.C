@@ -37,7 +37,7 @@ Solver::Solver() :
   , expensive_ccmin  (true)
   , polarity_mode    (polarity_false)
   , verbosity        (0)
-  , phase_saving     (false)
+  , phase_saving     (true)
     // Statistics: (formerly in 'SolverStats')
     //
   , starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0)
