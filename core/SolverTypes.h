@@ -150,11 +150,11 @@ public:
 /*_________________________________________________________________________________________________
 |
 |  subsumes : (other : const Clause&)  ->  Lit
-|  
+|
 |  Description:
 |       Checks if clause subsumes 'other', and at the same time, if it can be used to simplify 'other'
 |       by subsumption resolution.
-|  
+|
 |    Result:
 |       lit_Error  - No subsumption or simplification
 |       lit_Undef  - Clause subsumes 'other'
@@ -193,5 +193,84 @@ inline void Clause::strengthen(Lit p)
     remove(*this, p);
     calcAbstraction();
 }
+
+/**********************
+ *
+ * CSP stuff
+ *
+ **********************/
+
+class Solver;
+
+// a container for operations, lightweight enough to pass by value
+class cspvar
+{
+  int id;
+ public:
+  bool indomain(Solver& s, int val);
+  int getmin(Solver& s);
+  int getmax(Solver& s);
+
+  void remove(Solver& s, int val);
+  void removerange(Solver &s, int rb, int re);
+  void setmin(Solver& s, int m);
+  void setmax(Solver& s, int m);
+};
+
+class cons
+{
+  int id;
+ public:
+  virtual ~cons() {}
+
+  /* propagate, setting a clause or itself as reason for each
+   * pruning. In case of failure, return a clause that describes the
+   * reason.
+   *
+   * wake() is executed during propagation of a single variable, while
+   * propagate() is a delayed call. */
+  virtual Clause *wake(Solver&, Var);
+  virtual Clause *propagate(Solver&);
+  /* if this constraint forced a literal and set itself as reason, add
+   * to c all literals that explain this pruning.
+   */
+  virtual void explain(Solver&, Lit p, vec<Lit>& c);
+};
+
+// all the fixed or non-backtracked data of a csp variable
+class cspvar_fixed
+{
+  int omin; // min and max in the *original* domain
+  int omax;
+  int firstbool;
+
+  /* a cons may either wake immediately (like an ilog demon or a
+     gecode advisor) when we process a literal, or it may be scheduled
+     for execution later. */
+  vec<cons*>
+    wake_on_dom,
+    wake_on_lb,
+    wake_on_ub,
+    wake_on_fix;
+  vec<cons*>
+    schedule_on_dom,
+    schedule_on_lb,
+    schedule_on_ub,
+    schedule_on_fix;
+};
+
+// backtracked data of a csp variable
+class cspvar_bt
+{
+  int min;
+  int max;
+  int dsize;
+};
+
+struct consqueue
+{
+  vec<unsigned char> inq;
+  vec<cons*> q;
+};
 
 #endif

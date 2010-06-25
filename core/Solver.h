@@ -44,7 +44,21 @@ public:
     // Problem specification:
     //
     Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
+    cspvar  newCSPVar (int min, int max);
+    cspvar *newCSPVarArray(int n, int min, int max);
     bool    addClause (vec<Lit>& ps);                           // Add a clause to the solver. NOTE! 'ps' may be shrunk by this method!
+    bool    addConstraint(cons *c);
+
+    void    wake_on_lit(Var, cons *c);
+    void    wake_on_dom(cspvar, cons*c);
+    void    wake_on_lb(cspvar, cons*c);
+    void    wake_on_ub(cspvar, cons*c);
+    void    wake_on_fix(cspvar, cons*c);
+
+    void    schedule_on_dom(cspvar, cons*c);
+    void    schedule_on_lb(cspvar, cons*c);
+    void    schedule_on_ub(cspvar, cons*c);
+    void    schedule_on_fix(cspvar, cons*c);
 
     // Solving:
     //
@@ -52,6 +66,9 @@ public:
     bool    solve        (const vec<Lit>& assumps); // Search for a model that respects a given set of assumptions.
     bool    solve        ();                        // Search without assumptions.
     bool    okay         () const;                  // FALSE means solver is in a conflicting state
+
+    // Explaining
+    void    addInactiveClause(Clause *c);           // add a clause that will not be propagated, just as a reason or a conflict clause
 
     // Variable mode:
     //
@@ -95,6 +112,12 @@ public:
     uint64_t starts, decisions, rnd_decisions, propagations, conflicts;
     uint64_t clauses_literals, learnts_literals, max_literals, tot_literals;
 
+public:
+    // Interface to propagators
+    void     uncheckedEnqueue (Lit p, Clause* from = NULL);                            // Enqueue a literal. Assumes value of literal is undefined.
+    bool     enqueue          (Lit p, Clause* from = NULL);                            // Test if fact 'p' contradicts current state, enqueue otherwise.
+    Clause*  propagate        ();                                                      // Perform unit propagation. Returns possibly conflicting clause.
+
 protected:
 
     // Helper structures:
@@ -117,10 +140,15 @@ protected:
     bool                ok;               // If FALSE, the constraints are already unsatisfiable. No part of the solver state may be used!
     vec<Clause*>        clauses;          // List of problem clauses.
     vec<Clause*>        learnts;          // List of learnt clauses.
+    vec<Clause*>        inactive;         // List of non-propagating clauses.
+    vec<cons*>          conses;           // List of problem constraints.
     double              cla_inc;          // Amount to bump next clause with.
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
     double              var_inc;          // Amount to bump next variable with.
+
     vec<vec<Clause*> >  watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
+    vec<vec<cons*> >    wakes_on_lit;     // 'wakes_on_lit[var(lit)]' is a list of csp constraints that wake when var is set
+
     vec<char>           assigns;          // The current assignments (lbool:s stored as char:s).
     vec<char>           polarity;         // The preferred polarity of each variable.
     vec<char>           decision_var;     // Declares if a variable is eligible for selection in the decision heuristic.
@@ -151,9 +179,6 @@ protected:
     void     insertVarOrder   (Var x);                                                 // Insert a variable in the decision order priority queue.
     Lit      pickBranchLit    (int polarity_mode, double random_var_freq);             // Return the next decision variable.
     void     newDecisionLevel ();                                                      // Begins a new decision level.
-    void     uncheckedEnqueue (Lit p, Clause* from = NULL);                            // Enqueue a literal. Assumes value of literal is undefined.
-    bool     enqueue          (Lit p, Clause* from = NULL);                            // Test if fact 'p' contradicts current state, enqueue otherwise.
-    Clause*  propagate        ();                                                      // Perform unit propagation. Returns possibly conflicting clause.
     void     cancelUntil      (int level);                                             // Backtrack until a certain level.
     void     analyze          (Clause* confl, vec<Lit>& out_learnt, int& out_btlevel); // (bt = backtrack)
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?

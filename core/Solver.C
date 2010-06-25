@@ -20,7 +20,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "Solver.h"
 #include "Sort.h"
 #include <cmath>
-
+#include <vector>
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -60,6 +60,7 @@ Solver::~Solver()
 {
     for (int i = 0; i < learnts.size(); i++) free(learnts[i]);
     for (int i = 0; i < clauses.size(); i++) free(clauses[i]);
+    for (int i = 0; i < conses.size(); ++i) delete conses[i];
 }
 
 
@@ -75,6 +76,9 @@ Var Solver::newVar(bool sign, bool dvar)
     int v = nVars();
     watches   .push();          // (list for positive literal)
     watches   .push();          // (list for negative literal)
+
+    wakes_on_lit.push();
+
     reason    .push(NULL);
     assigns   .push(toInt(l_Undef));
     level     .push(-1);
@@ -124,6 +128,10 @@ bool Solver::addClause(vec<Lit>& ps)
     return true;
 }
 
+void Solver::addInactiveClause(Clause* c)
+{
+  inactive.push(c);
+}
 
 void Solver::attachClause(Clause& c) {
     assert(c.size() > 1);
@@ -154,6 +162,16 @@ bool Solver::satisfied(const Clause& c) const {
             return true;
     return false; }
 
+bool Solver::addConstraint(cons *c)
+{
+  conses.push(c);
+  return true;
+}
+
+void Solver::wake_on_lit(Var v, cons *c)
+{
+  wakes_on_lit[v].push(c);
+}
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -455,6 +473,19 @@ Clause* Solver::propagate()
         FoundWatch:;
         }
         ws.shrink(i - j);
+
+        /* Now propagate constraints that wake on this literal */
+        using std::vector;
+        vec<cons*>& pwakes = wakes_on_lit[var(p)];
+        for(cons **ci = &pwakes[0],
+              **ciend = ci+pwakes.size();
+            ci != ciend; ++ci) {
+          confl = (*ci)->wake(*this, var(p));
+          if( confl ) {
+            qhead = trail.size();
+            break;
+          }
+        }
     }
     propagations += num_props;
     simpDB_props -= num_props;
@@ -761,4 +792,21 @@ void Solver::checkLiteralCount()
         fprintf(stderr, "literal count: %d, real value = %d\n", (int)clauses_literals, cnt);
         assert((int)clauses_literals == cnt);
     }
+}
+
+Clause* cons::wake(Solver&, Var)
+{
+  assert(0);
+  return 0L;
+}
+
+Clause* cons::propagate(Solver&)
+{
+  assert(0);
+  return 0L;
+}
+
+void cons::explain(Solver&, Lit, vec<Lit>&)
+{
+  assert(0);
 }
