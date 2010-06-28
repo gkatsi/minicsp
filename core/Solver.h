@@ -21,6 +21,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define Solver_h
 
 #include <cstdio>
+#include <cstring>
 
 #include "Vec.h"
 #include "Heap.h"
@@ -32,6 +33,12 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 //=================================================================================================
 // Solver -- the main class:
 
+class Solver;
+/* a completely opaque reference type. can only be used with Solver::deref */
+class btptr {
+  size_t offset;
+  friend class Solver;
+};
 
 class Solver {
 public:
@@ -44,21 +51,31 @@ public:
     // Problem specification:
     //
     Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
-    cspvar  newCSPVar (int min, int max);
-    cspvar *newCSPVarArray(int n, int min, int max);
+    cspvar  newCSPVar (int min, int max);                       // Add a CSP (multi-valued) var with the given lower and upper bounds
+    vec<cspvar> newCSPVarArray(int n, int min, int max);        // Add a number of identical CSP vars
     bool    addClause (vec<Lit>& ps);                           // Add a clause to the solver. NOTE! 'ps' may be shrunk by this method!
-    bool    addConstraint(cons *c);
+    bool    addConstraint(cons *c);                             // Add a constraint. For transfer of ownership only, everything else in the constructor
 
-    void    wake_on_lit(Var, cons *c);
-    void    wake_on_dom(cspvar, cons*c);
-    void    wake_on_lb(cspvar, cons*c);
-    void    wake_on_ub(cspvar, cons*c);
-    void    wake_on_fix(cspvar, cons*c);
+    /* Waking means that the constraint is called immediately when we
+       process the corresponding literal in the assignment
+       stack. Scheduling means that when we process the literal, the
+       constraint is placed in a queue and then called when the
+       assignment stack has been processed. Similar to the difference
+       between a demon and a propagator in ilog. Unlike gecode
+       advisors, a constraint can prune when it wakes. */
+    void    wake_on_lit(Var, cons *c);                          // Wake this constraint when the Boolear Var is fixed
+    void    wake_on_dom(cspvar, cons*c);                        // Wake this constraint when a value of cspvar is pruned
+    void    wake_on_lb(cspvar, cons*c);                         // Wake this constraint when the lb of cspvar is changed
+    void    wake_on_ub(cspvar, cons*c);                         // Wake this constraint when the ub of cspvar is changed
+    void    wake_on_fix(cspvar, cons*c);                        // Wake this constraint when the cspvar is assigned
 
-    void    schedule_on_dom(cspvar, cons*c);
-    void    schedule_on_lb(cspvar, cons*c);
-    void    schedule_on_ub(cspvar, cons*c);
-    void    schedule_on_fix(cspvar, cons*c);
+    void    schedule_on_dom(cspvar, cons*c);                    // Schedule this constraint when a value of cspvar is pruned
+    void    schedule_on_lb(cspvar, cons*c);                     // Schedule this constraint when the lb of cspvar is changed
+    void    schedule_on_ub(cspvar, cons*c);                     // Schedule this constraint when the ub of cspvar is changed
+    void    schedule_on_fix(cspvar, cons*c);                    // Schedule this constraint when the cspvar is assigned
+
+    btptr   alloc_backtrackable(unsigned size);                 // allocate memory to be automatically restored to its previous contents on backtracking
+    void*   deref(btptr p);                                     // dereference backtrackable mem. for temporary use only
 
     // Solving:
     //
@@ -166,6 +183,13 @@ protected:
     double              progress_estimate;// Set by 'search()'.
     bool                remove_satisfied; // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
 
+    // csp stuff
+    vec<cspvar>         cspvars;
+    size_t              backtrackable_size;  // How much we need to copy
+    size_t              backtrackable_cap;   // How much backtrackable memory is allocated
+    vec<void*>          backtrackable_space; // per-level copies of backtrackable data
+    void*               current_space;       // All backtrackable data are pointers into this
+
     // Temporaries (to reduce allocation overhead). Each variable is prefixed by the method in which it is
     // used, exept 'seen' wich is used in several places.
     //
@@ -260,7 +284,20 @@ inline void Solver::claBumpActivity (Clause& c) {
 
 inline bool     Solver::enqueue         (Lit p, Clause* from)   { return value(p) != l_Undef ? value(p) != l_False : (uncheckedEnqueue(p, from), true); }
 inline bool     Solver::locked          (const Clause& c) const { return reason[var(c[0])] == &c && value(c[0]) == l_True; }
-inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size()); }
+
+inline void     Solver::newDecisionLevel()  {
+  trail_lim.push(trail.size());
+  int dlvl = decisionLevel();
+  if( backtrackable_space.size() < decisionLevel() )
+    backtrackable_space.push(0L);
+  if( !backtrackable_space[dlvl-1] ) {
+    backtrackable_space[dlvl-1] = malloc(backtrackable_size);
+    if(! backtrackable_space[dlvl-1] )
+      throw std::bad_alloc();
+  }
+  std::memcpy(backtrackable_space[dlvl-1], current_space,
+              backtrackable_size*sizeof(int));
+}
 
 inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
 inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level[x] & 31); }

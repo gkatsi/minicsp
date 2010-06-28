@@ -53,6 +53,10 @@ Solver::Solver() :
   , random_seed      (91648253)
   , progress_estimate(0)
   , remove_satisfied (true)
+
+    , backtrackable_size(0)
+    , backtrackable_space(0)
+    , current_space(0L)
 {}
 
 
@@ -186,8 +190,41 @@ void Solver::cancelUntil(int level) {
         qhead = trail_lim[level];
         trail.shrink(trail.size() - trail_lim[level]);
         trail_lim.shrink(trail_lim.size() - level);
-    } }
+    }
+    memcpy(current_space, backtrackable_space[level],
+           backtrackable_size*sizeof(int));
+}
 
+btptr Solver::alloc_backtrackable(unsigned size)
+{
+  // it is not strictly necessary that we are at level 0, but it is
+  // easier to assert this until we find a use case that requires
+  // otherwise
+  assert(decisionLevel() == 0);
+  assert(size > 0);
+  btptr p;
+  // make sure the allocation is sizeof(int)-aligned
+  p.offset = unsigned(ceil(double(backtrackable_size)/sizeof(int)))*sizeof(int);
+  backtrackable_size = p.offset+size;
+  if( backtrackable_size > backtrackable_cap ) {
+    backtrackable_cap = std::max(backtrackable_cap*2,
+                                 backtrackable_size);
+    current_space = realloc(current_space, backtrackable_cap);
+    if( !current_space ) throw std::bad_alloc();
+
+    // free cached allocations
+    for(int i = 0; i != backtrackable_space.size(); ++i) {
+      free(backtrackable_space[i]);
+      backtrackable_space[i] = 0L;
+    }
+  }
+  return p;
+}
+
+void* Solver::deref(btptr p)
+{
+  return ((char*)current_space)+p.offset;
+}
 
 //=================================================================================================
 // Major methods:
