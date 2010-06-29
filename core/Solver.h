@@ -75,7 +75,9 @@ public:
     void    schedule_on_fix(cspvar, cons*c);                    // Schedule this constraint when the cspvar is assigned
 
     btptr   alloc_backtrackable(unsigned size);                 // allocate memory to be automatically restored to its previous contents on backtracking
-    void*   deref(btptr p);                                     // dereference backtrackable mem. for temporary use only
+    void*   get(btptr p);                                       // get direct pointer to  backtrackable mem. for temporary use only
+    template<typename T>
+    T&      deref(btptr p);                                     // dereference backtrackable mem. for temporary use only
 
     // Solving:
     //
@@ -258,6 +260,18 @@ protected:
 //=================================================================================================
 // Implementation of inline methods:
 
+inline
+void* Solver::get(btptr p)
+{
+  return ((char*)current_space)+p.offset;
+}
+
+template <typename T>
+inline
+T& Solver::deref(btptr p)
+{
+  return *(T*)get(p);
+}
 
 inline void Solver::insertVarOrder(Var x) {
     if (!order_heap.inHeap(x) && decision_var[x]) order_heap.insert(x); }

@@ -221,11 +221,6 @@ btptr Solver::alloc_backtrackable(unsigned size)
   return p;
 }
 
-void* Solver::deref(btptr p)
-{
-  return ((char*)current_space)+p.offset;
-}
-
 //=================================================================================================
 // Major methods:
 
