@@ -99,6 +99,53 @@ Var Solver::newVar(bool sign, bool dvar)
 }
 
 
+cspvar Solver::newCSPVar(int min, int max)
+{
+  cspvar x(cspvars.size());
+
+  cspvars.push();
+  cspvar_fixed & xf = cspvars.last();
+
+  btptr p = alloc_backtrackable(sizeof(cspvar_bt));
+  cspvarbt.push(p);
+  cspvar_bt & xbt = deref<cspvar_bt>(p);
+
+  xf.omin = min;
+  xf.omax = max;
+  xbt.min = min;
+  xbt.max = max;
+  xbt.dsize = max-min+1;
+
+  // the propositional encoding of the domain
+  xf.firstbool = newVar();
+  for(int i = 1; i != 2*xbt.dsize; ++i)
+    newVar();
+
+  // (x <= i) => (x <= i+1)
+  // (x = i+1) <=> (x <= i+1) /\ -(x <= i)
+  for(int i = 0; i != xbt.dsize-1; ++i) {
+    vec<Lit> ps1, ps2, ps3, ps4;
+    ps1.push( ~Lit(xf.leqi(i)) );
+    ps1.push( Lit(xf.leqi(i+1)) );
+    addClause(ps1);
+
+    ps2.push( ~Lit(xf.eqi(i+1)) );
+    ps2.push( Lit(xf.leqi(i+1) ) );
+    addClause(ps2);
+
+    ps3.push( ~Lit(xf.eqi(i+1)) );
+    ps3.push( ~Lit(xf.leqi(i) ) );
+    addClause(ps3);
+
+    ps4.push( ~Lit(xf.leqi(i+1)) );
+    ps4.push( Lit(xf.leqi(i)) );
+    ps4.push( Lit(xf.eqi(i+1)) );
+    addClause(ps4);
+  }
+
+  return x;
+}
+
 bool Solver::addClause(vec<Lit>& ps)
 {
     assert(decisionLevel() == 0);

@@ -24,6 +24,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <cassert>
 #include <stdint.h>
 
+class Solver;
+
 //=================================================================================================
 // Variables, literals, lifted booleans, clauses:
 
@@ -205,8 +207,11 @@ class Solver;
 // a container for operations, lightweight enough to pass by value
 class cspvar
 {
-  int id;
+  friend class Solver;
+  int _id;
  public:
+  explicit cspvar(int id) : _id(id) {}
+
   bool indomain(Solver& s, int val);
   int getmin(Solver& s);
   int getmax(Solver& s);
@@ -240,9 +245,11 @@ class cons
 // all the fixed or non-backtracked data of a csp variable
 class cspvar_fixed
 {
+  friend class Solver;
+
   int omin; // min and max in the *original* domain
   int omax;
-  int firstbool;
+  Var firstbool;
 
   /* a cons may either wake immediately (like an ilog demon or a
      gecode advisor) when we process a literal, or it may be scheduled
@@ -257,11 +264,16 @@ class cspvar_fixed
     schedule_on_lb,
     schedule_on_ub,
     schedule_on_fix;
+
+  // accessing the propositional encoding
+  Var eqi(int i) const { return firstbool+2*(i-omin); }
+  Var leqi(int i) const { return firstbool+2*(i-omin)+1; }
 };
 
 // backtracked data of a csp variable
 class cspvar_bt
 {
+  friend class Solver;
   int min;
   int max;
   int dsize;

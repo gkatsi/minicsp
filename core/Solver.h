@@ -186,7 +186,8 @@ protected:
     bool                remove_satisfied; // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
 
     // csp stuff
-    vec<cspvar>         cspvars;
+    vec<cspvar_fixed>   cspvars;             // the fixed data for each cspvar
+    vec<btptr>          cspvarbt;            // the backtrackable data for each var
     size_t              backtrackable_size;  // How much we need to copy
     size_t              backtrackable_cap;   // How much backtrackable memory is allocated
     vec<void*>          backtrackable_space; // per-level copies of backtrackable data
