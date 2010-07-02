@@ -137,6 +137,12 @@ public:
     bool     enqueue          (Lit p, Clause* from = NULL);                            // Test if fact 'p' contradicts current state, enqueue otherwise.
     Clause*  propagate        ();                                                      // Perform unit propagation. Returns possibly conflicting clause.
 
+    int cspvarmax(cspvar x);              // get the current max of x
+    int cspvarmin(cspvar x);              // get the current min of x
+    int cspvardsize(cspvar x);            // get the current domain size of x (which may be smaller than max - min + 1)
+    Var cspvareqi(cspvar x, int d);       // get the propositional var representing x = d
+    Var cspvarleqi(cspvar x, int d);      // get the propositional var representing x <= d
+
 protected:
 
     // Helper structures:
@@ -188,6 +194,7 @@ protected:
     // csp stuff
     vec<cspvar_fixed>   cspvars;             // the fixed data for each cspvar
     vec<btptr>          cspvarbt;            // the backtrackable data for each var
+    vec<domevent>       events;              // the csp event that a literal corresponds to
     size_t              backtrackable_size;  // How much we need to copy
     size_t              backtrackable_cap;   // How much backtrackable memory is allocated
     vec<void*>          backtrackable_space; // per-level copies of backtrackable data
@@ -213,6 +220,7 @@ protected:
     lbool    search           (int nof_conflicts, double * nof_learnts);               // Search for a given number of conflicts.
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.
     void     removeSatisfied  (vec<Clause*>& cs);                                      // Shrink 'cs' to contain only non-satisfied clauses.
+    void     uncheckedEnqueue_np(Lit p, Clause *from);                                 // uncheckedEnqueue with no CSP propagation
 
     // Maintaining Variable/Clause activity:
     //
@@ -374,6 +382,144 @@ inline void Solver::printClause(const C& c)
         printLit(c[i]);
         fprintf(stderr, " ");
     }
+}
+
+//==================================================
+// cspvar inlines
+
+inline int Solver::cspvarmax(cspvar x)
+{
+  return deref<cspvar_bt>(cspvarbt[x._id]).max;
+}
+
+inline int Solver::cspvarmin(cspvar x)
+{
+  return deref<cspvar_bt>(cspvarbt[x._id]).min;
+}
+
+inline int Solver::cspvardsize(cspvar x)
+{
+  return deref<cspvar_bt>(cspvarbt[x._id]).dsize;
+}
+
+inline Var Solver::cspvareqi(cspvar x, int d)
+{
+  return cspvars[x._id].eqi(d);
+}
+
+inline Var Solver::cspvarleqi(cspvar x, int d)
+{
+  return cspvars[x._id].leqi(d);
+}
+
+inline bool cspvar::indomain(Solver &s, int d)
+{
+  return s.value( eqi(s, d) ) != l_False;
+}
+
+inline int cspvar::min(Solver &s)
+{
+  return s.cspvarmin(*this);
+}
+
+inline int cspvar::max(Solver &s)
+{
+  return s.cspvarmax(*this);
+}
+
+inline int cspvar::domsize(Solver &s)
+{
+  return s.cspvardsize(*this);
+}
+
+inline Var cspvar::eqi(Solver &s, int d)
+{
+  return s.cspvareqi(*this, d);
+}
+
+inline Var cspvar::leqi(Solver &s, int d)
+{
+  return s.cspvarleqi(*this, d);
+}
+
+inline Lit cspvar::r_geq(Solver &s, int d)
+{
+  return Lit( leqi(s, d-1) );
+}
+
+inline Lit cspvar::r_leq(Solver &s, int d)
+{
+  return ~Lit( leqi(s, d) );
+}
+
+inline Lit cspvar::e_geq(Solver &s, int d)
+{
+  return ~Lit( leqi(s, d-1) );
+}
+
+inline Lit cspvar::e_leq(Solver &s, int d)
+{
+  return Lit( leqi(s, d) );
+}
+
+inline Clause *cspvar::remove(Solver &s, int d, Clause *c)
+{
+  Var xd = eqi(s, d);
+  if( s.value(xd) == l_True ) return c;
+  s.uncheckedEnqueue( ~Lit(xd), c);
+  return 0L;
+}
+
+inline Clause *cspvar::remove(Solver &s, int d, vec<Lit> &ps)
+{
+  Clause *r = Clause_new(ps);
+  s.addInactiveClause(r);
+  return remove(s, d, r);
+}
+
+inline Clause *cspvar::setmin(Solver &s, int d, Clause *c)
+{
+  Var xd = leqi(s, d-1);
+  if( s.value(xd) == l_True ) return c;
+  s.uncheckedEnqueue( ~Lit(xd), c);
+  return 0L;
+}
+
+inline Clause *cspvar::setmin(Solver &s, int d, vec<Lit> &ps)
+{
+  Clause *r = Clause_new(ps);
+  s.addInactiveClause(r);
+  return setmin(s, d, r);
+}
+
+inline Clause *cspvar::setmax(Solver &s, int d, Clause *c)
+{
+  Var xd = leqi(s, d);
+  if( s.value(xd) == l_False ) return c;
+  s.uncheckedEnqueue( Lit(xd), c);
+  return 0L;
+}
+
+inline Clause *cspvar::setmax(Solver &s, int d, vec<Lit> &ps)
+{
+  Clause *r = Clause_new(ps);
+  s.addInactiveClause(r);
+  return setmin(s, d, r);
+}
+
+inline Clause *cspvar::assign(Solver &s, int d, Clause *c)
+{
+  Var xd = eqi(s, d);
+  if( s.value(xd) == l_False ) return c;
+  s.uncheckedEnqueue( Lit(xd), c );
+  return 0L;
+}
+
+inline Clause *cspvar::assign(Solver &s, int d, vec<Lit> &ps)
+{
+  Clause *r = Clause_new(ps);
+  s.addInactiveClause(r);
+  return assign(s, d, r);
 }
 
 

@@ -148,6 +148,7 @@ public:
     void         strengthen  (Lit p);
 };
 
+#define INVALID_CLAUSE ((Clause*)0x4)
 
 /*_________________________________________________________________________________________________
 |
@@ -203,6 +204,12 @@ inline void Clause::strengthen(Lit p)
  **********************/
 
 class Solver;
+class cons;
+
+// thrown by the constructor of a constraint only
+struct unsat : public std::exception
+{
+};
 
 // a container for operations, lightweight enough to pass by value
 class cspvar
@@ -212,14 +219,61 @@ class cspvar
  public:
   explicit cspvar(int id) : _id(id) {}
 
-  bool indomain(Solver& s, int val);
-  int getmin(Solver& s);
-  int getmax(Solver& s);
+  bool indomain(Solver& s, int d);
+  int min(Solver& s);
+  int max(Solver& s);
 
-  void remove(Solver& s, int val);
-  void removerange(Solver &s, int rb, int re);
-  void setmin(Solver& s, int m);
-  void setmax(Solver& s, int m);
+  int domsize(Solver& s);
+
+  /* the reason can be an existing clause, a clause to be generated
+     from a vec<Lit> or a cons, which will lazily be called on to
+     generate a clause later, if needed.
+
+     These return a Clause *, which is NULL if the operation does
+     not cause a conflict, otherwise a failed clause (i.e. all false
+     literals).
+  */
+  Clause *remove(Solver& s, int d, Clause *c);
+  Clause *remove(Solver& s, int d, vec<Lit>& reason);
+  Clause *remove(Solver& s, int d, cons *c);
+
+  Clause *removerange(Solver &s, int rb, int re, Clause *c);
+  Clause *removerange(Solver &s, int rb, int re, vec<Lit>& reason);
+  Clause *removerange(Solver &s, int rb, int re, cons *c);
+
+  Clause *setmin(Solver& s, int m, Clause *c);
+  Clause *setmin(Solver& s, int m, vec<Lit>& reason);
+  Clause *setmin(Solver& s, int m, cons *c);
+
+  Clause *setmax(Solver& s, int m, Clause *c);
+  Clause *setmax(Solver& s, int m, vec<Lit>& reason);
+  Clause *setmax(Solver& s, int m, cons *c);
+
+  Clause *assign(Solver& s, int d, Clause *c);
+  Clause *assign(Solver& s, int d, vec<Lit>& reason);
+  Clause *assign(Solver& s, int d, cons *c);
+
+  /* Generating reasons */
+  Var eqi(Solver &s, int d);
+  Var leqi(Solver &s, int d);
+
+  /* Generating reasons, convenience
+
+     prefix r_ means 'reason'
+     prefix e_ means 'effect'
+
+     Note when constructing a reason, there can be at most one e_
+     literal.
+  */
+  Lit r_geq(Solver &s, int d);
+  Lit r_leq(Solver &s, int d);
+  Lit r_neq(Solver &s, int d);
+  Lit r_eq(Solver& s, int d);
+
+  Lit e_geq(Solver &s, int d);
+  Lit e_leq(Solver &s, int d);
+  Lit e_neq(Solver &s, int d);
+  Lit e_eq(Solver &s, int d);
 };
 
 class cons
@@ -265,6 +319,8 @@ class cspvar_fixed
     schedule_on_ub,
     schedule_on_fix;
 
+  vec<Clause*> ps1, ps2, ps3, ps4;
+
   // accessing the propositional encoding
   Var eqi(int i) const { return firstbool+2*(i-omin); }
   Var leqi(int i) const { return firstbool+2*(i-omin)+1; }
@@ -283,6 +339,18 @@ struct consqueue
 {
   vec<unsigned char> inq;
   vec<cons*> q;
+};
+
+struct domevent
+{
+  cspvar x;
+  enum event_type { NEQ, EQ, GEQ, LEQ };
+  event_type type;
+  int d;
+
+  domevent() :  x(-1), type(NEQ), d(0) {}
+  domevent(cspvar px, event_type ptype, int pd) :
+     x(px), type(ptype), d(pd) {}
 };
 
 #endif
