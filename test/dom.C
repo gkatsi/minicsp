@@ -15,6 +15,9 @@ namespace {
     assert( !x.indomain(s, 6) );
     assert( !x.indomain(s, 5) );
     assert( x.domsize(s) == 4 );
+
+    x.setmin(s, 9, (Clause*)0L);
+    assert(x.min(s) == 9 );
   }
 
   void test02()
@@ -40,6 +43,9 @@ namespace {
     assert( !x.indomain(s, 8) );
     assert( !x.indomain(s, 9) );
     assert( x.domsize(s) == 3 );
+
+    x.setmax(s, 6, (Clause*)0L);
+    assert( x.max(s) == 6 );
   }
 
   void test04()

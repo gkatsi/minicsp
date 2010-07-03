@@ -350,13 +350,15 @@ struct consqueue
 struct domevent
 {
   cspvar x;
-  enum event_type { NEQ, EQ, GEQ, LEQ };
+  enum event_type { NEQ, EQ, GEQ, LEQ, NONE };
   event_type type;
   int d;
 
-  domevent() :  x(-1), type(NEQ), d(0) {}
+  domevent() :  x(0), type(NONE), d(0) {}
   domevent(cspvar px, event_type ptype, int pd) :
      x(px), type(ptype), d(pd) {}
 };
+
+inline bool noevent(domevent d) { return d.type == domevent::NONE; }
 
 #endif

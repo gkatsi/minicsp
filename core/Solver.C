@@ -95,9 +95,9 @@ Var Solver::newVar(bool sign, bool dvar)
 
     phase.push(l_Undef);
 
-    domevent noevent;
-    events.push(noevent);
-    events.push(noevent);
+    domevent none;
+    events.push(none);
+    events.push(none);
 
     insertVarOrder(v);
     return v;
@@ -578,7 +578,7 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
 
     // update csp var and propagate, if applicable
     domevent const &pevent = events[toInt(p)];
-    if( pevent.x._id < 0 ) return;
+    if( noevent(pevent) ) return;
     cspvar_fixed& xf = cspvars[pevent.x._id];
     cspvar_bt& xb = deref<cspvar_bt>(cspvarbt[pevent.x._id]);
     if( pevent.type == domevent::EQ ) {
@@ -665,7 +665,7 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
       int leq = pevent.d+1;
       while( leq <= xf.omax &&
              ( leq == xf.omax ||
-               value( xf.leqi(leq) ) != l_False ) ) {
+               value( xf.leqi(leq) ) != l_True ) ) {
         if( leq < xf.omax )
           uncheckedEnqueue_np( Lit( xf.leqi(leq) ), xf.ps1[leq-1-xf.omin] );
         if( value(xf.eqi(leq)) != l_False ) {
@@ -745,11 +745,30 @@ Clause* Solver::propagate()
         ws.shrink(i - j);
 
         /* Now propagate constraints that wake on this literal */
-        using std::vector;
         vec<cons*>& pwakes = wakes_on_lit[var(p)];
         for(cons **ci = &pwakes[0],
               **ciend = ci+pwakes.size();
             ci != ciend; ++ci) {
+          confl = (*ci)->wake(*this, var(p));
+          if( confl ) {
+            qhead = trail.size();
+            break;
+          }
+        }
+
+        domevent const & pe = events[toInt(p)];
+        if( noevent(pe) ) continue;
+        vec<cons*> *dewakes;
+        switch(pe.type) {
+        case domevent::NEQ: dewakes=&(cspvars[pe.x._id].wake_on_dom); break;
+        case domevent::EQ: dewakes=&(cspvars[pe.x._id].wake_on_fix); break;
+        case domevent::LEQ: dewakes=&(cspvars[pe.x._id].wake_on_ub); break;
+        case domevent::GEQ: dewakes=&(cspvars[pe.x._id].wake_on_lb); break;
+        case domevent::NONE: assert(0);
+        }
+        for( cons **ci = &((*dewakes)[0]),
+               **ciend = ci+dewakes->size();
+             ci != ciend; ++ci) {
           confl = (*ci)->wake(*this, var(p));
           if( confl ) {
             qhead = trail.size();
