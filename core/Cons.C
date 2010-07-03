@@ -11,8 +11,73 @@ using std::vector;
 
 class cons_eq;  // ==
 class cons_neq; // !=
-class cons_lt;  // less than
-class cons_le;  // less-or-equal
+
+/* x <= y + c */
+class cons_le : public cons {
+  cspvar _x, _y;
+  int _c;
+  vec<Lit> _reason; // cache to avoid the cost of allocation
+public:
+  cons_le(Solver &s,
+          cspvar x, cspvar y, int c) :
+    _x(x), _y(y), _c(c)
+  {
+    s.wake_on_lb(x, this);
+    s.wake_on_ub(y, this);
+    _reason.push(); _reason.push();
+    if( wake(s, 0) )
+      throw unsat();
+  }
+
+  virtual Clause *wake(Solver& s, Var p);
+};
+
+Clause *cons_le::wake(Solver& s, Var)
+{
+  if( _y.max(s) + _c < _x.min(s) ) { // failure
+    _reason[0] = _x.r_geq( s, _x.min(s) );
+    _reason[1] = _y.r_leq( s, _x.min(s) - _c );
+    Clause *r = Clause_new(_reason);
+    s.addInactiveClause(r);
+    return r;
+  }
+
+  if( _y.min(s) + _c < _x.min(s) ) {
+    _reason[1] = _x.r_geq(s, _x.min(s));
+    _reason[0] = _y.e_geq(s, _x.min(s) - _c);
+    if( _reason[1] == lit_Undef )
+      _y.setmin(s, _x.min(s) - _c, NO_REASON);
+    else
+      _y.setmin(s, _x.min(s) - _c, _reason);
+  }
+  if( _x.max(s) - _c > _y.max(s) ) {
+    _reason[1] = _y.r_leq( s, _y.max(s));
+    _reason[0] = _x.e_leq( s, _y.max(s) + _c );
+    if( _reason[1] == lit_Undef )
+      _x.setmax(s, _y.max(s) + _c, NO_REASON);
+    else
+      _x.setmax(s, _y.max(s) + _c, _reason);
+  }
+
+  return 0L;
+}
+
+// v1 <= v2 + c
+cons *post_leq(Solver& s, cspvar v1, cspvar v2, int c)
+{
+  cons *con = new cons_le(s, v1, v2, c);
+  s.addConstraint(con);
+  return con;
+}
+
+// v1 < v2 + c
+cons *post_less(Solver& s, cspvar v1, cspvar v2, int c)
+{
+  cons *con = new cons_le(s, v1, v2, c-1);
+  s.addConstraint(con);
+  return con;
+}
+
 
 /* Reified versions */
 class cons_eq_re;
