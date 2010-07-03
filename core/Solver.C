@@ -173,6 +173,11 @@ cspvar Solver::newCSPVar(int min, int max)
     }
   }
 
+  /* x <= omax, so this is true always. We could just simplify the
+     rest of the clauses but this seems easier
+   */
+  x.setmax(*this, xf.omax, (Clause*)0L);
+
   return x;
 }
 
@@ -627,7 +632,7 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
                    value(xf.leqi(xb.max)) == l_True) &&
                   value(xf.leqi(xb.max-1)) != l_False );
           uncheckedEnqueue_np( Lit( xf.leqi(xb.max-1) ),
-                               xf.ps4[xb.max-1-xf.omin] );
+                               xf.ps4[xb.max-xf.omin] );
           --xb.max;
         }
       }

@@ -79,8 +79,10 @@ namespace {
     x.remove(s, -5, (Clause*)0L);
     assert(x.min(s) == -4);
     assert( x.domsize(s) == 10 );
+    x.remove(s, 5, (Clause*)0L);
+    assert(x.max(s) == 4);
+    assert( x.domsize(s) == 9 );
   }
-
 }
 
 void dom_test()

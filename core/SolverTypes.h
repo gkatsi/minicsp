@@ -149,6 +149,7 @@ public:
 };
 
 #define INVALID_CLAUSE ((Clause*)0x4)
+#define NO_REASON ((Clause*)0L)
 
 /*_________________________________________________________________________________________________
 |
@@ -219,11 +220,11 @@ class cspvar
  public:
   explicit cspvar(int id) : _id(id) {}
 
-  bool indomain(Solver& s, int d);
-  int min(Solver& s);
-  int max(Solver& s);
+  bool indomain(Solver& s, int d) const;
+  int min(Solver& s) const;
+  int max(Solver& s) const;
 
-  int domsize(Solver& s);
+  int domsize(Solver& s) const;
 
   /* the reason can be an existing clause, a clause to be generated
      from a vec<Lit> or a cons, which will lazily be called on to
@@ -254,8 +255,8 @@ class cspvar
   Clause *assign(Solver& s, int d, cons *c);
 
   /* Generating reasons */
-  Var eqi(Solver &s, int d);
-  Var leqi(Solver &s, int d);
+  Var eqi(Solver &s, int d) const;
+  Var leqi(Solver &s, int d) const;
 
   /* Generating reasons, convenience
 
@@ -265,15 +266,15 @@ class cspvar
      Note when constructing a reason, there can be at most one e_
      literal.
   */
-  Lit r_geq(Solver &s, int d);
-  Lit r_leq(Solver &s, int d);
-  Lit r_neq(Solver &s, int d);
-  Lit r_eq(Solver& s, int d);
+  Lit r_geq(Solver &s, int d) const;
+  Lit r_leq(Solver &s, int d) const;
+  Lit r_neq(Solver &s, int d) const;
+  Lit r_eq(Solver& s, int d) const;
 
-  Lit e_geq(Solver &s, int d);
-  Lit e_leq(Solver &s, int d);
-  Lit e_neq(Solver &s, int d);
-  Lit e_eq(Solver &s, int d);
+  Lit e_geq(Solver &s, int d) const;
+  Lit e_leq(Solver &s, int d) const;
+  Lit e_neq(Solver &s, int d) const;
+  Lit e_eq(Solver &s, int d) const;
 };
 
 class cons
@@ -322,8 +323,13 @@ class cspvar_fixed
   vec<Clause*> ps1, ps2, ps3, ps4;
 
   // accessing the propositional encoding
-  Var eqi(int i) const { return firstbool+2*(i-omin); }
-  Var leqi(int i) const { return firstbool+2*(i-omin)+1; }
+  bool ind(int i) const { return i >= omin && i <= omax; }
+  Var eqi(int i) const { return ind(i)
+      ? firstbool+2*(i-omin)
+      : var_Undef; }
+  Var leqi(int i) const { return ind(i)
+      ? firstbool+2*(i-omin)+1
+      : var_Undef; }
 };
 
 // backtracked data of a csp variable

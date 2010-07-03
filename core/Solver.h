@@ -412,52 +412,52 @@ inline Var Solver::cspvarleqi(cspvar x, int d)
   return cspvars[x._id].leqi(d);
 }
 
-inline bool cspvar::indomain(Solver &s, int d)
+inline bool cspvar::indomain(Solver &s, int d) const
 {
   return s.value( eqi(s, d) ) != l_False;
 }
 
-inline int cspvar::min(Solver &s)
+inline int cspvar::min(Solver &s) const
 {
   return s.cspvarmin(*this);
 }
 
-inline int cspvar::max(Solver &s)
+inline int cspvar::max(Solver &s) const
 {
   return s.cspvarmax(*this);
 }
 
-inline int cspvar::domsize(Solver &s)
+inline int cspvar::domsize(Solver &s) const
 {
   return s.cspvardsize(*this);
 }
 
-inline Var cspvar::eqi(Solver &s, int d)
+inline Var cspvar::eqi(Solver &s, int d) const
 {
   return s.cspvareqi(*this, d);
 }
 
-inline Var cspvar::leqi(Solver &s, int d)
+inline Var cspvar::leqi(Solver &s, int d) const
 {
   return s.cspvarleqi(*this, d);
 }
 
-inline Lit cspvar::r_geq(Solver &s, int d)
+inline Lit cspvar::r_geq(Solver &s, int d) const
 {
   return Lit( leqi(s, d-1) );
 }
 
-inline Lit cspvar::r_leq(Solver &s, int d)
+inline Lit cspvar::r_leq(Solver &s, int d) const
 {
   return ~Lit( leqi(s, d) );
 }
 
-inline Lit cspvar::e_geq(Solver &s, int d)
+inline Lit cspvar::e_geq(Solver &s, int d) const
 {
   return ~Lit( leqi(s, d-1) );
 }
 
-inline Lit cspvar::e_leq(Solver &s, int d)
+inline Lit cspvar::e_leq(Solver &s, int d) const
 {
   return Lit( leqi(s, d) );
 }
@@ -465,6 +465,7 @@ inline Lit cspvar::e_leq(Solver &s, int d)
 inline Clause *cspvar::remove(Solver &s, int d, Clause *c)
 {
   Var xd = eqi(s, d);
+  if( xd == var_Undef ) return 0L;
   if( s.value(xd) == l_True ) return c;
   s.uncheckedEnqueue( ~Lit(xd), c);
   return 0L;
@@ -480,6 +481,7 @@ inline Clause *cspvar::remove(Solver &s, int d, vec<Lit> &ps)
 inline Clause *cspvar::setmin(Solver &s, int d, Clause *c)
 {
   Var xd = leqi(s, d-1);
+  if( xd == var_Undef ) return 0L;
   if( s.value(xd) == l_True ) return c;
   s.uncheckedEnqueue( ~Lit(xd), c);
   return 0L;
@@ -495,6 +497,7 @@ inline Clause *cspvar::setmin(Solver &s, int d, vec<Lit> &ps)
 inline Clause *cspvar::setmax(Solver &s, int d, Clause *c)
 {
   Var xd = leqi(s, d);
+  if( xd == var_Undef ) return 0L;
   if( s.value(xd) == l_False ) return c;
   s.uncheckedEnqueue( Lit(xd), c);
   return 0L;
@@ -504,12 +507,13 @@ inline Clause *cspvar::setmax(Solver &s, int d, vec<Lit> &ps)
 {
   Clause *r = Clause_new(ps);
   s.addInactiveClause(r);
-  return setmin(s, d, r);
+  return setmax(s, d, r);
 }
 
 inline Clause *cspvar::assign(Solver &s, int d, Clause *c)
 {
   Var xd = eqi(s, d);
+  assert( xd != var_Undef );
   if( s.value(xd) == l_False ) return c;
   s.uncheckedEnqueue( Lit(xd), c );
   return 0L;
