@@ -137,6 +137,9 @@ public:
     bool     enqueue          (Lit p, Clause* from = NULL);                            // Test if fact 'p' contradicts current state, enqueue otherwise.
     Clause*  propagate        ();                                                      // Perform unit propagation. Returns possibly conflicting clause.
 
+    void     newDecisionLevel ();                                                      // Begins a new decision level.
+    void     cancelUntil      (int level);                                             // Backtrack until a certain level.
+
     int cspvarmax(cspvar x);              // get the current max of x
     int cspvarmin(cspvar x);              // get the current min of x
     int cspvardsize(cspvar x);            // get the current domain size of x (which may be smaller than max - min + 1)
@@ -212,8 +215,6 @@ protected:
     //
     void     insertVarOrder   (Var x);                                                 // Insert a variable in the decision order priority queue.
     Lit      pickBranchLit    (int polarity_mode, double random_var_freq);             // Return the next decision variable.
-    void     newDecisionLevel ();                                                      // Begins a new decision level.
-    void     cancelUntil      (int level);                                             // Backtrack until a certain level.
     void     analyze          (Clause* confl, vec<Lit>& out_learnt, int& out_btlevel); // (bt = backtrack)
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
     bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
