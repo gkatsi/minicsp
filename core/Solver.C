@@ -683,6 +683,11 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
         --xb.max;
       }
     }
+
+    if( xb.max == xb.min &&
+        value( xf.eqi(xb.max) ) != l_True )
+      uncheckedEnqueue_np( Lit(xf.eqi(xb.max)),
+                           xf.ps4[xb.max-xf.omin] );
 }
 
 /*_________________________________________________________________________________________________

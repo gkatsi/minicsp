@@ -89,6 +89,15 @@ namespace {
     assert(x.max(s) == 4);
     assert( x.domsize(s) == 9 );
   }
+
+  void test07()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 5);
+    x.setmin(s, 3, NO_REASON);
+    x.setmax(s, 3, NO_REASON);
+    assert( s.value(x.eqi(s, 3)) == l_True );
+  }
 }
 
 void dom_test()
@@ -117,5 +126,9 @@ void dom_test()
 
   cerr << "test06..." << flush;
   test06();
+  cerr << "OK\n";
+
+  cerr << "test07..." << flush;
+  test07();
   cerr << "OK\n";
 }
