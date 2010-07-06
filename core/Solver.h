@@ -527,6 +527,16 @@ inline Clause *cspvar::assign(Solver &s, int d, vec<Lit> &ps)
   return assign(s, d, r);
 }
 
+//==================================================
+// a trick to avoid branching
+// returns a1 if w > 0, otherwise a2
+
+inline
+int select(int w, int a1, int a2)
+{
+  int mask = w >> (sizeof(int)*8-1);
+  return - (~mask*a1) - (mask*a2);
+}
 
 //=================================================================================================
 #endif
