@@ -20,6 +20,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Solver_h
 #define Solver_h
 
+#include <vector>
 #include <cstdio>
 #include <cstring>
 
@@ -52,7 +53,7 @@ public:
     //
     Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
     cspvar  newCSPVar (int min, int max);                       // Add a CSP (multi-valued) var with the given lower and upper bounds
-    vec<cspvar> newCSPVarArray(int n, int min, int max);        // Add a number of identical CSP vars
+    std::vector<cspvar> newCSPVarArray(int n, int min, int max);// Add a number of identical CSP vars
     bool    addClause (vec<Lit>& ps);                           // Add a clause to the solver. NOTE! 'ps' may be shrunk by this method!
     bool    addConstraint(cons *c);                             // Add a constraint. For transfer of ownership only, everything else in the constructor
 

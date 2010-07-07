@@ -106,6 +106,8 @@ Var Solver::newVar(bool sign, bool dvar)
 
 cspvar Solver::newCSPVar(int min, int max)
 {
+  assert(max - min > 0 );
+
   cspvar x(cspvars.size());
 
   cspvars.push();
@@ -179,6 +181,14 @@ cspvar Solver::newCSPVar(int min, int max)
   x.setmax(*this, xf.omax, (Clause*)0L);
 
   return x;
+}
+
+std::vector<cspvar> Solver::newCSPVarArray(int n, int min, int max)
+{
+  std::vector<cspvar> rv;
+  for(int i = min; i != max+1; ++i)
+    rv.push_back(newCSPVar(min, max));
+  return rv;
 }
 
 bool Solver::addClause(vec<Lit>& ps)
