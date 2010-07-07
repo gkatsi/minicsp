@@ -186,7 +186,7 @@ cspvar Solver::newCSPVar(int min, int max)
 std::vector<cspvar> Solver::newCSPVarArray(int n, int min, int max)
 {
   std::vector<cspvar> rv;
-  for(int i = min; i != max+1; ++i)
+  for(int i = 0; i != n; ++i)
     rv.push_back(newCSPVar(min, max));
   return rv;
 }
