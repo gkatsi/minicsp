@@ -98,6 +98,37 @@ namespace {
     x.setmax(s, 3, NO_REASON);
     assert( s.value(x.eqi(s, 3)) == l_True );
   }
+
+  // do something twice
+  void test08()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 20);
+    x.setmin(s, 3, NO_REASON);
+    x.setmin(s, 3, NO_REASON);
+
+    x.setmax(s, 15, NO_REASON);
+    x.setmax(s, 15, NO_REASON);
+
+    x.remove(s, 10, NO_REASON);
+    x.remove(s, 10, NO_REASON);
+
+    x.assign(s, 9, NO_REASON);
+    x.assign(s, 9, NO_REASON);
+  }
+
+  // assign to a value k when some values p,q s.t. k<p<=ub and
+  // lb<=q<k are already pruned
+  void test09()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 20);
+
+    x.remove(s, 7, NO_REASON);
+    x.remove(s, 9, NO_REASON);
+    x.assign(s, 8, NO_REASON);
+  }
+
 }
 
 void dom_test()
@@ -131,4 +162,13 @@ void dom_test()
   cerr << "test07..." << flush;
   test07();
   cerr << "OK\n";
+
+  cerr << "test08..." << flush;
+  test08();
+  cerr << "OK\n";
+
+  cerr << "test09..." << flush;
+  test09();
+  cerr << "OK\n";
+
 }

@@ -560,14 +560,13 @@ void Solver::uncheckedEnqueue_np(Lit p, Clause *from)
     if( !from ) return;
     bool foundp = false;
     for(int i = 0; i != from->size(); ++i) {
+      assert((*from)[i] != lit_Undef);
       if( (*from)[i] != p )
         assert( value((*from)[i]) == l_False );
       else
         foundp = true;
     }
     assert(foundp);
-    if( from->size() > 3 )
-      assert( (*from)[0] == p );
 #endif
 }
 
@@ -598,8 +597,9 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
       if( value(xf.leqi(pevent.d)) != l_True ) {
         uncheckedEnqueue_np( Lit(xf.leqi(pevent.d)),
                              xf.ps2[pevent.d-xf.omin] );
-        uncheckedEnqueue_np( ~Lit(xf.eqi(pevent.d+1)),
-                             xf.ps3[pevent.d+1-xf.omin] );
+        if( value(xf.eqi(pevent.d+1)) != l_False)
+          uncheckedEnqueue_np( ~Lit(xf.eqi(pevent.d+1)),
+                               xf.ps3[pevent.d+1-xf.omin] );
         int leq = pevent.d+1;
         while( leq < xf.omax && value(xf.leqi(leq)) != l_True ) {
           uncheckedEnqueue_np( Lit(xf.leqi(leq)), xf.ps1[leq-1-xf.omin] );
@@ -611,8 +611,9 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
       if( value(xf.leqi(pevent.d-1)) != l_False ) {
         uncheckedEnqueue_np( ~Lit(xf.leqi(pevent.d-1)),
                              xf.ps3[pevent.d-xf.omin] );
-        uncheckedEnqueue_np( ~Lit(xf.eqi(pevent.d-1)),
-                             xf.ps2[pevent.d-1-xf.omin] );
+        if( value(xf.eqi(pevent.d-1)) != l_False)
+          uncheckedEnqueue_np( ~Lit(xf.eqi(pevent.d-1)),
+                               xf.ps2[pevent.d-1-xf.omin] );
         int geq = pevent.d-2;
         while( geq >= xf.omin && value(xf.leqi(geq)) != l_False ) {
           uncheckedEnqueue_np( ~Lit(xf.leqi(geq)), xf.ps1[geq-xf.omin] );
