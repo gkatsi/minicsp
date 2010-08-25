@@ -63,9 +63,22 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
-    for (int i = 0; i < learnts.size(); i++) free(learnts[i]);
-    for (int i = 0; i < clauses.size(); i++) free(clauses[i]);
-    for (int i = 0; i < conses.size(); ++i) delete conses[i];
+  for (int i = 0; i < learnts.size(); i++) free(learnts[i]);
+  for (int i = 0; i < clauses.size(); i++) free(clauses[i]);
+  for (int i = 0; i < conses.size(); ++i) delete conses[i];
+  for (int i = 0; i != inactive.size(); ++i) free(inactive[i]);
+  for (int i = 0; i != cspvars.size(); ++i) {
+    cspvar_fixed & xf = cspvars[i];
+    for(int j = 0; j != (xf.omax-xf.omin+1); ++j) {
+      free(xf.ps1[j]);
+      free(xf.ps2[j]);
+      if( j > 0 ) free(xf.ps3[j]);
+      free(xf.ps4[j]);
+    }
+  }
+  for(int i = 0; i != backtrackable_space.size(); ++i)
+    free(backtrackable_space[i]);
+  free(current_space);
 }
 
 
