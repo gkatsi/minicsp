@@ -126,9 +126,26 @@ namespace {
 
     x.remove(s, 7, NO_REASON);
     x.remove(s, 9, NO_REASON);
+    x.remove(s, 5, NO_REASON);
+    x.remove(s, 11, NO_REASON);
     x.assign(s, 8, NO_REASON);
   }
 
+  // binary domains.
+  void test10()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(0,1);
+    cspvar y = s.newCSPVar(0,1);
+
+    s.newDecisionLevel();
+    x.assign(s, 0, NO_REASON);
+    y.assign(s, 1, NO_REASON);
+
+    s.cancelUntil(0);
+    x.setmax(s, 0, NO_REASON);
+    y.setmin(s, 1, NO_REASON);
+  }
 }
 
 void dom_test()
@@ -169,6 +186,10 @@ void dom_test()
 
   cerr << "test09..." << flush;
   test09();
+  cerr << "OK\n";
+
+  cerr << "test10..." << flush;
+  test10();
   cerr << "OK\n";
 
 }

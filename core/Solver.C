@@ -171,7 +171,10 @@ cspvar Solver::newCSPVar(int min, int max)
       xf.ps4[i] = c4;
     } else {
       xf.ps3[i] = INVALID_CLAUSE;
-      xf.ps4[i] = INVALID_CLAUSE;
+      ps4.push( ~Lit(xf.leqi(xf.omin)) );
+      ps4.push( Lit(xf.eqi(xf.omin)) );
+      Clause *c4 =Clause_new(ps4);
+      xf.ps4[i] = c4;
     }
   }
 
@@ -603,12 +606,14 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
         int leq = pevent.d+1;
         while( leq < xf.omax && value(xf.leqi(leq)) != l_True ) {
           uncheckedEnqueue_np( Lit(xf.leqi(leq)), xf.ps1[leq-1-xf.omin] );
-          uncheckedEnqueue_np( ~Lit(xf.eqi(leq+1)), xf.ps3[leq+1-xf.omin] );
+          if( value(xf.eqi(leq+1)) != l_False)
+            uncheckedEnqueue_np( ~Lit(xf.eqi(leq+1)), xf.ps3[leq+1-xf.omin] );
           ++leq;
         }
       }
       // propagate towards min
-      if( value(xf.leqi(pevent.d-1)) != l_False ) {
+      if( pevent.d > xf.omin &&
+          value(xf.leqi(pevent.d-1)) != l_False ) {
         uncheckedEnqueue_np( ~Lit(xf.leqi(pevent.d-1)),
                              xf.ps3[pevent.d-xf.omin] );
         if( value(xf.eqi(pevent.d-1)) != l_False)
@@ -617,7 +622,8 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
         int geq = pevent.d-2;
         while( geq >= xf.omin && value(xf.leqi(geq)) != l_False ) {
           uncheckedEnqueue_np( ~Lit(xf.leqi(geq)), xf.ps1[geq-xf.omin] );
-          uncheckedEnqueue_np( ~Lit(xf.eqi(geq)), xf.ps2[geq-xf.omin] );
+          if( value(xf.eqi(geq)) != l_False )
+            uncheckedEnqueue_np( ~Lit(xf.eqi(geq)), xf.ps2[geq-xf.omin] );
           --geq;
         }
       }
