@@ -260,7 +260,7 @@ cons *post_lin_leq_imp_b_re(Solver &s, vector<cspvar> const&vars,
   vector<int> c1(coeff);
 
   /* Let L = c + sum coeff[i]*vars[i] */
-  /* Discover ub, s.t. L <= ub */
+  /* Discover lb, ub, s.t. lb <= L <= ub */
   int ub = c, lb = c;
   for(size_t i = 0; i != vars.size(); ++i) {
     if( coeff[i] > 0 ) {
@@ -295,6 +295,74 @@ cons *post_lin_less_imp_b_re(Solver &s, vector<cspvar> const&vars,
 {
   return post_lin_leq_imp_b_re(s, vars, coeff, c+1, b);
 }
+
+cons *post_b_imp_lin_leq_re(Solver &s,
+                            cspvar b,
+                            std::vector<cspvar> const&vars,
+                            std::vector<int> const &coeff,
+                            int c)
+{
+  assert(vars.size() == coeff.size());
+  assert(b.min(s) == 0 && b.max(s) == 1);
+
+  vector<cspvar> v1(vars);
+  vector<int> c1(coeff);
+
+  /* Let L = c + sum coeff[i]*vars[i] */
+  /* Discover lb, ub, s.t. lb <= L <= ub */
+  int ub = c, lb = c;
+  for(size_t i = 0; i != vars.size(); ++i) {
+    if( coeff[i] > 0 ) {
+      ub += coeff[i] * vars[i].max(s);
+      lb += coeff[i] * vars[i].min(s);
+    } else {
+      ub += coeff[i] * vars[i].min(s);
+      lb += coeff[i] * vars[i].max(s);
+    }
+  }
+
+  if( ub <= 0 ) { /* L <= 0 always, lhs unaffected */
+    return 0L;
+  }
+  if( lb > 0 ) { /* L > 0 always, set b to false */
+    Clause *confl = b.assign(s, 0, NO_REASON);
+    if( confl ) throw unsat();
+    return 0L;
+  }
+
+  v1.push_back(b);
+  c1.push_back(ub+1);
+
+  // post -L + 1 + (lb - 1)*b <= 0
+  return post_lin_leq(s, v1, c1, c-ub-1);
+}
+
+cons *post_b_imp_lin_less_re(Solver &s,
+                             cspvar b,
+                             std::vector<cspvar> const&vars,
+                             std::vector<int> const &coeff,
+                             int c)
+{
+  return post_b_imp_lin_leq_re(s, b, vars, coeff, c+1);
+}
+
+cons *post_lin_leq_iff_re(Solver &s, std::vector<cspvar> const& vars,
+                          std::vector<int> const& coeff,
+                          int c, cspvar b)
+{
+  post_b_imp_lin_leq_re(s, b, vars, coeff, c);
+  return post_lin_leq_imp_b_re(s, vars, coeff, c, b);
+}
+
+cons *post_lin_less_iff_re(Solver &s, std::vector<cspvar> const& vars,
+                           std::vector<int> const& coeff,
+                           int c, cspvar b)
+{
+  post_b_imp_lin_leq_re(s, b, vars, coeff, c);
+  return post_lin_leq_imp_b_re(s, vars, coeff, c, b);
+}
+
+
 
 /* cons_pb
 
