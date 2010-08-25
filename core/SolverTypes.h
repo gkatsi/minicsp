@@ -220,6 +220,8 @@ class cspvar
  public:
   explicit cspvar(int id) : _id(id) {}
 
+  int id() const { return _id; }
+
   bool indomain(Solver& s, int d) const;
   int min(Solver& s) const;
   int max(Solver& s) const;

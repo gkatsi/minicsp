@@ -532,6 +532,11 @@ inline Clause *cspvar::assign(Solver &s, int d, vec<Lit> &ps)
   return assign(s, d, r);
 }
 
+inline bool operator==(cspvar x1, cspvar x2)
+{
+  return x1.id() == x2.id();
+}
+
 //==================================================
 // a trick to avoid branching
 // returns a1 if w >= 0, otherwise a2

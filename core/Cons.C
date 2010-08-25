@@ -218,6 +218,14 @@ Clause *cons_lin_le<N>::wake(Solver &s, Var)
   return 0L;
 }
 
+namespace lin {
+  struct cmp_varid {
+    bool operator()(pair<int, cspvar> x1, pair<int, cspvar> x2) const {
+      return x1.second.id() < x2.second.id();
+    }
+  };
+}
+
 cons *post_lin_leq(Solver &s, vector<cspvar> const& vars,
                    vector<int> const &coeff, int c)
 {
@@ -231,6 +239,20 @@ cons *post_lin_leq(Solver &s, vector<cspvar> const& vars,
     if( c > 0 ) throw unsat();
     return 0L;
   }
+
+  sort(pairs.begin(), pairs.end(), lin::cmp_varid());
+  vector< pair<int, cspvar> >::iterator i = pairs.begin(), j = i;
+  ++j;
+  for(; j != pairs.end(); ++j) {
+    if( i->second == j->second )
+      i->first += j->first;
+    else {
+      ++i;
+      *i = *j;
+    }
+  }
+  ++i;
+  pairs.erase(i, pairs.end());
 
   cons *con;
   switch(pairs.size()) {
