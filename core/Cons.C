@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -85,16 +86,222 @@ class cons_neq_re;
 class cons_lt_re;
 class cons_le_re;
 
-/* N-ary linear inequality, fixed arity (by template), non-fixed arity
-   and reified versions of both, Boolean and non-Boolean versions */
-template<int N> class cons_fixed_lin_le;
-template<int N> class cons_fixed_lin_le_re;
-class cons_nary_lin_le;
-class cons_nary_lin_le_re;
-/* no cons_lin_eq, because it's NP-hard. Just simulate with le and
-   ge. Also no lt, simulate with c == 1 */
+/* cons_lin_le
 
-/* sum_i weight[i]*var[i] >= lb */
+   N-ary linear inequality
+
+   sum w[i]*v[i] + c <= 0
+
+   The template parameter N is used to tell the compiler to create
+   optimized versions for small N. When N = 0, it uses the generic
+   loop, otherwise constant propagation will make it a fixed loop.
+*/
+template<size_t N>
+class cons_lin_le : public cons {
+  vector< pair<int, cspvar> > _vars;
+  int _c;
+  btptr _lbptr;
+
+  vec<Lit> _ps;
+
+  // computes the minimum contribution of var x with coeff w:
+  // w*x.min() if w>0, w*x.max() if w<0
+  int vmin(Solver &s, int w, cspvar x);
+  // describe the domain of x to use in the reason for whatever we do:
+  // 'x>=x.min()' if w>0, 'x<=x.max()' if w<0
+  Lit litreason(Solver &s, int lb, int w, cspvar x);
+public:
+  cons_lin_le(Solver &s,
+              vector< pair<int, cspvar> > const& vars,
+              int c);
+
+  Clause *wake(Solver& s, Var p);
+};
+
+template<size_t N>
+int cons_lin_le<N>::vmin(Solver &s, int w, cspvar x)
+{
+  return select(w, w*x.min(s), w*x.max(s));
+}
+
+template<size_t N>
+Lit cons_lin_le<N>::litreason(Solver &s, int lb,
+                              int w, cspvar x)
+{
+  return toLit( select(w,
+                       toInt(x.r_geq(s, x.min(s))),
+                       toInt(x.r_leq(s, x.max(s)))));
+}
+
+template<size_t N>
+cons_lin_le<N>::cons_lin_le(Solver &s,
+                            vector< pair<int, cspvar> > const& vars,
+                            int c) :
+  _vars(vars), _c(c)
+{
+  assert(N == 0 || N == vars.size());
+  _lbptr = s.alloc_backtrackable(sizeof(int));
+  int & lb = s.deref<int>(_lbptr);
+  lb = _c;
+  for(size_t i = 0; i != vars.size(); ++i) {
+    lb += vmin(s, _vars[i].first, _vars[i].second);
+    if( _vars[i].first > 0 )
+      s.wake_on_lb(_vars[i].second, this);
+    else
+      s.wake_on_ub(_vars[i].second, this);
+  }
+  if( lb > 0 ) throw unsat();
+  _ps.growTo(_vars.size(), lit_Undef);
+  if( wake(s, 0) )
+    throw unsat();
+}
+
+template<size_t N>
+Clause *cons_lin_le<N>::wake(Solver &s, Var)
+{
+  const size_t n = (N > 0) ? N : _vars.size();
+  int & lb = s.deref<int>(_lbptr);
+
+  lb = _c;
+  size_t nl = 0;
+  for(size_t i = 0; i != n; ++i) {
+    int w = _vars[i].first;
+    cspvar x = _vars[i].second;
+    _ps[nl] = litreason(s, lb, w, x);
+    nl += select( toInt(_ps[nl]), 1, 0 );
+    lb += vmin(s, w, x);
+  }
+
+  if( lb > 0 ) {
+    // shrink _ps to contruct the clause, then bring it back to its
+    // previous size
+    _ps.shrink(_vars.size() - nl );
+    Clause *r = Clause_new(_ps);
+    _ps.growTo(_vars.size(), lit_Undef);
+    s.addInactiveClause(r);
+    return r;
+  }
+
+  _ps.shrink(_vars.size() - nl );
+  for(size_t i = 0; i != n; ++i) {
+    Lit l = _ps[i];
+    int w = _vars[i].first;
+    cspvar x = _vars[i].second;
+    int gap = lb-vmin(s, w, x);
+    double newbound = -gap/(double)w;
+    if( w > 0 ) {
+      int ibound = floor(newbound);
+      if( litreason(s, lb, w, x) == lit_Undef ) {
+        _ps.push(x.e_leq(s, ibound));
+        x.setmax(s, ibound, _ps);
+        _ps.pop();
+      } else {
+        _ps[i] = x.e_leq(s, ibound);
+        x.setmax(s, ibound, _ps);
+        _ps[i] = l;
+      }
+    } else {
+      int ibound = ceil(newbound);
+      if( litreason(s, lb, w, x) == lit_Undef ) {
+        _ps.push(x.e_geq(s, ibound));
+        x.setmin(s, ibound, _ps);
+        _ps.pop();
+      } else {
+        _ps[i] = x.e_geq(s, ibound);
+        x.setmin(s, ibound, _ps);
+        _ps[i] = l;
+      }
+    }
+  }
+  _ps.growTo(_vars.size(), lit_Undef);
+
+  return 0L;
+}
+
+cons *post_lin_leq(Solver &s, vector<cspvar> const& vars,
+                   vector<int> const &coeff, int c)
+{
+  assert(vars.size() == coeff.size());
+  vector< pair<int, cspvar> > pairs;
+  for(size_t i = 0; i != vars.size(); ++i)
+    if( coeff[i] )
+      pairs.push_back( make_pair(coeff[i], vars[i]));
+
+  if( pairs.size() == 0 ) {
+    if( c > 0 ) throw unsat();
+    return 0L;
+  }
+
+  cons *con;
+  switch(pairs.size()) {
+  case 1:   con = new cons_lin_le<1>(s, pairs, c); break;
+  case 2:   con = new cons_lin_le<2>(s, pairs, c); break;
+  case 3:   con = new cons_lin_le<3>(s, pairs, c); break;
+  default:  con = new cons_lin_le<0>(s, pairs, c); break;
+  }
+  s.addConstraint(con);
+  return con;
+}
+
+cons *post_lin_less(Solver &s, vector<cspvar> const& vars,
+                    vector<int> const &coeff, int c)
+{
+  return post_lin_leq(s, vars, coeff, c+1);
+}
+
+cons *post_lin_leq_imp_b_re(Solver &s, vector<cspvar> const&vars,
+                            vector<int> const &coeff,
+                            int c, cspvar b)
+{
+  assert(vars.size() == coeff.size());
+  assert(b.min(s) == 0 && b.max(s) == 1);
+
+  vector<cspvar> v1(vars);
+  vector<int> c1(coeff);
+
+  /* Let L = c + sum coeff[i]*vars[i] */
+  /* Discover ub, s.t. L <= ub */
+  int ub = c, lb = c;
+  for(size_t i = 0; i != vars.size(); ++i) {
+    if( coeff[i] > 0 ) {
+      ub += coeff[i] * vars[i].max(s);
+      lb += coeff[i] * vars[i].min(s);
+    } else {
+      ub += coeff[i] * vars[i].min(s);
+      lb += coeff[i] * vars[i].max(s);
+    }
+    c1[i] = -c1[i];
+  }
+
+  if( ub <= 0 ) { /* L <= 0 always, b is true */
+    Clause *confl = b.assign(s, 1, NO_REASON);
+    if( confl ) throw unsat();
+    return 0L;
+  }
+  if( lb > 0 ) { /* L > 0 always, rhs unaffected */
+    return 0L;
+  }
+
+  v1.push_back(b);
+  c1.push_back(lb-1);
+
+  // post -L + 1 + (lb - 1)*b <= 0
+  return post_lin_leq(s, v1, c1, -c+1);
+}
+
+cons *post_lin_less_imp_b_re(Solver &s, vector<cspvar> const&vars,
+                             vector<int> const &coeff,
+                             int c, cspvar b)
+{
+  return post_lin_leq_imp_b_re(s, vars, coeff, c+1, b);
+}
+
+/* cons_pb
+
+   PseudoBoolean constraint
+
+   sum_i weight[i]*var[i] >= lb
+*/
 namespace pb {
   struct compare_abs_weights {
     bool operator()(pair<int, Var> a, pair<int, Var> b)
