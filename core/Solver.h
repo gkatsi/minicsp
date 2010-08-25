@@ -313,7 +313,7 @@ inline bool     Solver::locked          (const Clause& c) const { return reason[
 inline void     Solver::newDecisionLevel()  {
   trail_lim.push(trail.size());
   int dlvl = decisionLevel();
-  if( backtrackable_space.size() < decisionLevel() )
+  while( backtrackable_space.size() < decisionLevel() )
     backtrackable_space.push(0L);
   if( !backtrackable_space[dlvl-1] ) {
     backtrackable_space[dlvl-1] = malloc(backtrackable_size);
@@ -321,7 +321,7 @@ inline void     Solver::newDecisionLevel()  {
       throw std::bad_alloc();
   }
   std::memcpy(backtrackable_space[dlvl-1], current_space,
-              backtrackable_size*sizeof(int));
+              backtrackable_size);
 }
 
 inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
@@ -534,7 +534,7 @@ inline Clause *cspvar::assign(Solver &s, int d, vec<Lit> &ps)
 
 //==================================================
 // a trick to avoid branching
-// returns a1 if w > 0, otherwise a2
+// returns a1 if w >= 0, otherwise a2
 
 inline
 int select(int w, int a1, int a2)

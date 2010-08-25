@@ -304,7 +304,7 @@ void Solver::cancelUntil(int level) {
         trail_lim.shrink(trail_lim.size() - level);
     }
     memcpy(current_space, backtrackable_space[level],
-           backtrackable_size*sizeof(int));
+           backtrackable_size);
 }
 
 btptr Solver::alloc_backtrackable(unsigned size)
