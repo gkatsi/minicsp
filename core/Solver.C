@@ -423,8 +423,9 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
         if (c.learnt())
             claBumpActivity(c);
 
-        for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
+        for (int j = 0; j < c.size(); j++){
             Lit q = c[j];
+            if( p == q ) continue;
 
             if (!seen[var(q)] && level[var(q)] > 0){
                 varBumpActivity(var(q));
