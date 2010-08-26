@@ -650,9 +650,8 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
           assert( value(xf.leqi(xb.min)) != l_False &&
                   (xb.min == xf.omin ||
                    value(xf.leqi(xb.min-1)) == l_False ));
-          if( xb.min > xf.omin )
-            uncheckedEnqueue_np( ~Lit( xf.leqi(xb.min) ),
-                                 xf.ps4[xb.min-1-xf.omin] );
+          uncheckedEnqueue_np( ~Lit( xf.leqi(xb.min) ),
+                               xf.ps4[xb.min-xf.omin] );
           ++xb.min;
         }
       }

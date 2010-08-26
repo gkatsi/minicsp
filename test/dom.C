@@ -13,7 +13,7 @@ namespace {
     --xmin;
     while( x.eqi(s, xmin) != var_Undef ) {
       Var eqi = x.eqi(s, xmin);
-      Var leqi = x.eqi(s, xmin);
+      Var leqi = x.leqi(s, xmin);
       assert( s.value( eqi ) == l_False );
       assert( s.value( leqi ) == l_False );
       --xmin;
@@ -228,5 +228,4 @@ void dom_test()
   cerr << "test10..." << flush;
   test10();
   cerr << "OK\n";
-
 }
