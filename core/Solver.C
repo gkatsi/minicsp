@@ -670,14 +670,16 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
 
     if( pevent.type == domevent::GEQ ) {
       int geq = pevent.d-1;
-      while(geq >= xf.omin &&
-            (geq == xf.omin ||
-             value( xf.leqi(geq-1) ) != l_False ) ) {
-        if( geq > xf.omin )
-          uncheckedEnqueue_np( ~Lit(xf.leqi(geq-1)),
-                               xf.ps1[geq-1-xf.omin] );
-        if( value(xf.eqi(geq)) != l_False ) {
-          uncheckedEnqueue_np( ~Lit( xf.eqi(geq)), xf.ps2[geq-xf.omin] );
+      if( value(xf.eqi(geq)) != l_False ) {
+        uncheckedEnqueue_np( ~Lit( xf.eqi(geq)), xf.ps2[geq-xf.omin] );
+        --xb.dsize;
+      }
+      while(geq > xf.omin &&
+            value( xf.leqi(geq-1) ) != l_False ) {
+        uncheckedEnqueue_np( ~Lit(xf.leqi(geq-1)),
+                             xf.ps1[geq-1-xf.omin] );
+        if( value(xf.eqi(geq-1)) != l_False ) {
+          uncheckedEnqueue_np( ~Lit( xf.eqi(geq-1)), xf.ps2[geq-1-xf.omin] );
           --xb.dsize;
         }
         --geq;
@@ -693,13 +695,15 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
     }
     if( pevent.type == domevent::LEQ ) {
       int leq = pevent.d+1;
-      while( leq <= xf.omax &&
-             ( leq == xf.omax ||
-               value( xf.leqi(leq) ) != l_True ) ) {
-        if( leq < xf.omax )
-          uncheckedEnqueue_np( Lit( xf.leqi(leq) ), xf.ps1[leq-1-xf.omin] );
-        if( value(xf.eqi(leq)) != l_False ) {
-          uncheckedEnqueue_np( ~Lit( xf.eqi(leq)), xf.ps3[leq-xf.omin] );
+      if( leq <= xf.omax && value(xf.eqi(leq)) != l_False ) {
+        uncheckedEnqueue_np( ~Lit( xf.eqi(leq)), xf.ps3[leq-xf.omin] );
+        --xb.dsize;
+      }
+      while( leq < xf.omax &&
+             value( xf.leqi(leq) ) != l_True ) {
+        uncheckedEnqueue_np( Lit( xf.leqi(leq) ), xf.ps1[leq-1-xf.omin] );
+        if( value(xf.eqi(leq+1)) != l_False ) {
+          uncheckedEnqueue_np( ~Lit( xf.eqi(leq+1)), xf.ps3[leq+1-xf.omin] );
           --xb.dsize;
         }
         ++leq;
