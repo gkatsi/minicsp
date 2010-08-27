@@ -291,7 +291,7 @@ class cons
    *
    * wake() is executed during propagation of a single variable, while
    * propagate() is a delayed call. */
-  virtual Clause *wake(Solver&, Var);
+  virtual Clause *wake(Solver&, Lit);
   virtual Clause *propagate(Solver&);
   /* if this constraint forced a literal and set itself as reason, add
    * to c all literals that explain this pruning.

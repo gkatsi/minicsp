@@ -788,7 +788,7 @@ Clause* Solver::propagate()
         for(cons **ci = &pwakes[0],
               **ciend = ci+pwakes.size();
             ci != ciend; ++ci) {
-          confl = (*ci)->wake(*this, var(p));
+          confl = (*ci)->wake(*this, p);
           if( confl ) {
             qhead = trail.size();
             break;
@@ -808,7 +808,7 @@ Clause* Solver::propagate()
         for( cons **ci = &((*dewakes)[0]),
                **ciend = ci+dewakes->size();
              ci != ciend; ++ci) {
-          confl = (*ci)->wake(*this, var(p));
+          confl = (*ci)->wake(*this, p);
           if( confl ) {
             qhead = trail.size();
             break;
@@ -1122,7 +1122,7 @@ void Solver::checkLiteralCount()
     }
 }
 
-Clause* cons::wake(Solver&, Var)
+Clause* cons::wake(Solver&, Lit)
 {
   assert(0);
   return 0L;

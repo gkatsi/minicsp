@@ -26,14 +26,14 @@ public:
     s.wake_on_lb(x, this);
     s.wake_on_ub(y, this);
     _reason.push(); _reason.push();
-    if( wake(s, 0) )
+    if( wake(s, lit_Undef) )
       throw unsat();
   }
 
-  virtual Clause *wake(Solver& s, Var p);
+  virtual Clause *wake(Solver& s, Lit p);
 };
 
-Clause *cons_le::wake(Solver& s, Var)
+Clause *cons_le::wake(Solver& s, Lit)
 {
   if( _y.max(s) + _c < _x.min(s) ) { // failure
     _reason[0] = _x.r_geq( s, _x.min(s) );
@@ -115,7 +115,7 @@ public:
               vector< pair<int, cspvar> > const& vars,
               int c);
 
-  Clause *wake(Solver& s, Var p);
+  Clause *wake(Solver& s, Lit p);
 };
 
 template<size_t N>
@@ -152,12 +152,12 @@ cons_lin_le<N>::cons_lin_le(Solver &s,
   }
   if( lb > 0 ) throw unsat();
   _ps.growTo(_vars.size(), lit_Undef);
-  if( wake(s, 0) )
+  if( wake(s, lit_Undef) )
     throw unsat();
 }
 
 template<size_t N>
-Clause *cons_lin_le<N>::wake(Solver &s, Var)
+Clause *cons_lin_le<N>::wake(Solver &s, Lit)
 {
   const size_t n = (N > 0) ? N : _vars.size();
   int & lb = s.deref<int>(_lbptr);
@@ -412,7 +412,7 @@ public:
           std::vector<Var> const& vars,
           std::vector<int> const& weights, int lb);
 
-  virtual Clause *wake(Solver& s, Var p);
+  virtual Clause *wake(Solver& s, Lit p);
 };
 
 cons *post_pb(Solver& s, vector<Var> const& vars,
@@ -447,7 +447,7 @@ cons_pb::cons_pb(Solver& s,
     s.wake_on_lit(_svars[i].second, this);
 }
 
-Clause *cons_pb::wake(Solver& s, Var)
+Clause *cons_pb::wake(Solver& s, Lit)
 {
   size_t np = _posvars.size(),
     nn = _negvars.size();
