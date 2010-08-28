@@ -208,6 +208,7 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
 {
   const size_t n = (N > 0) ? N : _vars.size();
   int & lb = s.deref<int>(_lbptr);
+  int pspos[_vars.size()];
 
   lb = _c;
   size_t nl = 0;
@@ -215,6 +216,7 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
     int w = _vars[i].first;
     cspvar x = _vars[i].second;
     _ps[nl] = litreason(s, lb, w, x);
+    pspos[i] = nl;
     nl += select( toInt(_ps[nl]), 1, 0 );
     lb += vmin(s, w, x);
   }
@@ -231,7 +233,7 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
 
   _ps.shrink(_vars.size() - nl );
   for(size_t i = 0; i != n; ++i) {
-    Lit l = _ps[i];
+    Lit l = _ps[pspos[i]];
     int w = _vars[i].first;
     cspvar x = _vars[i].second;
     int gap = lb-vmin(s, w, x);
@@ -243,9 +245,9 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
         x.setmax(s, ibound, _ps);
         _ps.pop();
       } else {
-        _ps[i] = x.e_leq(s, ibound);
+        _ps[pspos[i]] = x.e_leq(s, ibound);
         x.setmax(s, ibound, _ps);
-        _ps[i] = l;
+        _ps[pspos[i]] = l;
       }
     } else {
       int ibound = ceil(newbound);
@@ -254,9 +256,9 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
         x.setmin(s, ibound, _ps);
         _ps.pop();
       } else {
-        _ps[i] = x.e_geq(s, ibound);
+        _ps[pspos[i]] = x.e_geq(s, ibound);
         x.setmin(s, ibound, _ps);
-        _ps[i] = l;
+        _ps[pspos[i]] = l;
       }
     }
   }

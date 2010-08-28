@@ -207,8 +207,32 @@ namespace {
       assert( x[i].min(s) == 2 );
   }
 
-  /* SEND+MORE=MONEY */
+  /* not-so-black-box. this tests that the clause produced from
+     lin_leq contains the right literals, even though x[1].r_geq(1)
+     and x[2].r_geq(1) are both lit_Undef. This would mean that
+     x[3].e_leq(2) does not go to _ps[3] but to _ps[1] in the original
+     buggy implementation.
+  */
   void test09()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(4, 1, 20);
+    vector<int> c(4);
+    c[0] = 1000;
+    c[1] = 1;
+    c[2] = 1;
+    c[3] = 1000;
+    post_lin_leq(s, x, c, -5040);
+    x[0].setmin(s, 3, NO_REASON);
+    x[3].setmin(s, 2, NO_REASON);
+    Clause *confl = s.propagate();
+    assert(!confl);
+    assert(x[0].max(s) == 3);
+    assert(x[3].max(s) == 2);
+  }
+
+  /* SEND+MORE=MONEY */
+  void test_money()
   {
     Solver s;
     vector<cspvar> x = s.newCSPVarArray(8, 0, 9);
@@ -242,9 +266,12 @@ namespace {
 
     post_lin_leq(s, v, c, 0);
     post_lin_leq(s, v, c1, 0);
+    post_alldiff(s, x);
 
     s.solve();
+    cout << s.conflicts << " conflicts. ";
   }
+
 }
 
 void lin_test()
@@ -285,5 +312,9 @@ void lin_test()
 
   cerr << "test09..." << flush;
   test09();
+  cerr << "OK\n";
+
+  cerr << "send more money..." << flush;
+  test_money();
   cerr << "OK\n";
 }
