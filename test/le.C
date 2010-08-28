@@ -91,11 +91,95 @@ namespace {
     Clause *c = s.propagate();
     assert(c);
   }
+
+  void test06()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(0, 10);
+    cspvar y = s.newCSPVar(5, 15);
+    post_neq(s, x, y, 0);
+    Clause *c = s.propagate();
+    assert(!c);
+
+    s.newDecisionLevel();
+    x.assign(s, 7, NO_REASON);
+    c = s.propagate();
+    assert(!c);
+    assert( !y.indomain(s, 7) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    x.assign(s, 4, NO_REASON);
+    c = s.propagate();
+    assert(!c);
+    assert( y.domsize(s) == 11 );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    y.assign(s, 7, NO_REASON);
+    c = s.propagate();
+    assert(!c);
+    assert( !x.indomain(s, 7) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    y.assign(s, 14, NO_REASON);
+    c = s.propagate();
+    assert(!c);
+    assert( x.domsize(s) == 11 );
+    s.cancelUntil(0);
+
+    cspvar z = s.newCSPVar(5, 7);
+    cspvar w = s.newCSPVar(5, 7);
+    z.assign(s, 5, NO_REASON);
+    w.assign(s, 5, NO_REASON);
+    bool caught=false;
+    try {
+      post_neq(s, z, w, 0);
+    } catch(unsat) {
+      caught = true;
+    }
+    assert(caught);
+  }
+
+  void test07()
+  {
+    Solver s;
+    cspvar p = s.newCSPVar(5, 7);
+    cspvar q = s.newCSPVar(3, 10);
+    p.assign(s, 5, NO_REASON);
+    post_neq(s, p, q, 0);
+    assert( !q.indomain(s, 5) );
+  }
+
+  void test08()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(5, 10);
+    cspvar y = s.newCSPVar(15, 20);
+    post_neq(s, x, y, -11);
+    Clause *c = s.propagate();
+    assert(!c);
+
+    s.newDecisionLevel();
+    x.assign(s, 7, NO_REASON);
+    c = s.propagate();
+    assert(!c);
+    assert( !y.indomain(s, 18));
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    y.assign(s, 19, NO_REASON);
+    c = s.propagate();
+    assert(!c);
+    assert( !x.indomain(s, 8));
+    s.cancelUntil(0);
+  }
 }
 
 void le_test()
 {
-  cerr << "le tests\n";
+  cerr << "arithmetic relation tests\n";
 
   cerr << "test 01 ... " << flush;
   test01();
@@ -114,6 +198,19 @@ void le_test()
   cerr << "OK" << endl;
 
   cerr << "test 05 ... " << flush;
-  test04();
+  test05();
   cerr << "OK" << endl;
+
+  cerr << "test 06 ... " << flush;
+  test06();
+  cerr << "OK" << endl;
+
+  cerr << "test 07 ... " << flush;
+  test07();
+  cerr << "OK" << endl;
+
+  cerr << "test 08 ... " << flush;
+  test08();
+  cerr << "OK" << endl;
+
 }

@@ -11,7 +11,54 @@ using std::make_pair;
 using std::vector;
 
 class cons_eq;  // ==
-class cons_neq; // !=
+
+/* x != y + c */
+class cons_neq : public cons {
+  cspvar _x, _y;
+  int _c;
+  vec<Lit> _reason; // cache to avoid the cost of allocation
+public:
+  cons_neq(Solver &s,
+           cspvar x, cspvar y, int c) :
+    _x(x), _y(y), _c(c)
+  {
+    s.wake_on_fix(x, this);
+    s.wake_on_fix(y, this);
+    _reason.push(); _reason.push();
+    if( x.min(s) == x.max(s) ) {
+      Clause *c = wake(s, x.e_eq(s, x.min(s)));
+      if(c) throw unsat();
+    } else if( y.min(s) == y.max(s) ) {
+      Clause *c = wake(s, y.e_eq(s, y.min(s)));
+      if(c) throw unsat();
+    }
+  }
+
+  virtual Clause *wake(Solver& s, Lit p);
+};
+
+Clause *cons_neq::wake(Solver& s, Lit event)
+{
+  domevent e = s.event(event);
+  assert( e.type == domevent::EQ );
+  if( e.x == _x ) {
+    _reason[0] = ~event;
+    _reason[1] = _y.e_neq(s, e.d-_c);
+    return _y.remove(s, e.d-_c, _reason);
+  } else {
+    _reason[0] = ~event;
+    _reason[1] = _x.e_neq(s, e.d+_c);
+    return _x.remove(s, e.d+_c, _reason);
+  }
+}
+
+/* x != y + c */
+cons *post_neq(Solver& s, cspvar x, cspvar y, int c)
+{
+  cons *con = new cons_neq(s, x, y, c);
+  s.addConstraint(con);
+  return con;
+}
 
 /* x <= y + c */
 class cons_le : public cons {
@@ -517,3 +564,12 @@ class cons_table;
 /* Global constraints */
 class cons_alldiff;
 class cons_gcc;
+
+cons *post_alldiff(Solver &s, std::vector<cspvar> const &x)
+{
+  cons *rv;
+  for(size_t i = 0; i != x.size(); ++i)
+    for(size_t j = i+1; j != x.size(); ++j)
+      rv = post_neq(s, x[i], x[j], 0);
+  return rv;
+}

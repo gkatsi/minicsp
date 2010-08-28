@@ -80,6 +80,9 @@ public:
     template<typename T>
     T&      deref(btptr p);                                     // dereference backtrackable mem. for temporary use only
 
+    // event information
+    domevent event(Lit p);                                      // get the event associated with a literal, if any
+
     // Solving:
     //
     bool    simplify     ();                        // Removes already satisfied clauses.
@@ -284,6 +287,13 @@ T& Solver::deref(btptr p)
   return *(T*)get(p);
 }
 
+inline
+domevent Solver::event(Lit p)
+{
+  if( p != lit_Undef ) return events[toInt(p)];
+  else return domevent();
+}
+
 inline void Solver::insertVarOrder(Var x) {
     if (!order_heap.inHeap(x) && decision_var[x]) order_heap.insert(x); }
 
@@ -454,6 +464,16 @@ inline Lit cspvar::r_leq(Solver &s, int d) const
   return ~Lit( leqi(s, d) );
 }
 
+inline Lit cspvar::r_eq(Solver &s, int d) const
+{
+  return ~Lit( eqi(s, d) );
+}
+
+inline Lit cspvar::r_neq(Solver &s, int d) const
+{
+  return Lit( eqi(s, d) );
+}
+
 inline Lit cspvar::e_geq(Solver &s, int d) const
 {
   return ~Lit( leqi(s, d-1) );
@@ -462,6 +482,16 @@ inline Lit cspvar::e_geq(Solver &s, int d) const
 inline Lit cspvar::e_leq(Solver &s, int d) const
 {
   return Lit( leqi(s, d) );
+}
+
+inline Lit cspvar::e_eq(Solver &s, int d) const
+{
+  return Lit( eqi(s, d) );
+}
+
+inline Lit cspvar::e_neq(Solver &s, int d) const
+{
+  return ~Lit( eqi(s, d) );
 }
 
 inline Clause *cspvar::remove(Solver &s, int d, Clause *c)

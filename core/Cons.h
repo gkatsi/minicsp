@@ -10,6 +10,9 @@
 
 /* Arithmetic relations */
 
+// v1 != v2 + c
+cons *post_neq(Solver& s, cspvar v1, cspvar v2, int c);
+
 // v1 <= v2 + c
 cons *post_leq(Solver& s, cspvar v1, cspvar v2, int c);
 // v1 < v2 + c
@@ -57,3 +60,7 @@ cons *post_lin_less_iff_re(Solver &s, std::vector<cspvar> const& vars,
 /* Boolean N-ary linear inequality: Pseudo-Boolean constraints */
 cons *post_pb(Solver& s, std::vector<Var> const& vars,
               std::vector<int> const& weights, int lb);
+
+// alldiff
+cons *post_alldiff(Solver &s, std::vector<cspvar> const& vars);
+
