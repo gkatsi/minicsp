@@ -1068,6 +1068,11 @@ bool Solver::solve(const vec<Lit>& assumps)
         // Extend & copy model:
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
+        cspmodel.growTo(cspvars.size());
+        for(int i = 0; i != cspvars.size(); ++i) {
+          cspvar_bt& xb = deref<cspvar_bt>(cspvarbt[i]);
+          cspmodel[i] = std::make_pair(xb.min, xb.max);
+        }
 #ifndef NDEBUG
         verifyModel();
 #endif

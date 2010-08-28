@@ -269,7 +269,23 @@ namespace {
     post_alldiff(s, x);
 
     s.solve();
-    cout << s.conflicts << " conflicts. ";
+    cout << s.conflicts << " conflicts.\n";
+    for(int i = 0; i != s.cspmodel.size(); ++i)
+      assert(s.cspmodel[i].first == s.cspmodel[i].second);
+    cout << "SEND+MORE=MONEY\n";
+    vec< pair<int, int> >& m = s.cspmodel;
+    cout << m[0].first << m[1].first << m[2].first << m[3].first << "+"
+         << m[4].first << m[5].first << m[6].first << m[1].first << "="
+         << m[4].first
+         << m[5].first << m[2].first << m[1].first << m[7].first
+         << "\n";
+    int send = 1000*m[0].first + 100*m[1].first + 10*m[2].first
+      + m[3].first;
+    int more = 1000*m[4].first + 100*m[5].first + 10*m[6].first
+      + m[1].first;
+    int money = 10000*m[4].first +
+      1000*m[5].first + 100*m[2].first + 10*m[1].first + m[7].first;
+    assert(send+more==money);
   }
 
 }

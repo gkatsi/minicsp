@@ -110,9 +110,11 @@ public:
 
     // Extra results: (read-only member variable)
     //
-    vec<lbool> model;             // If problem is satisfiable, this vector contains the model (if any).
-    vec<Lit>   conflict;          // If problem is unsatisfiable (possibly under assumptions),
-                                  // this vector represent the final conflict clause expressed in the assumptions.
+    vec<lbool> model;                   // If problem is satisfiable, this vector contains the model (if any).
+    vec<Lit>   conflict;                // If problem is unsatisfiable (possibly under assumptions),
+                                        // this vector represent the final conflict clause expressed in the assumptions.
+    vec<std::pair<int, int> > cspmodel; // for a satisfiable problem, the lb and ub of every csp variable. easier to
+                                        // access than through model, but strictly speaking redundant
 
     // Mode of operation:
     //
