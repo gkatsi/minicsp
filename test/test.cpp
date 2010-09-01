@@ -1,5 +1,5 @@
-#include "Test.h"
-#include "Solver.h"
+#include "test.hpp"
+#include "solver.hpp"
 
 void assert_clause_exact(Clause *to_test, vec<Lit> const& expected)
 {

@@ -1,6 +1,6 @@
 MTL       = ../mtl
 CORE      = ../core
-CHDRS     = $(wildcard *.h) $(wildcard $(MTL)/*.h)
+CHDRS     = $(wildcard *.hpp) $(wildcard $(MTL)/*.h)
 EXEC      = minicsp
 CFLAGS    = -I$(MTL) -Wall -ffloat-store
 LFLAGS    = -lz

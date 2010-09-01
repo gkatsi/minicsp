@@ -3,8 +3,8 @@
 #include <vector>
 #include <algorithm>
 #include <cassert>
-#include "Cons.h"
-#include "Solver.h"
+#include "cons.hpp"
+#include "solver.hpp"
 
 using std::pair;
 using std::make_pair;

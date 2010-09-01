@@ -5,7 +5,7 @@
  * Copyright (c) 2010 George katsirelos
  ******************************************************************************/
 
-#include "Solver.h"
+#include "solver.hpp"
 #include <vector>
 
 /* Arithmetic relations */

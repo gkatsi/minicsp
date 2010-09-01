@@ -1,7 +1,7 @@
 #include <iostream>
-#include "Test.h"
-#include "Solver.h"
-#include "Cons.h"
+#include "test.hpp"
+#include "solver.hpp"
+#include "cons.hpp"
 
 using std::vector;
 

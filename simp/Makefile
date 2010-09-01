@@ -1,11 +1,11 @@
 MTL       = ../mtl
 CORE      = ../core
-CHDRS     = $(wildcard *.h) $(wildcard $(MTL)/*.h)
+CHDRS     = $(wildcard *.hpp) $(wildcard $(MTL)/*.h)
 EXEC      = minisat
 CFLAGS    = -I$(MTL) -I$(CORE) -Wall -ffloat-store
 LFLAGS    = -lz
 
-CSRCS     = $(wildcard *.C)
-COBJS     = $(addsuffix .o, $(basename $(CSRCS))) $(CORE)/Solver.o
+CSRCS     = $(wildcard *.cpp)
+COBJS     = $(addsuffix .o, $(basename $(CSRCS))) $(CORE)/solver.o
 
 include ../mtl/template.mk

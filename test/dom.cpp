@@ -1,6 +1,6 @@
 #include <iostream>
-#include "Test.h"
-#include "Solver.h"
+#include "test.hpp"
+#include "solver.hpp"
 
 using namespace std;
 

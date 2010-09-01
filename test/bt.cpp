@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "Solver.h"
-#include "Cons.h"
+#include "solver.hpp"
+#include "cons.hpp"
 
 using namespace std;
 

@@ -28,7 +28,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "Heap.h"
 #include "Alg.h"
 
-#include "SolverTypes.h"
+#include "solvertypes.hpp"
 
 
 //=================================================================================================
