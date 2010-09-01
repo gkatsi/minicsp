@@ -207,11 +207,6 @@ inline void Clause::strengthen(Lit p)
 class Solver;
 class cons;
 
-// thrown by the constructor of a constraint only
-struct unsat : public std::exception
-{
-};
-
 // a container for operations, lightweight enough to pass by value
 class cspvar
 {
@@ -363,5 +358,24 @@ struct domevent
 };
 
 inline bool noevent(domevent d) { return d.type == domevent::NONE; }
+
+//==================================================
+// exceptions
+
+// thrown by the constructor of a constraint only
+struct unsat : public std::exception
+{
+};
+
+// thrown when we expect a var to be assigned
+struct unassigned_var : public std::exception
+{
+  Solver &_s;
+  cspvar _x;
+
+  unassigned_var(Solver& s, cspvar x) : _s(s), _x(x) {}
+  const char* what() const throw();
+};
+
 
 #endif

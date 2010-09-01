@@ -116,6 +116,8 @@ public:
     vec<std::pair<int, int> > cspmodel; // for a satisfiable problem, the lb and ub of every csp variable. easier to
                                         // access than through model, but strictly speaking redundant
 
+    int modelval(cspvar x);             // even easier than cspmodel
+
     // Mode of operation:
     //
     double    var_decay;          // Inverse of the variable activity decay factor.                                            (default 1 / 0.95)
@@ -398,6 +400,15 @@ inline void Solver::printClause(const C& c)
     }
 }
 
+inline int Solver::modelval(cspvar x)
+{
+  int id = x._id;
+  if( cspmodel[id].first != cspmodel[id].second )
+    throw unassigned_var(*this, x);
+  return cspmodel[id].first;
+}
+
+
 //==================================================
 // cspvar inlines
 
@@ -598,6 +609,19 @@ int select(int w, int a1, int a2)
 {
   int mask = w >> (sizeof(int)*8-1);
   return - (~mask*a1) - (mask*a2);
+}
+
+//==================================================
+// exception stuff
+
+inline
+const char *unassigned_var::what() const throw()
+{
+  const char s[] = "expected var %s to be assigned";
+  static const int l = strlen(s);
+  static char exc[2*strlen(s)+1];
+  snprintf(exc, 2*l, s, _x.id());
+  return exc;
 }
 
 //=================================================================================================
