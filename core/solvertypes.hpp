@@ -218,6 +218,7 @@ class cspvar
   friend class Solver;
   int _id;
  public:
+  cspvar() : _id(-1) {}
   explicit cspvar(int id) : _id(id) {}
 
   int id() const { return _id; }
