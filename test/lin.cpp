@@ -273,6 +273,27 @@ namespace {
     assert(x[0].max(s) == 6);
   }
 
+  /* sum x1..x5 <= 25
+     x1 .. x4 in [4, 10]
+     x5 = 5
+
+     result: x1..x4 <= 8
+
+     this is supposed to test that the correct constraint is posted
+     after simplification when a variable is fixed. it's not clear how
+     to test this other than making sure the correct propagation
+     happens.
+   */
+  void test12()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(5, 4, 10);
+    x[4].assign(s, 5, NO_REASON);
+    vector<int> c(5);
+    for(int i = 0; i != 5; ++i) c[i] = 1;
+    post_lin_leq(s, x, c, -25);
+  }
+
   /* SEND+MORE=MONEY */
   void test_money()
   {
@@ -378,6 +399,10 @@ void lin_test()
 
   cerr << "test11..." << flush;
   test11();
+  cerr << "OK\n";
+
+  cerr << "test12..." << flush;
+  test12();
   cerr << "OK\n";
 
   cerr << "send more money..." << flush;

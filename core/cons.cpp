@@ -277,9 +277,14 @@ void post_lin_leq(Solver &s, vector<cspvar> const& vars,
 {
   assert(vars.size() == coeff.size());
   vector< pair<int, cspvar> > pairs;
-  for(size_t i = 0; i != vars.size(); ++i)
-    if( coeff[i] )
-      pairs.push_back( make_pair(coeff[i], vars[i]));
+  for(size_t i = 0; i != vars.size(); ++i) {
+    if( !coeff[i] ) continue;
+    if( vars[i].min(s) == vars[i].max(s) ) {
+      c += coeff[i]*vars[i].min(s);
+      continue;
+    }
+    pairs.push_back( make_pair(coeff[i], vars[i]));
+  }
 
   if( pairs.size() == 0 ) {
     if( c > 0 ) throw unsat();
