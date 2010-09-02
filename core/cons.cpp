@@ -53,11 +53,10 @@ Clause *cons_neq::wake(Solver& s, Lit event)
 }
 
 /* x != y + c */
-cons *post_neq(Solver& s, cspvar x, cspvar y, int c)
+void post_neq(Solver& s, cspvar x, cspvar y, int c)
 {
   cons *con = new cons_neq(s, x, y, c);
   s.addConstraint(con);
-  return con;
 }
 
 /* x <= y + c */
@@ -111,19 +110,17 @@ Clause *cons_le::wake(Solver& s, Lit)
 }
 
 // v1 <= v2 + c
-cons *post_leq(Solver& s, cspvar v1, cspvar v2, int c)
+void post_leq(Solver& s, cspvar v1, cspvar v2, int c)
 {
   cons *con = new cons_le(s, v1, v2, c);
   s.addConstraint(con);
-  return con;
 }
 
 // v1 < v2 + c
-cons *post_less(Solver& s, cspvar v1, cspvar v2, int c)
+void post_less(Solver& s, cspvar v1, cspvar v2, int c)
 {
   cons *con = new cons_le(s, v1, v2, c-1);
   s.addConstraint(con);
-  return con;
 }
 
 
@@ -275,7 +272,7 @@ namespace lin {
   };
 }
 
-cons *post_lin_leq(Solver &s, vector<cspvar> const& vars,
+void post_lin_leq(Solver &s, vector<cspvar> const& vars,
                    vector<int> const &coeff, int c)
 {
   assert(vars.size() == coeff.size());
@@ -286,7 +283,7 @@ cons *post_lin_leq(Solver &s, vector<cspvar> const& vars,
 
   if( pairs.size() == 0 ) {
     if( c > 0 ) throw unsat();
-    return 0L;
+    return;
   }
 
   sort(pairs.begin(), pairs.end(), lin::cmp_varid());
@@ -311,16 +308,15 @@ cons *post_lin_leq(Solver &s, vector<cspvar> const& vars,
   default:  con = new cons_lin_le<0>(s, pairs, c); break;
   }
   s.addConstraint(con);
-  return con;
 }
 
-cons *post_lin_less(Solver &s, vector<cspvar> const& vars,
+void post_lin_less(Solver &s, vector<cspvar> const& vars,
                     vector<int> const &coeff, int c)
 {
-  return post_lin_leq(s, vars, coeff, c+1);
+  post_lin_leq(s, vars, coeff, c+1);
 }
 
-cons *post_lin_leq_imp_b_re(Solver &s, vector<cspvar> const&vars,
+void post_lin_leq_imp_b_re(Solver &s, vector<cspvar> const&vars,
                             vector<int> const &coeff,
                             int c, cspvar b)
 {
@@ -347,27 +343,27 @@ cons *post_lin_leq_imp_b_re(Solver &s, vector<cspvar> const&vars,
   if( ub <= 0 ) { /* L <= 0 always, b is true */
     Clause *confl = b.assign(s, 1, NO_REASON);
     if( confl ) throw unsat();
-    return 0L;
+    return;
   }
   if( lb > 0 ) { /* L > 0 always, rhs unaffected */
-    return 0L;
+    return;
   }
 
   v1.push_back(b);
   c1.push_back(lb-1);
 
   // post -L + 1 + (lb - 1)*b <= 0
-  return post_lin_leq(s, v1, c1, -c+1);
+  post_lin_leq(s, v1, c1, -c+1);
 }
 
-cons *post_lin_less_imp_b_re(Solver &s, vector<cspvar> const&vars,
+void post_lin_less_imp_b_re(Solver &s, vector<cspvar> const&vars,
                              vector<int> const &coeff,
                              int c, cspvar b)
 {
-  return post_lin_leq_imp_b_re(s, vars, coeff, c+1, b);
+  post_lin_leq_imp_b_re(s, vars, coeff, c+1, b);
 }
 
-cons *post_b_imp_lin_leq_re(Solver &s,
+void post_b_imp_lin_leq_re(Solver &s,
                             cspvar b,
                             std::vector<cspvar> const&vars,
                             std::vector<int> const &coeff,
@@ -393,44 +389,44 @@ cons *post_b_imp_lin_leq_re(Solver &s,
   }
 
   if( ub <= 0 ) { /* L <= 0 always, lhs unaffected */
-    return 0L;
+    return;
   }
   if( lb > 0 ) { /* L > 0 always, set b to false */
     Clause *confl = b.assign(s, 0, NO_REASON);
     if( confl ) throw unsat();
-    return 0L;
+    return;
   }
 
   v1.push_back(b);
   c1.push_back(ub+1);
 
   // post -L + 1 + (lb - 1)*b <= 0
-  return post_lin_leq(s, v1, c1, c-ub-1);
+  post_lin_leq(s, v1, c1, c-ub-1);
 }
 
-cons *post_b_imp_lin_less_re(Solver &s,
+void post_b_imp_lin_less_re(Solver &s,
                              cspvar b,
                              std::vector<cspvar> const&vars,
                              std::vector<int> const &coeff,
                              int c)
 {
-  return post_b_imp_lin_leq_re(s, b, vars, coeff, c+1);
+  post_b_imp_lin_leq_re(s, b, vars, coeff, c+1);
 }
 
-cons *post_lin_leq_iff_re(Solver &s, std::vector<cspvar> const& vars,
+void post_lin_leq_iff_re(Solver &s, std::vector<cspvar> const& vars,
                           std::vector<int> const& coeff,
                           int c, cspvar b)
 {
   post_b_imp_lin_leq_re(s, b, vars, coeff, c);
-  return post_lin_leq_imp_b_re(s, vars, coeff, c, b);
+  post_lin_leq_imp_b_re(s, vars, coeff, c, b);
 }
 
-cons *post_lin_less_iff_re(Solver &s, std::vector<cspvar> const& vars,
+void post_lin_less_iff_re(Solver &s, std::vector<cspvar> const& vars,
                            std::vector<int> const& coeff,
                            int c, cspvar b)
 {
   post_b_imp_lin_leq_re(s, b, vars, coeff, c);
-  return post_lin_leq_imp_b_re(s, vars, coeff, c, b);
+  post_lin_leq_imp_b_re(s, vars, coeff, c, b);
 }
 
 
@@ -464,12 +460,11 @@ public:
   virtual Clause *wake(Solver& s, Lit p);
 };
 
-cons *post_pb(Solver& s, vector<Var> const& vars,
+void post_pb(Solver& s, vector<Var> const& vars,
               vector<Var> const& weights, int lb)
 {
   cons *c = new cons_pb(s, vars, weights, lb);
   s.addConstraint(c);
-  return c;
 }
 
 cons_pb::cons_pb(Solver& s,
@@ -567,11 +562,9 @@ class cons_table;
 class cons_alldiff;
 class cons_gcc;
 
-cons *post_alldiff(Solver &s, std::vector<cspvar> const &x)
+void post_alldiff(Solver &s, std::vector<cspvar> const &x)
 {
-  cons *rv;
   for(size_t i = 0; i != x.size(); ++i)
     for(size_t j = i+1; j != x.size(); ++j)
-      rv = post_neq(s, x[i], x[j], 0);
-  return rv;
+      post_neq(s, x[i], x[j], 0);
 }
