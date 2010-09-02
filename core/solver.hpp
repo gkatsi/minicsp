@@ -103,6 +103,9 @@ public:
     lbool   value      (Var x) const;       // The current value of a variable.
     lbool   value      (Lit p) const;       // The current value of a literal.
     lbool   modelValue (Lit p) const;       // The value of a literal in the last model. The last call to solve must have been satisfiable.
+  std::pair<int,int>  cspModelRange(cspvar x) const; // Range in last model
+  int     cspModelValue(cspvar x) const;     // Assigned value in last model
+
     int     nAssigns   ()      const;       // The current number of assigned literals.
     int     nClauses   ()      const;       // The current number of original clauses.
     int     nLearnts   ()      const;       // The current number of learnt clauses.
@@ -115,8 +118,6 @@ public:
                                         // this vector represent the final conflict clause expressed in the assumptions.
     vec<std::pair<int, int> > cspmodel; // for a satisfiable problem, the lb and ub of every csp variable. easier to
                                         // access than through model, but strictly speaking redundant
-
-    int modelval(cspvar x);             // even easier than cspmodel
 
     // Mode of operation:
     //
@@ -400,7 +401,12 @@ inline void Solver::printClause(const C& c)
     }
 }
 
-inline int Solver::modelval(cspvar x)
+inline std::pair<int, int> Solver::cspModelRange(cspvar x) const
+{
+  return cspmodel[x._id];
+}
+
+inline int Solver::cspModelValue(cspvar x) const
 {
   int id = x._id;
   if( cspmodel[id].first != cspmodel[id].second )

@@ -217,6 +217,7 @@ class cspvar
   explicit cspvar(int id) : _id(id) {}
 
   int id() const { return _id; }
+  bool valid() const { return _id >= 0; }
 
   bool indomain(Solver& s, int d) const;
   int min(Solver& s) const;
@@ -370,10 +371,10 @@ struct unsat : public std::exception
 // thrown when we expect a var to be assigned
 struct unassigned_var : public std::exception
 {
-  Solver &_s;
+  Solver const&_s;
   cspvar _x;
 
-  unassigned_var(Solver& s, cspvar x) : _s(s), _x(x) {}
+  unassigned_var(Solver const& s, cspvar x) : _s(s), _x(x) {}
   const char* what() const throw();
 };
 
