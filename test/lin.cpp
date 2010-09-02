@@ -231,6 +231,48 @@ namespace {
     assert(x[3].max(s) == 2);
   }
 
+  /* sum x1..x4 <= 18 ===> b
+     x1..x4 in [1..5]
+     b = 0 *while posting*
+
+     result: x1..x4 >= 4
+   */
+  void test10()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(4, 1, 5);
+    cspvar b = s.newCSPVar(0,1);
+    vector<int> c(4);
+    c[0] = 1;
+    c[1] = 1;
+    c[2] = 1;
+    c[3] = 1;
+    b.setmax(s, 0, NO_REASON);
+    post_lin_leq_imp_b_re(s, x, c, -18, b);
+    assert(x[0].min(s) == 4);
+  }
+
+  /* b ===> sum x1..x4 <= 18
+     x1..x4 in [4, 7]
+     b = 1 *while posting*
+
+     result x1..x4 <= 6
+   */
+  void test11()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(4, 4, 7);
+    cspvar b = s.newCSPVar(0,1);
+    vector<int> c(4);
+    c[0] = 1;
+    c[1] = 1;
+    c[2] = 1;
+    c[3] = 1;
+    b.setmin(s, 1, NO_REASON);
+    post_b_imp_lin_leq_re(s, b, x, c, -18);
+    assert(x[0].max(s) == 6);
+  }
+
   /* SEND+MORE=MONEY */
   void test_money()
   {
@@ -328,6 +370,14 @@ void lin_test()
 
   cerr << "test09..." << flush;
   test09();
+  cerr << "OK\n";
+
+  cerr << "test10..." << flush;
+  test10();
+  cerr << "OK\n";
+
+  cerr << "test11..." << flush;
+  test11();
   cerr << "OK\n";
 
   cerr << "send more money..." << flush;

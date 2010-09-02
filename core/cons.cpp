@@ -321,7 +321,15 @@ void post_lin_leq_imp_b_re(Solver &s, vector<cspvar> const&vars,
                             int c, cspvar b)
 {
   assert(vars.size() == coeff.size());
-  assert(b.min(s) == 0 && b.max(s) == 1);
+  assert(b.min(s) >= 0 && b.max(s) <= 1);
+
+  if(b.max(s) == 0) {
+    vector<int> c1(coeff);
+    for(size_t i = 0; i != vars.size(); ++i)
+      c1[i] = -c1[i];
+    post_lin_leq(s, vars, c1, -c+1);
+    return;
+  }
 
   vector<cspvar> v1(vars);
   vector<int> c1(coeff);
@@ -370,7 +378,12 @@ void post_b_imp_lin_leq_re(Solver &s,
                             int c)
 {
   assert(vars.size() == coeff.size());
-  assert(b.min(s) == 0 && b.max(s) == 1);
+  assert(b.min(s) >= 0 && b.max(s) <= 1);
+
+  if( b.min(s) == 1 ) {
+    post_lin_leq(s, vars, coeff, c);
+    return;
+  }
 
   vector<cspvar> v1(vars);
   vector<int> c1(coeff);
