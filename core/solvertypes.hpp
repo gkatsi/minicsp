@@ -378,5 +378,17 @@ struct unassigned_var : public std::exception
   const char* what() const throw();
 };
 
+//==================================================
+// convenience macros
+
+#define DO_OR_THROW(action) do {                \
+    Clause *confl##__LINE__ = action;           \
+    if( confl##__LINE__ ) throw unsat();        \
+  } while(0)
+
+#define DO_OR_RETURN(action) do {               \
+    Clause *confl##__LINE__ = action;           \
+    if( confl##__LINE__ ) return confl##__LINE; \
+  } while(0)
 
 #endif
