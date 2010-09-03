@@ -10,7 +10,103 @@ using std::pair;
 using std::make_pair;
 using std::vector;
 
-class cons_eq;  // ==
+/* x == y + c */
+class cons_eq : public cons {
+  cspvar _x, _y;
+  int _c;
+  vec<Lit> _reason; // cache to avoid the cost of allocation
+public:
+  cons_eq(Solver &s,
+           cspvar x, cspvar y, int c) :
+    _x(x), _y(y), _c(c)
+  {
+    // wake on everything! more immediate consequences
+    s.wake_on_dom(x, this);
+    s.wake_on_lb(x, this);
+    s.wake_on_ub(x, this);
+    s.wake_on_fix(x, this);
+    s.wake_on_dom(y, this);
+    s.wake_on_lb(y, this);
+    s.wake_on_ub(y, this);
+    s.wake_on_fix(y, this);
+    _reason.push(); _reason.push();
+
+    if( _x.min(s) > _y.max(s)+_c ||
+        _y.min(s) > _x.max(s)-_c )
+      throw unsat();
+
+    DO_OR_THROW(_y.setmin(s, _x.min(s)-_c, NO_REASON));
+    DO_OR_THROW(_y.setmax(s, _x.max(s)-_c, NO_REASON));
+    DO_OR_THROW(_x.setmin(s, _y.min(s)+_c, NO_REASON));
+    DO_OR_THROW(_x.setmax(s, _y.max(s)+_c, NO_REASON));
+
+    for(int i = x.min(s)+1, iend = x.max(s); i != iend; ++i) {
+      if( !x.indomain(s, i) )
+        DO_OR_THROW(wake(s, x.e_neq(s, i)));
+    }
+
+    for(int i = y.min(s)+1, iend = y.max(s); i != iend; ++i) {
+      if( !y.indomain(s, i) )
+        DO_OR_THROW(wake(s, y.e_neq(s, i)));
+    }
+  }
+
+  virtual Clause *wake(Solver& s, Lit p);
+};
+
+Clause *cons_eq::wake(Solver& s, Lit event)
+{
+  domevent e = s.event(event);
+  _reason[0] = ~event;
+  switch(e.type) {
+  case domevent::EQ:
+    if( e.x == _x ) {
+      _reason[1] = _y.e_eq(s, e.d-_c);
+      return _y.assign(s, e.d-_c, _reason);
+    } else {
+      _reason[1] = _x.e_eq(s, e.d+_c);
+      return _x.assign(s, e.d+_c, _reason);
+    }
+    break;
+  case domevent::NEQ:
+    if( e.x == _x ) {
+      _reason[1] = _y.e_neq(s, e.d-_c);
+      return _y.remove(s, e.d-_c, _reason);
+    } else {
+      _reason[1] = _x.e_neq(s, e.d+_c);
+      return _x.remove(s, e.d+_c, _reason);
+    }
+    break;
+  case domevent::GEQ:
+    if( e.x == _x ) {
+      _reason[1] = _y.e_geq(s, e.d-_c);
+      return _y.setmin(s, e.d-_c, _reason);
+    } else {
+      _reason[1] = _x.e_geq(s, e.d+_c);
+      return _x.setmin(s, e.d+_c, _reason);
+    }
+    break;
+  case domevent::LEQ:
+    if( e.x == _x ) {
+      _reason[1] = _y.e_leq(s, e.d-_c);
+      return _y.setmax(s, e.d-_c, _reason);
+    } else {
+      _reason[1] = _x.e_leq(s, e.d+_c);
+      return _x.setmax(s, e.d+_c, _reason);
+    }
+    break;
+  case domevent::NONE:
+    assert(0);
+  }
+  return 0L;
+}
+
+/* x == y + c */
+void post_eq(Solver& s, cspvar x, cspvar y, int c)
+{
+  cons *con = new cons_eq(s, x, y, c);
+  s.addConstraint(con);
+}
 
 /* x != y + c */
 class cons_neq : public cons {

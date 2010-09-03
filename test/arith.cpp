@@ -175,6 +175,67 @@ namespace {
     assert( !x.indomain(s, 8));
     s.cancelUntil(0);
   }
+
+  // eq, c == 0
+  void test09()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(5, 10);
+    cspvar y = s.newCSPVar(7, 12);
+    post_eq(s, x, y, 0);
+    assert(x.min(s) == 7);
+    assert(y.max(s) == 10);
+
+    s.newDecisionLevel();
+    x.remove(s, 9, NO_REASON);
+    y.remove(s, 8, NO_REASON);
+    s.propagate();
+    assert(!y.indomain(s, 9));
+    assert(!x.indomain(s, 8));
+    s.cancelUntil(0);
+
+    x.assign(s, 10, NO_REASON);
+    s.propagate();
+    assert(y.min(s) == 10 && y.max(s) == 10);
+  }
+
+  // eq, c != 0
+  void test10()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(15, 20);
+    cspvar y = s.newCSPVar(7, 12);
+    post_eq(s, x, y, 10);
+    assert(x.min(s) == 17);
+    assert(y.max(s) == 10);
+
+    s.newDecisionLevel();
+    x.remove(s, 19, NO_REASON);
+    y.remove(s, 8, NO_REASON);
+    s.propagate();
+    assert(!y.indomain(s, 9));
+    assert(!x.indomain(s, 18));
+    s.cancelUntil(0);
+
+    x.assign(s, 20, NO_REASON);
+    s.propagate();
+    assert(y.min(s) == 10 && y.max(s) == 10);
+  }
+
+  // eq unsat
+  void test11()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(15, 20);
+    cspvar y = s.newCSPVar(7, 12);
+    bool caught = false;
+    try {
+      post_eq(s, x, y, 0);
+    } catch( unsat ) {
+      caught = true;
+    }
+    assert(caught);
+  }
 }
 
 void le_test()
@@ -213,4 +274,15 @@ void le_test()
   test08();
   cerr << "OK" << endl;
 
+  cerr << "test 09 ... " << flush;
+  test09();
+  cerr << "OK" << endl;
+
+  cerr << "test 10 ... " << flush;
+  test10();
+  cerr << "OK" << endl;
+
+  cerr << "test 11 ... " << flush;
+  test11();
+  cerr << "OK" << endl;
 }

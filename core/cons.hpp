@@ -10,6 +10,9 @@
 
 /* Arithmetic relations */
 
+// v1 == v2 + c
+void post_eq(Solver& s, cspvar v1, cspvar v2, int c);
+
 // v1 != v2 + c
 void post_neq(Solver& s, cspvar v1, cspvar v2, int c);
 
