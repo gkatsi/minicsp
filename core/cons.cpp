@@ -473,10 +473,10 @@ void post_lin_less_right_imp_re(Solver &s, vector<cspvar> const&vars,
 }
 
 void post_lin_leq_left_imp_re(Solver &s,
-                              cspvar b,
                               std::vector<cspvar> const&vars,
-                            std::vector<int> const &coeff,
-                            int c)
+                              std::vector<int> const &coeff,
+                              int c,
+                              cspvar b)
 {
   assert(vars.size() == coeff.size());
   assert(b.min(s) >= 0 && b.max(s) <= 1);
@@ -519,19 +519,19 @@ void post_lin_leq_left_imp_re(Solver &s,
 }
 
 void post_lin_less_left_imp_re(Solver &s,
-                               cspvar b,
                                std::vector<cspvar> const&vars,
                                std::vector<int> const &coeff,
-                               int c)
+                               int c,
+                               cspvar b)
 {
-  post_lin_leq_left_imp_re(s, b, vars, coeff, c+1);
+  post_lin_leq_left_imp_re(s, vars, coeff, c+1, b);
 }
 
 void post_lin_leq_iff_re(Solver &s, std::vector<cspvar> const& vars,
                           std::vector<int> const& coeff,
                           int c, cspvar b)
 {
-  post_lin_leq_left_imp_re(s, b, vars, coeff, c);
+  post_lin_leq_left_imp_re(s, vars, coeff, c, b);
   post_lin_leq_right_imp_re(s, vars, coeff, c, b);
 }
 
@@ -539,11 +539,203 @@ void post_lin_less_iff_re(Solver &s, std::vector<cspvar> const& vars,
                            std::vector<int> const& coeff,
                            int c, cspvar b)
 {
-  post_lin_leq_left_imp_re(s, b, vars, coeff, c);
+  post_lin_leq_left_imp_re(s, vars, coeff, c, b);
   post_lin_leq_right_imp_re(s, vars, coeff, c, b);
 }
 
+// sum coeff[i]*vars[i] + c = 0
+void post_lin_eq(Solver &s,
+                 std::vector<cspvar> const& vars,
+                 std::vector<int> const& coeff,
+                 int c)
+{
+  post_lin_leq(s, vars, coeff, c);
+  vector<int> c1(coeff);
+  for(size_t i = 0; i != vars.size(); ++i)
+    c1[i] = -coeff[i];
+  post_lin_leq(s, vars, c1, -c);
+}
 
+// sum coeff[i]*vars[i] + c = 0 implies b = 1
+void post_lin_eq_right_imp_re(Solver &s,
+                              std::vector<cspvar> const& vars,
+                              std::vector<int> const& coeff,
+                              int c,
+                              cspvar b)
+{
+  cspvar b1 = s.newCSPVar(0,1);
+  cspvar b2 = s.newCSPVar(0,1);
+  post_lin_leq_right_imp_re(s, vars, coeff, c, b1);
+  vector<int> c1(coeff);
+  for(size_t i = 0; i != vars.size(); ++i)
+    c1[i] = -coeff[i];
+  post_lin_leq_right_imp_re(s, vars, c1, -c, b2);
+  vec<Lit> ps;
+  ps.push( ~Lit(b1.eqi(s, 1)) );
+  ps.push( ~Lit(b2.eqi(s, 1)) );
+  ps.push( Lit(b.eqi(s, 1)) );
+  s.addClause(ps);
+}
+
+// b = 1 implies sum coeff[i]*vars[i] + c = 0
+void post_lin_eq_left_imp_re(Solver &s,
+                             std::vector<cspvar> const& vars,
+                             std::vector<int> const& coeff,
+                             int c,
+                             cspvar b)
+{
+  cspvar b1 = s.newCSPVar(0,1);
+  cspvar b2 = s.newCSPVar(0,1);
+  post_lin_leq_left_imp_re(s, vars, coeff, c, b1);
+  vector<int> c1(coeff);
+  for(size_t i = 0; i != vars.size(); ++i)
+    c1[i] = -coeff[i];
+  post_lin_leq_left_imp_re(s, vars, c1, -c, b2);
+  vec<Lit> ps;
+  ps.push( ~Lit(b1.eqi(s, 1)) );
+  ps.push( ~Lit(b2.eqi(s, 1)) );
+  ps.push( Lit(b.eqi(s, 1)) );
+  s.addClause(ps);
+}
+
+// b=1 iff sum coeff[i]*vars[i] + c = 0
+//
+// L >= 0 => b1, L <= 0 => b2, b <=> b1 /\ b2
+void post_lin_iff_re(Solver &s,
+                     std::vector<cspvar> const& vars,
+                     std::vector<int> const& coeff,
+                     int c,
+                     cspvar b)
+{
+  cspvar b1 = s.newCSPVar(0,1);
+  cspvar b2 = s.newCSPVar(0,1);
+  post_lin_leq_right_imp_re(s, vars, coeff, c, b1);
+  vector<int> c1(coeff);
+  for(size_t i = 0; i != vars.size(); ++i)
+    c1[i] = -coeff[i];
+  post_lin_leq_right_imp_re(s, vars, c1, -c, b2);
+
+  vec<Lit> ps1, ps2, ps3;
+  ps1.push( ~Lit( b.eqi(s, 1) ) );
+  ps1.push( Lit( b1.eqi(s, 1) ) );
+
+  ps2.push( ~Lit( b.eqi(s, 1) ) );
+  ps2.push( Lit( b2.eqi(s, 1) ) );
+
+  ps3.push( ~Lit( b1.eqi(s, 1) ) );
+  ps3.push( ~Lit( b2.eqi(s, 1) ) );
+  ps3.push( Lit( b.eqi(s, 1)) );
+
+  s.addClause(ps1);
+  s.addClause(ps2);
+  s.addClause(ps3);
+}
+
+/* linear inequality: L != 0
+
+   implemented as
+   L >= 0 => b1, L <= 0 => b2, not b1 or not b2 */
+void post_lin_neq(Solver &s,
+                  std::vector<cspvar> const& vars,
+                  std::vector<int> const& coeff,
+                  int c)
+{
+  cspvar b1 = s.newCSPVar(0,1);
+  cspvar b2 = s.newCSPVar(0,1);
+  post_lin_leq_right_imp_re(s, vars, coeff, c, b1);
+  vector<int> c1(coeff);
+  for(size_t i = 0; i != vars.size(); ++i)
+    c1[i] = -coeff[i];
+  post_lin_leq_right_imp_re(s, vars, c1, -c, b2);
+  vec<Lit> ps;
+  ps.push( ~Lit(b1.eqi(s, 1)) );
+  ps.push( ~Lit(b2.eqi(s, 1)) );
+  s.addClause(ps);
+}
+
+/* L != 0 => b = 1
+
+   implemented as
+   L > 0 => b1, L < 0 => b2, b1 or b2 => b
+*/
+void post_lin_neq_right_imp_re(Solver &s,
+                               std::vector<cspvar> const& vars,
+                               std::vector<int> const& coeff,
+                               int c,
+                               cspvar b)
+{
+  cspvar b1 = s.newCSPVar(0,1);
+  cspvar b2 = s.newCSPVar(0,1);
+  post_lin_less_right_imp_re(s, vars, coeff, c, b1);
+  vector<int> c1(coeff);
+  for(size_t i = 0; i != vars.size(); ++i)
+    c1[i] = -coeff[i];
+  post_lin_less_right_imp_re(s, vars, c1, -c, b2);
+  vec<Lit> ps;
+  ps.push( ~Lit(b1.eqi(s, 1)) );
+  ps.push( ~Lit(b2.eqi(s, 1)) );
+  ps.push( Lit( b.eqi(s, 1)) );
+  s.addClause(ps);
+}
+
+/* b = 1 => L != 0
+
+   implemented as
+   b1 => L > 0, b2 => L < 0, b => b1 or b2
+*/
+void post_lin_neq_left_imp_re(Solver &s,
+                              std::vector<cspvar> const& vars,
+                              std::vector<int> const& coeff,
+                              int c,
+                              cspvar b)
+{
+  cspvar b1 = s.newCSPVar(0,1);
+  cspvar b2 = s.newCSPVar(0,1);
+  post_lin_less_left_imp_re(s, vars, coeff, c, b1);
+  vector<int> c1(coeff);
+  for(size_t i = 0; i != vars.size(); ++i)
+    c1[i] = -coeff[i];
+  post_lin_less_left_imp_re(s, vars, c1, -c, b2);
+  vec<Lit> ps;
+  ps.push( Lit(b1.eqi(s, 1)) );
+  ps.push( Lit(b2.eqi(s, 1)) );
+  ps.push( ~Lit( b.eqi(s, 1)) );
+  s.addClause(ps);
+}
+
+/* b = 1 <=> L != 0
+
+   implemented as
+   b1 => L > 0, b2 => L < 0, b <=> b1 or b2
+ */
+void post_lin_neq_iff_re(Solver &s,
+                         std::vector<cspvar> const& vars,
+                         std::vector<int> const& coeff,
+                         int c,
+                         cspvar b)
+{
+  cspvar b1 = s.newCSPVar(0,1);
+  cspvar b2 = s.newCSPVar(0,1);
+  post_lin_less_left_imp_re(s, vars, coeff, c, b1);
+  vector<int> c1(coeff);
+  for(size_t i = 0; i != vars.size(); ++i)
+    c1[i] = -coeff[i];
+  post_lin_less_left_imp_re(s, vars, c1, -c, b2);
+  vec<Lit> ps1, ps2, ps3;
+  ps1.push( Lit(b1.eqi(s, 1)) );
+  ps1.push( Lit(b2.eqi(s, 1)) );
+  ps1.push( ~Lit( b.eqi(s, 1)) );
+
+  ps2.push( ~Lit(b2.eqi(s, 1)) );
+  ps2.push( Lit( b.eqi(s, 1)) );
+
+  ps3.push( ~Lit(b2.eqi(s, 1)) );
+  ps3.push( Lit( b.eqi(s, 1)) );
+
+  s.addClause(ps1);
+  s.addClause(ps2);
+  s.addClause(ps3);
+}
 
 /* cons_pb
 

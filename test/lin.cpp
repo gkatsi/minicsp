@@ -165,7 +165,7 @@ namespace {
     w[1] = 1;
     w[2] = 1;
     w[3] = 1;
-    post_lin_leq_left_imp_re(s, b, x, w, -20);
+    post_lin_leq_left_imp_re(s, x, w, -20, b);
     s.propagate();
     assert(b.max(s) == 0);
   }
@@ -189,7 +189,7 @@ namespace {
     w[1] = -1;
     w[2] = -1;
     w[3] = -1;
-    post_lin_leq_left_imp_re(s, b, x, w, 20);
+    post_lin_leq_left_imp_re(s, x, w, 20, b);
     Clause *confl = s.propagate();
     assert(!confl);
 
@@ -269,7 +269,7 @@ namespace {
     c[2] = 1;
     c[3] = 1;
     b.setmin(s, 1, NO_REASON);
-    post_lin_leq_left_imp_re(s, b, x, c, -18);
+    post_lin_leq_left_imp_re(s, x, c, -18, b);
     assert(x[0].max(s) == 6);
   }
 
