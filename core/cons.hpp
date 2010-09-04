@@ -29,25 +29,25 @@ void post_lin_less(Solver &s, std::vector<cspvar> const& vars,
 
 // sum coeff[i]*vars[i] + c <= 0 implies b=1. This is NOT flatzinc's
 // reified constraint!
-void post_lin_leq_imp_b_re(Solver &s, std::vector<cspvar> const&vars,
-                      std::vector<int> const &coeff,
-                      int c, cspvar b);
-void post_lin_less_imp_b_re(Solver &s, std::vector<cspvar> const&vars,
-                       std::vector<int> const &coeff,
-                       int c, cspvar b);
+void post_lin_leq_right_imp_re(Solver &s, std::vector<cspvar> const&vars,
+                               std::vector<int> const &coeff,
+                               int c, cspvar b);
+void post_lin_less_right_imp_re(Solver &s, std::vector<cspvar> const&vars,
+                                std::vector<int> const &coeff,
+                                int c, cspvar b);
 
 // b implies sum coeff[i]*vars[i] + c <= 0. Again, not flatzinc's
 // constraint
-void post_b_imp_lin_leq_re(Solver &s,
-                            cspvar b,
-                            std::vector<cspvar> const&vars,
-                            std::vector<int> const &coeff,
-                            int c);
-void post_b_imp_lin_less_re(Solver &s,
-                             cspvar b,
-                             std::vector<cspvar> const&vars,
-                             std::vector<int> const &coeff,
-                             int c);
+void post_lin_leq_left_imp_re(Solver &s,
+                              cspvar b,
+                              std::vector<cspvar> const&vars,
+                              std::vector<int> const &coeff,
+                              int c);
+void post_lin_less_left_imp_re(Solver &s,
+                               cspvar b,
+                               std::vector<cspvar> const&vars,
+                               std::vector<int> const &coeff,
+                               int c);
 
 // this is flatzinc reified linear inequality
 void post_lin_leq_iff_re(Solver &s, std::vector<cspvar> const& vars,

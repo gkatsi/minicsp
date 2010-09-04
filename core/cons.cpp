@@ -417,9 +417,9 @@ void post_lin_less(Solver &s, vector<cspvar> const& vars,
   post_lin_leq(s, vars, coeff, c+1);
 }
 
-void post_lin_leq_imp_b_re(Solver &s, vector<cspvar> const&vars,
-                            vector<int> const &coeff,
-                            int c, cspvar b)
+void post_lin_leq_right_imp_re(Solver &s, vector<cspvar> const&vars,
+                               vector<int> const &coeff,
+                               int c, cspvar b)
 {
   assert(vars.size() == coeff.size());
   assert(b.min(s) >= 0 && b.max(s) <= 1);
@@ -465,16 +465,16 @@ void post_lin_leq_imp_b_re(Solver &s, vector<cspvar> const&vars,
   post_lin_leq(s, v1, c1, -c+1);
 }
 
-void post_lin_less_imp_b_re(Solver &s, vector<cspvar> const&vars,
-                             vector<int> const &coeff,
-                             int c, cspvar b)
+void post_lin_less_right_imp_re(Solver &s, vector<cspvar> const&vars,
+                                vector<int> const &coeff,
+                                int c, cspvar b)
 {
-  post_lin_leq_imp_b_re(s, vars, coeff, c+1, b);
+  post_lin_leq_right_imp_re(s, vars, coeff, c+1, b);
 }
 
-void post_b_imp_lin_leq_re(Solver &s,
-                            cspvar b,
-                            std::vector<cspvar> const&vars,
+void post_lin_leq_left_imp_re(Solver &s,
+                              cspvar b,
+                              std::vector<cspvar> const&vars,
                             std::vector<int> const &coeff,
                             int c)
 {
@@ -518,29 +518,29 @@ void post_b_imp_lin_leq_re(Solver &s,
   post_lin_leq(s, v1, c1, c-ub-1);
 }
 
-void post_b_imp_lin_less_re(Solver &s,
-                             cspvar b,
-                             std::vector<cspvar> const&vars,
-                             std::vector<int> const &coeff,
-                             int c)
+void post_lin_less_left_imp_re(Solver &s,
+                               cspvar b,
+                               std::vector<cspvar> const&vars,
+                               std::vector<int> const &coeff,
+                               int c)
 {
-  post_b_imp_lin_leq_re(s, b, vars, coeff, c+1);
+  post_lin_leq_left_imp_re(s, b, vars, coeff, c+1);
 }
 
 void post_lin_leq_iff_re(Solver &s, std::vector<cspvar> const& vars,
                           std::vector<int> const& coeff,
                           int c, cspvar b)
 {
-  post_b_imp_lin_leq_re(s, b, vars, coeff, c);
-  post_lin_leq_imp_b_re(s, vars, coeff, c, b);
+  post_lin_leq_left_imp_re(s, b, vars, coeff, c);
+  post_lin_leq_right_imp_re(s, vars, coeff, c, b);
 }
 
 void post_lin_less_iff_re(Solver &s, std::vector<cspvar> const& vars,
                            std::vector<int> const& coeff,
                            int c, cspvar b)
 {
-  post_b_imp_lin_leq_re(s, b, vars, coeff, c);
-  post_lin_leq_imp_b_re(s, vars, coeff, c, b);
+  post_lin_leq_left_imp_re(s, b, vars, coeff, c);
+  post_lin_leq_right_imp_re(s, vars, coeff, c, b);
 }
 
 
