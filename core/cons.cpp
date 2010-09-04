@@ -581,6 +581,68 @@ void post_pb(Solver& s, vector<Var> const& vars,
   s.addConstraint(c);
 }
 
+void post_pb(Solver& s, vector<cspvar> const& vars,
+              vector<Var> const& weights, int lb)
+{
+  vector<Var> vbool(vars.size());
+  for(size_t i = 0; i != vars.size(); ++i)
+    vbool[i] = vars[i].eqi(s, 1);
+
+  cons *c = new cons_pb(s, vbool, weights, lb);
+  s.addConstraint(c);
+}
+
+// sum ci*bi >= lb ==> b
+void post_pb_right_imp_re(Solver& s, std::vector<cspvar> const& vars,
+                          std::vector<int> const& weights, int lb,
+                          cspvar b)
+{
+  vector<cspvar> v1(vars);
+  vector<int> w1(weights);
+  int lub = 0, llb = 0;
+  for(size_t i = 0; i != vars.size(); ++i) {
+    if( weights[i] > 0 )
+      lub += weights[i];
+    else
+      llb += weights[i];
+    w1[i] = -w1[i];
+  }
+
+  int diff = lub - llb + 1;
+  v1.push_back(b);
+  w1.push_back( diff );
+  post_pb(s, v1, w1, - lb + 1);
+}
+
+// b ==> sum ci*bi >= lb
+void post_pb_left_imp_re(Solver& s, std::vector<cspvar> const& vars,
+                         std::vector<int> const& weights, int lb,
+                         cspvar b)
+{
+  vector<cspvar> v1(vars);
+  vector<int> w1(weights);
+  int lub = 0, llb = 0;
+  for(size_t i = 0; i != vars.size(); ++i) {
+    if( weights[i] > 0 )
+      lub += weights[i];
+    else
+      llb += weights[i];
+  }
+
+  int diff = lub - llb + 1;
+  v1.push_back(b);
+  w1.push_back( -diff );
+  post_pb(s, v1, w1, lb - diff);
+}
+
+void post_pb_iff_re(Solver& s, std::vector<cspvar> const& vars,
+                    std::vector<int> const& weights, int lb,
+                    cspvar b)
+{
+  post_pb_right_imp_re(s, vars, weights, lb, b);
+  post_pb_left_imp_re(s, vars, weights, lb, b);
+}
+
 cons_pb::cons_pb(Solver& s,
                  vector<Var> const& vars, vector<int> const& weights,
                  int lb) : _lb(lb), _ub(0)

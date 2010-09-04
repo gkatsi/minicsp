@@ -232,6 +232,24 @@ namespace {
     assert(c);
     assert_clause_exact(c, expected);
   }
+
+  /* 5*x1+5*x2 >= 0 ==> b = 1
+     exp: b=1
+   */
+  void test09()
+  {
+    // test disabled for now because the pb constraint does not do
+    // propagation
+#if 0
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(2, 0, 1);
+    cspvar b = s.newCSPVar(0, 1);
+    vector<int> w(2);
+    w[0] = 5;
+    w[1] = 5;
+    post_pb_right_imp_re(s, x, w, 0, b);
+#endif
+  }
 }
 
 void pb_test()

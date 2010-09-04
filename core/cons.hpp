@@ -63,6 +63,19 @@ void post_lin_less_iff_re(Solver &s, std::vector<cspvar> const& vars,
 /* Boolean N-ary linear inequality: Pseudo-Boolean constraints */
 void post_pb(Solver& s, std::vector<Var> const& vars,
               std::vector<int> const& weights, int lb);
+void post_pb(Solver& s, std::vector<cspvar> const& vars,
+              std::vector<int> const& weights, int lb);
+
+// reified versions
+void post_pb_right_imp_re(Solver& s, std::vector<cspvar> const& vars,
+                          std::vector<int> const& weights, int lb,
+                          cspvar b);
+void post_pb_left_imp_re(Solver& s, std::vector<cspvar> const& vars,
+                         std::vector<int> const& weights, int lb,
+                         cspvar b);
+void post_pb_iff_re(Solver& s, std::vector<cspvar> const& vars,
+                    std::vector<int> const& weights, int lb,
+                    cspvar b);
 
 // alldiff
 void post_alldiff(Solver &s, std::vector<cspvar> const& vars);
