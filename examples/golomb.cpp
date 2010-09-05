@@ -36,17 +36,24 @@ int main(int argc, char *argv[])
   post_alldiff(s, x);
   x[0].assign(s, 0, NO_REASON);
 
-  bool sol = s.solve();
+  bool sol = false, next = false;
+  do {
+    next = s.solve();
+    sol = sol || next;
+    if(next) {
+      for(size_t i = 0; i != m; ++i)
+        cout << s.cspModelValue(x[i]) << ' ';
+      cout << "\n";
+      int len = s.cspModelValue(x[m-1]);
+      x[m-1].setmax(s, len-1, NO_REASON);
+    }
+  } while(next);
+
+  cout << s.conflicts << " conflicts\n";
   if( !sol ) {
     cout << "unsat\n";
     return 0;
   }
 
-  for(size_t i = 0; i != m; ++i)
-    cout << s.cspModelValue(x[i]) << ' ';
-  cout << "\ndifferences ";
-  for(size_t i = m; i != x.size(); ++i)
-    cout << s.cspModelValue(x[i]) << ' ';
-  cout << "\n";
   return 0;
 }
