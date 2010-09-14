@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
   x[0].assign(s, 0, NO_REASON);
 
   bool sol = false, next = false;
+  int opt = l;
   do {
     next = s.solve();
     sol = sol || next;
@@ -45,10 +46,12 @@ int main(int argc, char *argv[])
         cout << s.cspModelValue(x[i]) << ' ';
       cout << "\n";
       int len = s.cspModelValue(x[m-1]);
+      opt = len;
       x[m-1].setmax(s, len-1, NO_REASON);
     }
   } while(next);
 
+  cout << "optimal length " << opt << "\n";
   cout << s.conflicts << " conflicts\n";
   if( !sol ) {
     cout << "unsat\n";
