@@ -58,6 +58,8 @@ Solver::Solver() :
     , backtrackable_cap(0)
     , backtrackable_space(0)
     , current_space(0L)
+
+    , active_constraint(0L)
 {}
 
 
@@ -565,6 +567,50 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
     seen[var(p)] = 0;
 }
 
+void Solver::debugclause(Clause *from, cons *c)
+{
+  Solver s1;
+  // add all variables
+  int nv = nVars();
+  s1.watches.growTo(2*nv);
+  s1.wakes_on_lit.growTo(nv);
+  s1.reason.growTo(nv, NULL);
+  s1.assigns.growTo(nv, toInt(l_Undef));
+  s1.level.growTo(nv, -1);
+  s1.activity.growTo(nv, 0);
+  s1.seen.growTo(nv, 0);
+
+  polarity.copyTo(s1.polarity);
+  decision_var.copyTo(s1.decision_var);
+
+  s1.phase.growTo(nv, l_Undef);
+  events.copyTo(s1.events);
+
+  cspvars.copyTo(s1.cspvars);
+  for(int i = 0; i != cspvars.size(); ++i) {
+    cspvar x(i);
+    btptr p = s1.alloc_backtrackable(sizeof(cspvar_bt));
+    s1.cspvarbt.push(p);
+    cspvar_bt & xbt = s1.deref<cspvar_bt>(p);
+    xbt.min = cspvars[i].omin;
+    xbt.max = cspvars[i].omax;
+    xbt.dsize = xbt.max - xbt.min + 1;
+    x.setmax(s1, xbt.max, (Clause*)0L);
+  }
+  s1.propagate();
+
+  c->clone(s1);
+  for(int i = 0; i != from->size(); ++i) {
+    Lit q = (*from)[i];
+    if(s1.value(q) == l_True )
+      return; // conflict already
+    if( s1.value( q ) != l_False )
+      s1.uncheckedEnqueue(~q, 0L);
+  }
+  Clause *confl = s1.propagate();
+  assert(confl);
+}
+
 void Solver::uncheckedEnqueue_np(Lit p, Clause *from)
 {
     assert(value(p) == l_Undef);
@@ -584,6 +630,11 @@ void Solver::uncheckedEnqueue_np(Lit p, Clause *from)
         foundp = true;
     }
     assert(foundp);
+#endif
+
+#ifdef INVARIANTS
+    if( active_constraint )
+      debugclause(from, active_constraint);
 #endif
 }
 
@@ -788,7 +839,9 @@ Clause* Solver::propagate()
         for(cons **ci = &pwakes[0],
               **ciend = ci+pwakes.size();
             ci != ciend; ++ci) {
+          active_constraint = *ci;
           confl = (*ci)->wake(*this, p);
+          active_constraint = 0L;
           if( confl ) {
             qhead = trail.size();
             break;
@@ -797,7 +850,7 @@ Clause* Solver::propagate()
 
         domevent const & pe = events[toInt(p)];
         if( noevent(pe) ) continue;
-        vec<cons*> *dewakes;
+        vec<cons*> *dewakes = 0L;
         switch(pe.type) {
         case domevent::NEQ: dewakes=&(cspvars[pe.x._id].wake_on_dom); break;
         case domevent::EQ: dewakes=&(cspvars[pe.x._id].wake_on_fix); break;
@@ -808,7 +861,9 @@ Clause* Solver::propagate()
         for( cons **ci = &((*dewakes)[0]),
                **ciend = ci+dewakes->size();
              ci != ciend; ++ci) {
+          active_constraint = *ci;
           confl = (*ci)->wake(*this, p);
+          active_constraint = 0L;
           if( confl ) {
             qhead = trail.size();
             break;
@@ -1140,6 +1195,11 @@ Clause* cons::propagate(Solver&)
 }
 
 void cons::explain(Solver&, Lit, vec<Lit>&)
+{
+  assert(0);
+}
+
+void cons::clone(Solver &other)
 {
   assert(0);
 }

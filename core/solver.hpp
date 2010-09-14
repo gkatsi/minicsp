@@ -142,6 +142,7 @@ public:
 
 public:
     // Interface to propagators
+    void     debugclause      (Clause *from, cons *c);                                 // check whether clause *from causes a failure given constraint c
     void     uncheckedEnqueue (Lit p, Clause* from = NULL);                            // Enqueue a literal. Assumes value of literal is undefined.
     bool     enqueue          (Lit p, Clause* from = NULL);                            // Test if fact 'p' contradicts current state, enqueue otherwise.
     Clause*  propagate        ();                                                      // Perform unit propagation. Returns possibly conflicting clause.
@@ -211,6 +212,8 @@ protected:
     size_t              backtrackable_cap;   // How much backtrackable memory is allocated
     vec<void*>          backtrackable_space; // per-level copies of backtrackable data
     void*               current_space;       // All backtrackable data are pointers into this
+
+    cons*               active_constraint;   // the constraint currently propagating.
 
     // Temporaries (to reduce allocation overhead). Each variable is prefixed by the method in which it is
     // used, exept 'seen' wich is used in several places.

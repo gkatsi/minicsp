@@ -131,6 +131,7 @@ public:
   }
 
   virtual Clause *wake(Solver& s, Lit p);
+  virtual void clone(Solver& other);
 };
 
 Clause *cons_neq::wake(Solver& s, Lit event)
@@ -146,6 +147,12 @@ Clause *cons_neq::wake(Solver& s, Lit event)
     _reason[1] = _x.e_neq(s, e.d+_c);
     return _x.remove(s, e.d+_c, _reason);
   }
+}
+
+void cons_neq::clone(Solver &other)
+{
+  cons *con = new cons_neq(other, _x, _y, _c);
+  other.addConstraint(con);
 }
 
 /* x != y + c */
@@ -173,6 +180,7 @@ public:
   }
 
   virtual Clause *wake(Solver& s, Lit p);
+  virtual void clone(Solver& othersolver);
 };
 
 Clause *cons_le::wake(Solver& s, Lit)
@@ -203,6 +211,12 @@ Clause *cons_le::wake(Solver& s, Lit)
   }
 
   return 0L;
+}
+
+void cons_le::clone(Solver &other)
+{
+  cons *con = new cons_le(other, _x, _y, _c);
+  other.addConstraint(con);
 }
 
 // v1 <= v2 + c
@@ -256,6 +270,7 @@ public:
               int c);
 
   Clause *wake(Solver& s, Lit p);
+  void clone(Solver& other);
 };
 
 template<size_t N>
@@ -358,6 +373,13 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
   _ps.growTo(_vars.size(), lit_Undef);
 
   return 0L;
+}
+
+template<size_t N>
+void cons_lin_le<N>::clone(Solver &other)
+{
+  cons *con = new cons_lin_le<N>(other, _vars, _c);
+  other.addConstraint(con);
 }
 
 namespace lin {
@@ -907,8 +929,6 @@ Clause *cons_pb::wake(Solver& s, Lit)
   s.addInactiveClause(conf);
   return conf;
 }
-
-class cons_pb_re;
 
 class cons_div; // integer division
 class cons_min;

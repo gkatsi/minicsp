@@ -294,6 +294,10 @@ class cons
    * to c all literals that explain this pruning.
    */
   virtual void explain(Solver&, Lit p, vec<Lit>& c);
+
+  /* Clone this constraint and post it to othersolver. Useful for
+   * debugging clauses */
+  virtual void clone(Solver &othersolver);
 };
 
 // all the fixed or non-backtracked data of a csp variable
@@ -329,6 +333,25 @@ class cspvar_fixed
   Var leqi(int i) const { return ind(i)
       ? firstbool+2*(i-omin)+1
       : var_Undef; }
+
+  void copyclauses(vec<Clause*>& target, vec<Clause*> const& source)
+  {
+    target.growTo(source.size(), 0L);
+    for(int i = 0; i != source.size(); ++i) {
+      if( source[i] && source[i] != INVALID_CLAUSE )
+        target[i] = Clause_new(*source[i]);
+    }
+  }
+public:
+  cspvar_fixed() {}
+  cspvar_fixed(cspvar_fixed& f) :
+    omin(f.omin), omax(f.omax), firstbool(f.firstbool)
+  {
+    copyclauses(ps1, f.ps1);
+    copyclauses(ps2, f.ps2);
+    copyclauses(ps3, f.ps3);
+    copyclauses(ps4, f.ps4);
+  }
 };
 
 // backtracked data of a csp variable
