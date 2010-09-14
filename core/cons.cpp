@@ -6,6 +6,7 @@
 #include "cons.hpp"
 #include "solver.hpp"
 
+using std::ostream;
 using std::pair;
 using std::make_pair;
 using std::vector;
@@ -132,6 +133,7 @@ public:
 
   virtual Clause *wake(Solver& s, Lit p);
   virtual void clone(Solver& other);
+  virtual ostream& print(ostream& os) const;
 };
 
 Clause *cons_neq::wake(Solver& s, Lit event)
@@ -153,6 +155,16 @@ void cons_neq::clone(Solver &other)
 {
   cons *con = new cons_neq(other, _x, _y, _c);
   other.addConstraint(con);
+}
+
+ostream& cons_neq::print(ostream& os) const
+{
+  os << _x << " != " << _y;
+  if( _c > 0 )
+    os << " + " << _c;
+  else if( _c < 0 )
+    os << " - " << -_c;
+  return os;
 }
 
 /* x != y + c */
@@ -181,6 +193,7 @@ public:
 
   virtual Clause *wake(Solver& s, Lit p);
   virtual void clone(Solver& othersolver);
+  virtual ostream& print(ostream& os) const;
 };
 
 Clause *cons_le::wake(Solver& s, Lit)
@@ -217,6 +230,16 @@ void cons_le::clone(Solver &other)
 {
   cons *con = new cons_le(other, _x, _y, _c);
   other.addConstraint(con);
+}
+
+ostream& cons_le::print(ostream& os) const
+{
+  os << _x << " <= " << _y;
+  if( _c > 0 )
+    os << " + " << _c;
+  else if( _c < 0 )
+    os << " - " << -_c;
+  return os;
 }
 
 // v1 <= v2 + c
@@ -271,6 +294,7 @@ public:
 
   Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
+  ostream& print(ostream& os) const;
 };
 
 template<size_t N>
@@ -380,6 +404,37 @@ void cons_lin_le<N>::clone(Solver &other)
 {
   cons *con = new cons_lin_le<N>(other, _vars, _c);
   other.addConstraint(con);
+}
+
+template<size_t N>
+ostream& cons_lin_le<N>::print(ostream& os) const
+{
+  for(size_t i = 0; i != _vars.size(); ++i) {
+    if( _vars[i].first == 1 ) {
+      if( i != 0 )
+        os << " + ";
+      os << _vars[i].second;
+    } else if( _vars[i].first == -1 ) {
+      if( i != 0 )
+        os << " ";
+      os << "- " << _vars[i].second;
+    } else if( _vars[i].first > 0 ) {
+      if( i != 0 )
+        os << " +";
+      os << _vars[i].first << "*" << _vars[i].second;
+    }
+    else if( _vars[i].first < 0 ) {
+      if( i != 0 )
+        os << " ";
+      os << "- " << -_vars[i].first << "*" << _vars[i].second;
+    }
+  }
+  if( _c > 0 )
+    os << " + " << _c;
+  else
+    os << " - " << -_c;
+  os << " <= 0";
+  return os;
 }
 
 namespace lin {

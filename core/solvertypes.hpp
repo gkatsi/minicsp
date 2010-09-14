@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <cassert>
 #include <stdint.h>
+#include <iostream>
 
 class Solver;
 
@@ -298,6 +299,9 @@ class cons
   /* Clone this constraint and post it to othersolver. Useful for
    * debugging clauses */
   virtual void clone(Solver &othersolver);
+
+  /* human readable representation of the constraint for debugging */
+  virtual std::ostream& print(std::ostream& os) const;
 };
 
 // all the fixed or non-backtracked data of a csp variable
@@ -382,6 +386,14 @@ struct domevent
 };
 
 inline bool noevent(domevent d) { return d.type == domevent::NONE; }
+
+//==================================================
+// output
+
+std::ostream& operator<<(std::ostream& os, cons const&);
+std::ostream& operator<<(std::ostream& os, domevent);
+std::ostream& operator<<(std::ostream& os, Lit);
+std::ostream& operator<<(std::ostream& os, cspvar);
 
 //==================================================
 // exceptions

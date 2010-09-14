@@ -22,6 +22,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <cmath>
 #include <vector>
 
+using namespace std;
+
 //=================================================================================================
 // Constructor/Destructor:
 
@@ -29,7 +31,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 Solver::Solver() :
 
     // Parameters: (formerly in 'SearchParams')
-    var_decay(1 / 0.95), clause_decay(1 / 0.999), random_var_freq(0.02)
+    trace(false)
+  , var_decay(1 / 0.95), clause_decay(1 / 0.999), random_var_freq(0.02)
   , restart_first(32), restart_inc(1.5), learntsize_factor((double)1/(double)3), learntsize_inc(1.1)
 
     // More parameters:
@@ -651,6 +654,21 @@ void Solver::uncheckedEnqueue_np(Lit p, Clause *from)
  */
 void Solver::uncheckedEnqueue(Lit p, Clause* from)
 {
+    if(trace) {
+      domevent const &pevent = events[toInt(p)];
+      if( !noevent(pevent) ) {
+        if( active_constraint )
+          cout << pevent << " forced by " << *active_constraint << "\n";
+        else
+          cout << pevent << " forced by clause " << from << "\n";
+      } else {
+        if( active_constraint )
+          cout << p << " forced by " << *active_constraint << "\n";
+        else
+          cout << p << " forced by clause " << from << "\n";
+      }
+    }
+
     uncheckedEnqueue_np(p, from);
 
     // update csp var and propagate, if applicable
@@ -1164,6 +1182,47 @@ bool Solver::solve(const vec<Lit>& assumps)
     return status == l_True;
 }
 
+//==================================================
+// output
+
+
+ostream& operator<<(ostream& os, cons const& c)
+{
+  return c.print(os);
+}
+
+ostream& operator<<(ostream& os, domevent pevent)
+{
+  if( noevent(pevent) ) {
+    os << "noevent";
+    return os;
+  }
+
+  const char *op;
+  switch(pevent.type) {
+  case domevent::EQ: op = "=="; break;
+  case domevent::NEQ: op = "!="; break;
+  case domevent::LEQ: op = "<="; break;
+  case domevent::GEQ: op = ">="; break;
+  case domevent::NONE: op = "#$%#^%"; break;
+  }
+  os << "x" << pevent.x.id() << ' ' << op << ' '
+     << pevent.d;
+  return os;
+}
+
+ostream& operator<<(ostream& os, Lit p)
+{
+  os << (sign(p) ? "-" : "") << var(p)+1;
+  return os;
+}
+
+ostream& operator<<(ostream& os, cspvar x)
+{
+  os << "x" << x.id();
+  return os;
+}
+
 //=================================================================================================
 // Debug methods:
 
@@ -1225,4 +1284,10 @@ void cons::explain(Solver&, Lit, vec<Lit>&)
 void cons::clone(Solver &other)
 {
   assert(0);
+}
+
+ostream& cons::print(ostream& os) const
+{
+  os << "cons@" << this;
+  return os;
 }
