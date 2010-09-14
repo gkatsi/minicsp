@@ -632,7 +632,7 @@ void Solver::uncheckedEnqueue_np(Lit p, Clause *from)
     assert(foundp);
 #endif
 
-#ifdef INVARIANTS
+#ifdef EXPENSIVE_INVARIANTS
     if( active_constraint )
       debugclause(from, active_constraint);
 #endif
@@ -692,7 +692,6 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
           --geq;
         }
       }
-      return;
     }
 
     if( pevent.type == domevent::NEQ ) {
@@ -773,6 +772,17 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
         value( xf.eqi(xb.max) ) != l_True )
       uncheckedEnqueue_np( Lit(xf.eqi(xb.max)),
                            xf.ps4[xb.max-xf.omin] );
+
+#ifdef INVARIANTS
+    for(int i = xf.omin; i != xf.omax; ++i ) {
+      if( value(xf.leqi(i)) == l_False )
+        assert( xb.min > i );
+      if( value(xf.leqi(i)) == l_True )
+        assert( xb.max <= i );
+      if( value(xf.eqi(i)) == l_False )
+        assert( xb.min != i && xb.max != i );
+    }
+#endif
 }
 
 /*_________________________________________________________________________________________________
@@ -999,6 +1009,7 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                 learnts.push(c);
                 attachClause(*c);
                 claBumpActivity(*c);
+
                 uncheckedEnqueue(learnt_clause[0], c);
             }
 
@@ -1007,6 +1018,19 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
 
         }else{
             // NO CONFLICT
+
+            /* Increase decision level. We must now call
+               newDecisionLevel() immediately after propagate() in
+               order to store the changes to backtrackable data made
+               by propagation. Otherwise, we might restart next and
+               cancelUntil(0) will overwrite our changes. This only
+               happens if we restart immediately after learning a unit
+               clause.
+
+               This is a new requirement compared to stock minisat
+             */
+            newDecisionLevel();
+
 
             if (nof_conflicts >= 0 && conflictC >= nof_conflicts){
                 // Reached bound on number of conflicts:
@@ -1050,9 +1074,8 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                     return l_True;
             }
 
-            // Increase decision level and enqueue 'next'
+            // enqueue 'next'
             assert(value(next) == l_Undef);
-            newDecisionLevel();
             uncheckedEnqueue(next);
         }
     }
