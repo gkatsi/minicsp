@@ -908,6 +908,9 @@ Clause* Solver::propagate()
         }
         ws.shrink(i - j);
 
+        if(confl)
+          break;
+
         /* Now propagate constraints that wake on this literal */
         vec<cons*>& pwakes = wakes_on_lit[var(p)];
         for(cons **ci = &pwakes[0],
@@ -921,6 +924,9 @@ Clause* Solver::propagate()
             break;
           }
         }
+
+        if(confl)
+          break;
 
         domevent const & pe = events[toInt(p)];
         if( noevent(pe) ) continue;
