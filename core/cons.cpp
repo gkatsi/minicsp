@@ -295,6 +295,7 @@ public:
   Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
   ostream& print(ostream& os) const;
+  ostream& printstate(Solver& s, ostream& os) const;
 };
 
 template<size_t N>
@@ -434,6 +435,21 @@ ostream& cons_lin_le<N>::print(ostream& os) const
   else
     os << " - " << -_c;
   os << " <= 0";
+
+  return os;
+}
+
+template<size_t N>
+ostream& cons_lin_le<N>::printstate(Solver& s, ostream& os) const
+{
+  print(os);
+  os << " (with ";
+  for(size_t i = 0; i != _vars.size(); ++i) {
+    if( i ) os << ", ";
+    cspvar x = _vars[i].second;
+    os << x << " in [" << x.min(s) << ", " << x.max(s) << "]";
+  }
+  os << ")";
   return os;
 }
 

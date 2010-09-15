@@ -264,6 +264,12 @@ protected:
     void     verifyModel      ();
     void     checkLiteralCount();
 
+    friend std::ostream& operator<<(std::ostream&, lit_printer);
+
+public:
+    std::vector<int> debug_solution;
+    void check_debug_solution(Lit p, Clause *from);
+
     // Static helpers:
     //
 
@@ -403,6 +409,23 @@ inline void Solver::printClause(const C& c)
         printLit(c[i]);
         fprintf(stderr, " ");
     }
+}
+
+inline
+std::ostream& operator<<(std::ostream& os, lit_printer lp)
+{
+  Solver &s(lp._s);
+  Lit l = lp._p;
+  domevent pe = s.event(l);
+  if( noevent(pe) )
+    os << (sign(l) ? "-" : "") << var(l)+1;
+  else
+    os << pe;
+  os << ":"
+     << (s.value(l) == l_True ? '1' : (s.value(l) == l_False ? '0' : 'X'));
+  if( s.value(l) != l_Undef )
+    os << '(' << s.level[var(l)] << ')';
+  return os;
 }
 
 inline std::pair<int, int> Solver::cspModelRange(cspvar x) const

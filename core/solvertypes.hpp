@@ -302,6 +302,8 @@ class cons
 
   /* human readable representation of the constraint for debugging */
   virtual std::ostream& print(std::ostream& os) const;
+  /* as above, but also any state (var domains, etc) */
+  virtual std::ostream& printstate(Solver& s, std::ostream& os) const;
 };
 
 // all the fixed or non-backtracked data of a csp variable
@@ -394,6 +396,67 @@ std::ostream& operator<<(std::ostream& os, cons const&);
 std::ostream& operator<<(std::ostream& os, domevent);
 std::ostream& operator<<(std::ostream& os, Lit);
 std::ostream& operator<<(std::ostream& os, cspvar);
+
+struct cons_printer {
+  Solver& _s;
+  cons const & _c;
+  cons_printer(Solver& s, cons const& c) : _s(s), _c(c) {}
+};
+
+inline
+std::ostream& operator<<(std::ostream& os, cons_printer cp)
+{
+  return cp._c.printstate(cp._s, os);
+}
+
+struct lit_printer {
+  Solver& _s;
+  Lit _p;
+  lit_printer(Solver& s, Lit p) : _s(s), _p(p) {}
+};
+
+std::ostream& operator<<(std::ostream& os, lit_printer lp);
+
+template<typename T>
+struct clause_printer {
+  Solver& _s;
+  T const * _c;
+  clause_printer(Solver& s, T const * c) : _s(s), _c(c) {}
+};
+
+template<typename T>
+inline
+std::ostream& operator<<(std::ostream& os, clause_printer<T> cp)
+{
+  if( !cp._c ) {
+    os << "NO_REASON";
+    return os;
+  }
+  os << "( ";
+  for(int i = 0; i != cp._c->size(); ++i)
+    os << lit_printer(cp._s, (*cp._c)[i]) << " ";
+  os << ")@" << cp._c;
+  return os;
+}
+
+inline
+cons_printer print(Solver& s, cons const& c)
+{
+  return cons_printer(s, c);
+}
+
+inline
+lit_printer print(Solver& s, Lit p)
+{
+  return lit_printer(s, p);
+}
+
+template<typename T>
+inline
+clause_printer<T> print(Solver& s, T const* c)
+{
+  return clause_printer<T>(s, c);
+}
 
 //==================================================
 // exceptions

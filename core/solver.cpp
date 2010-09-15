@@ -498,6 +498,9 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
 
 
     for (int j = 0; j < analyze_toclear.size(); j++) seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
+#ifdef INVARIANTS
+    for(int i = 0; i != nVars(); ++i) assert(seen[i] == 0);
+#endif
 }
 
 
@@ -614,6 +617,43 @@ void Solver::debugclause(Clause *from, cons *c)
   assert(confl);
 }
 
+void Solver::check_debug_solution(Lit p, Clause *from)
+{
+#ifdef INVARIANTS
+    if( debug_solution.empty() ) return;
+    domevent pe = events[toInt(p)];
+    switch(pe.type) {
+    case domevent::NEQ:
+      if( pe.d != debug_solution[pe.x._id] ) return;
+      break;
+    case domevent::EQ:
+      if( pe.d == debug_solution[pe.x._id] ) return;
+      break;
+    case domevent::LEQ:
+      if( pe.d >= debug_solution[pe.x._id] ) return;
+      break;
+    case domevent::GEQ:
+      if( pe.d <= debug_solution[pe.x._id] ) return;
+      break;
+    case domevent::NONE:
+      return;
+    }
+    cout << "\t\tinconsistent with x"
+         << pe.x._id << " == " << debug_solution[pe.x._id] << "\n";
+    for(int i = 0; i != cspvars.size(); ++i) {
+      if( i != pe.x._id &&
+          value(cspvars[i].eqi( debug_solution[i] )) == l_False ) {
+        cout << "\t\tx" << i << " != " << debug_solution[i] << " already "
+             << "at level " << level[cspvars[i].eqi( debug_solution[i] )]
+             << "\n";
+        cout << "\t\t\tother assignments inconsistent with solution\n";
+        return;
+      }
+    }
+    assert( from == NO_REASON && decisionLevel() > 0);
+#endif
+}
+
 void Solver::uncheckedEnqueue_np(Lit p, Clause *from)
 {
     assert(value(p) == l_Undef);
@@ -623,16 +663,17 @@ void Solver::uncheckedEnqueue_np(Lit p, Clause *from)
     trail.push(p);
 
 #ifdef INVARIANTS
-    if( !from ) return;
-    bool foundp = false;
-    for(int i = 0; i != from->size(); ++i) {
-      assert((*from)[i] != lit_Undef);
-      if( (*from)[i] != p )
-        assert( value((*from)[i]) == l_False );
-      else
-        foundp = true;
+    if( from ) {
+      bool foundp = false;
+      for(int i = 0; i != from->size(); ++i) {
+        assert((*from)[i] != lit_Undef);
+        if( (*from)[i] != p )
+          assert( value((*from)[i]) == l_False );
+        else
+          foundp = true;
+      }
+      assert(foundp);
     }
-    assert(foundp);
 #endif
 
 #ifdef EXPENSIVE_INVARIANTS
@@ -658,17 +699,21 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
       domevent const &pevent = events[toInt(p)];
       if( !noevent(pevent) ) {
         if( active_constraint )
-          cout << pevent << " forced by " << *active_constraint << "\n";
+          cout << pevent << " forced by "
+               << print(*this, *active_constraint);
         else
-          cout << pevent << " forced by clause " << from << "\n";
+          cout << pevent << " forced by clause " << print(*this, from);
       } else {
         if( active_constraint )
-          cout << p << " forced by " << *active_constraint << "\n";
+          cout << p << " forced by "
+               << print(*this, *active_constraint);
         else
-          cout << p << " forced by clause " << from << "\n";
+          cout << p << " forced by clause " << print(*this, from);
       }
+      cout << " at level " << decisionLevel() << "\n";
     }
 
+    check_debug_solution(p, from);
     uncheckedEnqueue_np(p, from);
 
     // update csp var and propagate, if applicable
@@ -893,6 +938,10 @@ Clause* Solver::propagate()
           confl = (*ci)->wake(*this, p);
           active_constraint = 0L;
           if( confl ) {
+            if( trace ) {
+              cout << "Constraint " << print(*this, **ci) << " failed, "
+                   << "clause @ " << confl << "\n";
+            }
             qhead = trail.size();
             break;
           }
@@ -1092,6 +1141,17 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                     return l_True;
             }
 
+            if( trace ) {
+              domevent pe = events[toInt(next)];
+              cout << "Decision ";
+              if( noevent(pe) ) {
+                cout << next;
+              } else {
+                cout << pe;
+              }
+              cout << " at level " << decisionLevel() << "\n";
+            }
+
             // enqueue 'next'
             assert(value(next) == l_Undef);
             uncheckedEnqueue(next);
@@ -1287,6 +1347,12 @@ void cons::clone(Solver &other)
 }
 
 ostream& cons::print(ostream& os) const
+{
+  os << "cons@" << this;
+  return os;
+}
+
+ostream& cons::printstate(Solver&, ostream& os) const
 {
   os << "cons@" << this;
   return os;
