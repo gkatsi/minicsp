@@ -1087,6 +1087,18 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                 uncheckedEnqueue(learnt_clause[0], c);
             }
 
+            if(trace) {
+              cout << "Conflict " << conflicts
+                   << ", backjumping to level " << backtrack_level
+                   << " and setting " << print(*this, learnt_clause[0]);
+              if( !noevent(event(learnt_clause[0])) ) {
+                cspvar x = event(learnt_clause[0]).x;
+                cout << ", " << x << " in ["
+                     << x.min(*this) << ", " << x.max(*this) << "]";
+              }
+              cout << "\n";
+            }
+
             varDecayActivity();
             claDecayActivity();
 
@@ -1150,7 +1162,7 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
 
             if( trace ) {
               domevent pe = events[toInt(next)];
-              cout << "Decision ";
+              cout << "Decision " << decisions << ":";
               if( noevent(pe) ) {
                 cout << next;
               } else {
