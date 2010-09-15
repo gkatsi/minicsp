@@ -20,6 +20,12 @@ DCOBJS     = $(addsuffix d,  $(COBJS))
 RCOBJS     = $(addsuffix r,  $(COBJS))
 CCOBJS     = $(addsuffix c,  $(COBJS))
 
+CXX       ?= g++
+CFLAGS    ?= -Wall
+LFLAGS    ?= -Wall
+
+COPTIMIZE ?= -O3
+
 .PHONY : s p d r rs c clean 
 
 s:         $(EXECS)
