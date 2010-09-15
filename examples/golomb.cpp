@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
     next = s.solve();
     sol = sol || next;
     if(next) {
+      cout << "solution ";
       for(size_t i = 0; i != m; ++i)
         cout << s.cspModelValue(x[i]) << ' ';
       cout << "\n";
