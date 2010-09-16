@@ -183,6 +183,22 @@ namespace {
     y.setmin(s, 1, NO_REASON);
     check_consistency(s,x);
   }
+
+  // unary
+  void test11()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(5, 5);
+    assert( !x.assign(s, 5, NO_REASON) );
+    assert( !x.setmax(s, 5, NO_REASON) );
+    assert( !x.setmin(s, 5, NO_REASON) );
+    assert( x.min(s) == 5 );
+    assert( x.max(s) == 5 );
+    assert( x.indomain(s, 5) );
+
+    // this requires more thought
+    //assert( x.remove(s, 5, NO_REASON) );
+  }
 }
 
 void dom_test()
@@ -227,5 +243,9 @@ void dom_test()
 
   cerr << "test10..." << flush;
   test10();
+  cerr << "OK\n";
+
+  cerr << "test11..." << flush;
+  test11();
   cerr << "OK\n";
 }

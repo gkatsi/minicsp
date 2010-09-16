@@ -74,6 +74,7 @@ Solver::~Solver()
   for (int i = 0; i != inactive.size(); ++i) free(inactive[i]);
   for (int i = 0; i != cspvars.size(); ++i) {
     cspvar_fixed & xf = cspvars[i];
+    if( xf.omax == xf.omin ) continue;
     for(int j = 0; j != (xf.omax-xf.omin+1); ++j) {
       free(xf.ps1[j]);
       free(xf.ps2[j]);
@@ -205,12 +206,15 @@ cspvar Solver::newCSPVar(int min, int max)
   /* x <= omax, so this is true always. We could just simplify the
      rest of the clauses but this seems easier
    */
-  x.setmax(*this, xf.omax, (Clause*)0L);
+  if( !unary )
+    x.setmax(*this, xf.omax, (Clause*)0L);
 
   /* Unary vars are also hacky. Immediately set eqi(min) = l_True
    */
-  if( unary )
+  if( unary ) {
+    uncheckedEnqueue_np(Lit(xf.firstbool+1), NO_REASON);
     uncheckedEnqueue_np(Lit(xf.firstbool), NO_REASON);
+  }
 
   return x;
 }
