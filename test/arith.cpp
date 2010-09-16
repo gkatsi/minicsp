@@ -236,6 +236,69 @@ namespace {
     }
     assert(caught);
   }
+
+  // neg, c == 0
+  void test12()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(5, 10);
+    cspvar y = s.newCSPVar(-12, -7);
+    post_neg(s, x, y, 0);
+    assert(x.min(s) == 7);
+    assert(y.min(s) == -10);
+
+    s.newDecisionLevel();
+    x.remove(s, 9, NO_REASON);
+    y.remove(s, -8, NO_REASON);
+    s.propagate();
+    assert(!y.indomain(s, -9));
+    assert(!x.indomain(s, 8));
+    s.cancelUntil(0);
+
+    x.assign(s, 10, NO_REASON);
+    s.propagate();
+    assert(y.min(s) == -10 && y.max(s) == -10);
+  }
+
+  // neg, c != 0
+  void test13()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(15, 20);
+    cspvar y = s.newCSPVar(-12, -7);
+    post_neg(s, x, y, 10);
+    assert(x.min(s) == 17);
+    assert(y.min(s) == -10);
+
+    s.newDecisionLevel();
+    x.remove(s, 19, NO_REASON);
+    y.remove(s, -8, NO_REASON);
+    s.propagate();
+    assert(!y.indomain(s, -9));
+    assert(!x.indomain(s, 18));
+    s.cancelUntil(0);
+
+    x.assign(s, 20, NO_REASON);
+    s.propagate();
+    assert(y.min(s) == -10 && y.max(s) == -10);
+  }
+
+  // neg unsat
+  void test14()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(15, 20);
+    cspvar y = s.newCSPVar(-12, -7);
+    bool caught = false;
+    try {
+      post_neg(s, x, y, 0);
+    } catch( unsat ) {
+      caught = true;
+    }
+    assert(caught);
+  }
+
+
 }
 
 void le_test()
@@ -284,5 +347,17 @@ void le_test()
 
   cerr << "test 11 ... " << flush;
   test11();
+  cerr << "OK" << endl;
+
+  cerr << "test 12 ... " << flush;
+  test12();
+  cerr << "OK" << endl;
+
+  cerr << "test 13 ... " << flush;
+  test13();
+  cerr << "OK" << endl;
+
+  cerr << "test 14 ... " << flush;
+  test14();
   cerr << "OK" << endl;
 }

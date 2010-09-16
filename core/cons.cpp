@@ -11,16 +11,25 @@ using std::pair;
 using std::make_pair;
 using std::vector;
 
-/* x == y + c */
+/* x == y + c     and        x == -y + c
+
+   implemented as x = W*y + c, but with W == 1 or W == -1
+*/
+template<int W>
 class cons_eq : public cons {
   cspvar _x, _y;
   int _c;
   vec<Lit> _reason; // cache to avoid the cost of allocation
+
+  void requires() {
+    int w[ (W==1)+(W==-1)-1 ] __attribute__ ((__unused__));
+  }
 public:
   cons_eq(Solver &s,
            cspvar x, cspvar y, int c) :
     _x(x), _y(y), _c(c)
   {
+    requires();
     // wake on everything! more immediate consequences
     s.wake_on_dom(x, this);
     s.wake_on_lb(x, this);
@@ -32,14 +41,21 @@ public:
     s.wake_on_fix(y, this);
     _reason.push(); _reason.push();
 
-    if( _x.min(s) > _y.max(s)+_c ||
-        _y.min(s) > _x.max(s)-_c )
+    if( _x.min(s) > W*_y.max(s)+_c ||
+        _y.min(s) > W*_x.max(s)-W*_c )
       throw unsat();
 
-    DO_OR_THROW(_y.setmin(s, _x.min(s)-_c, NO_REASON));
-    DO_OR_THROW(_y.setmax(s, _x.max(s)-_c, NO_REASON));
-    DO_OR_THROW(_x.setmin(s, _y.min(s)+_c, NO_REASON));
-    DO_OR_THROW(_x.setmax(s, _y.max(s)+_c, NO_REASON));
+    if( W > 0 ) {
+      DO_OR_THROW(_y.setmin(s, _x.min(s)-_c, NO_REASON));
+      DO_OR_THROW(_y.setmax(s, _x.max(s)-_c, NO_REASON));
+      DO_OR_THROW(_x.setmin(s, _y.min(s)+_c, NO_REASON));
+      DO_OR_THROW(_x.setmax(s, _y.max(s)+_c, NO_REASON));
+    } else {
+      DO_OR_THROW(_y.setmin(s, -_x.max(s)+_c, NO_REASON));
+      DO_OR_THROW(_y.setmax(s, -_x.min(s)+_c, NO_REASON));
+      DO_OR_THROW(_x.setmin(s, -_y.max(s)+_c, NO_REASON));
+      DO_OR_THROW(_x.setmax(s, -_y.min(s)+_c, NO_REASON));
+    }
 
     for(int i = x.min(s)+1, iend = x.max(s); i != iend; ++i) {
       if( !x.indomain(s, i) )
@@ -55,45 +71,66 @@ public:
   virtual Clause *wake(Solver& s, Lit p);
 };
 
-Clause *cons_eq::wake(Solver& s, Lit event)
+template<int W>
+Clause *cons_eq<W>::wake(Solver& s, Lit event)
 {
   domevent e = s.event(event);
   _reason[0] = ~event;
   switch(e.type) {
   case domevent::EQ:
     if( e.x == _x ) {
-      _reason[1] = _y.e_eq(s, e.d-_c);
-      return _y.assign(s, e.d-_c, _reason);
+      _reason[1] = _y.e_eq(s, W*e.d-W*_c);
+      return _y.assign(s, W*e.d-W*_c, _reason);
     } else {
-      _reason[1] = _x.e_eq(s, e.d+_c);
-      return _x.assign(s, e.d+_c, _reason);
+      _reason[1] = _x.e_eq(s, W*e.d+_c);
+      return _x.assign(s, W*e.d+_c, _reason);
     }
     break;
   case domevent::NEQ:
     if( e.x == _x ) {
-      _reason[1] = _y.e_neq(s, e.d-_c);
-      return _y.remove(s, e.d-_c, _reason);
+      _reason[1] = _y.e_neq(s, W*e.d-W*_c);
+      return _y.remove(s, W*e.d-W*_c, _reason);
     } else {
-      _reason[1] = _x.e_neq(s, e.d+_c);
-      return _x.remove(s, e.d+_c, _reason);
+      _reason[1] = _x.e_neq(s, W*e.d+_c);
+      return _x.remove(s, W*e.d+_c, _reason);
     }
     break;
   case domevent::GEQ:
     if( e.x == _x ) {
-      _reason[1] = _y.e_geq(s, e.d-_c);
-      return _y.setmin(s, e.d-_c, _reason);
+      if( W > 0 ) {
+        _reason[1] = _y.e_geq(s, e.d-_c);
+        return _y.setmin(s, e.d-_c, _reason);
+      } else {
+        _reason[1] = _y.e_leq(s, -e.d+_c);
+        return _y.setmax(s, -e.d+_c, _reason);
+      }
     } else {
-      _reason[1] = _x.e_geq(s, e.d+_c);
-      return _x.setmin(s, e.d+_c, _reason);
+      if( W > 0 ) {
+        _reason[1] = _x.e_geq(s, e.d+_c);
+        return _x.setmin(s, e.d+_c, _reason);
+      } else {
+        _reason[1] = _x.e_geq(s, -e.d+_c);
+        return _x.setmax(s, -e.d+_c, _reason);
+      }
     }
     break;
   case domevent::LEQ:
     if( e.x == _x ) {
-      _reason[1] = _y.e_leq(s, e.d-_c);
-      return _y.setmax(s, e.d-_c, _reason);
+      if( W > 0 ) {
+        _reason[1] = _y.e_leq(s, e.d-_c);
+        return _y.setmax(s, e.d-_c, _reason);
+      } else {
+        _reason[1] = _y.e_geq(s, -e.d+_c);
+        return _y.setmin(s, -e.d+_c, _reason);
+      }
     } else {
-      _reason[1] = _x.e_leq(s, e.d+_c);
-      return _x.setmax(s, e.d+_c, _reason);
+      if( W > 0 ) {
+        _reason[1] = _x.e_leq(s, e.d+_c);
+        return _x.setmax(s, e.d+_c, _reason);
+      } else {
+        _reason[1] = _x.e_leq(s, -e.d+_c);
+        return _x.setmax(s, -e.d+_c, _reason);
+      }
     }
     break;
   case domevent::NONE:
@@ -105,7 +142,14 @@ Clause *cons_eq::wake(Solver& s, Lit event)
 /* x == y + c */
 void post_eq(Solver& s, cspvar x, cspvar y, int c)
 {
-  cons *con = new cons_eq(s, x, y, c);
+  cons *con = new cons_eq<1>(s, x, y, c);
+  s.addConstraint(con);
+}
+
+/* x == -y + c */
+void post_neg(Solver &s, cspvar x, cspvar y, int c)
+{
+  cons *con = new cons_eq<-1>(s, x, y, c);
   s.addConstraint(con);
 }
 
