@@ -301,16 +301,18 @@ public:
 template<size_t N>
 int cons_lin_le<N>::vmin(Solver &s, int w, cspvar x)
 {
-  return select(w, w*x.min(s), w*x.max(s));
+  if( w > 0 ) return w*x.min(s);
+  else return w*x.max(s);
 }
 
 template<size_t N>
 Lit cons_lin_le<N>::litreason(Solver &s, int lb,
                               int w, cspvar x)
 {
-  return toLit( select(w,
-                       toInt(x.r_geq(s, x.min(s))),
-                       toInt(x.r_leq(s, x.max(s)))));
+  if( w > 0 )
+    return x.r_geq(s, x.min(s));
+  else
+    return x.r_leq(s, x.max(s));
 }
 
 template<size_t N>
@@ -370,9 +372,8 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
     int w = _vars[i].first;
     cspvar x = _vars[i].second;
     int gap = lb-vmin(s, w, x);
-    double newbound = -gap/(double)w;
     if( w > 0 ) {
-      int ibound = floor(newbound);
+      int ibound = -gap/w;
       if( litreason(s, lb, w, x) == lit_Undef ) {
         _ps.push(x.e_leq(s, ibound));
         x.setmax(s, ibound, _ps);
@@ -383,7 +384,12 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
         _ps[pspos[i]] = l;
       }
     } else {
-      int ibound = ceil(newbound);
+      int ibound;
+      // rounding towards zero is weird
+      if( gap < 0 )
+        ibound = -gap/w;
+      else
+        ibound = -(gap-w-1)/w;
       if( litreason(s, lb, w, x) == lit_Undef ) {
         _ps.push(x.e_geq(s, ibound));
         x.setmin(s, ibound, _ps);
