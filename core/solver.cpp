@@ -124,7 +124,10 @@ Var Solver::newVar(bool sign, bool dvar)
 
 cspvar Solver::newCSPVar(int min, int max)
 {
-  assert(max - min > 0 );
+  assert(max - min >= 0 );
+
+  bool unary = false;
+  if( max == min ) unary = true;
 
   cspvar x(cspvars.size());
 
@@ -157,14 +160,17 @@ cspvar Solver::newCSPVar(int min, int max)
     events[ toInt( ~Lit(xf.leqi(i) ) ) ] = geq;
   }
 
-  xf.ps1.growTo(xbt.dsize);
-  xf.ps2.growTo(xbt.dsize);
-  xf.ps3.growTo(xbt.dsize);
-  xf.ps4.growTo(xbt.dsize);
+  if( !unary ) {
+    xf.ps1.growTo(xbt.dsize);
+    xf.ps2.growTo(xbt.dsize);
+    xf.ps3.growTo(xbt.dsize);
+    xf.ps4.growTo(xbt.dsize);
+  }
 
   // (x <= i) => (x <= i+1)
   // (x = i) <=> (x <= i) /\ -(x <= i-1)
   for(int i = 0; i != xbt.dsize; ++i) {
+    if( unary ) continue;
     vec<Lit> ps1, ps2, ps3, ps4;
     ps1.push( ~Lit(xf.leqi(i+xf.omin)) );
     ps1.push( Lit(xf.leqi(i+1+xf.omin)) );
@@ -200,6 +206,11 @@ cspvar Solver::newCSPVar(int min, int max)
      rest of the clauses but this seems easier
    */
   x.setmax(*this, xf.omax, (Clause*)0L);
+
+  /* Unary vars are also hacky. Immediately set eqi(min) = l_True
+   */
+  if( unary )
+    uncheckedEnqueue_np(Lit(xf.firstbool), NO_REASON);
 
   return x;
 }
