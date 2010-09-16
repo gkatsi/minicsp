@@ -934,10 +934,19 @@ Clause* Solver::propagate()
         switch(pe.type) {
         case domevent::NEQ: dewakes=&(cspvars[pe.x._id].wake_on_dom); break;
         case domevent::EQ: dewakes=&(cspvars[pe.x._id].wake_on_fix); break;
-        case domevent::LEQ: dewakes=&(cspvars[pe.x._id].wake_on_ub); break;
-        case domevent::GEQ: dewakes=&(cspvars[pe.x._id].wake_on_lb); break;
+        case domevent::LEQ:
+          if( pe.x.max(*this) < pe.d )
+            dewakes = 0L;
+          else
+            dewakes=&(cspvars[pe.x._id].wake_on_ub); break;
+        case domevent::GEQ:
+          if( pe.x.min(*this) > pe.d )
+            dewakes = 0L;
+          else
+            dewakes=&(cspvars[pe.x._id].wake_on_lb); break;
         case domevent::NONE: assert(0);
         }
+        if( !dewakes ) continue;
         for( cons **ci = &((*dewakes)[0]),
                **ciend = ci+dewakes->size();
              ci != ciend; ++ci) {
