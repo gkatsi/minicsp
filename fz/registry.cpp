@@ -309,30 +309,6 @@ namespace FlatZinc {
       p_int_leq_c(s, m, ce[0], ce[1], -1, ann);
     }
 
-    // void p_int_CMP_reif(Solver& s, IntRelType irt, const ConExpr& ce,
-    //                     AST::Node* ann) {
-    //   if (ce[2]->isBool()) {
-    //     if (ce[2]->getBool()) {
-    //       p_int_CMP(s, irt, ce, ann);
-    //     } else {
-    //       p_int_CMP(s, neg(irt), ce, ann);
-    //     }
-    //     return;
-    //   }
-    //   if (ce[0]->isIntVar()) {
-    //     if (ce[1]->isIntVar()) {
-    //       rel(s, getIntVar(s, ce[0]), irt, getIntVar(s, ce[1]),
-    //              getBoolVar(s, ce[2]), ann2icl(ann));
-    //     } else {
-    //       rel(s, getIntVar(s, ce[0]), irt, ce[1]->getInt(),
-    //              getBoolVar(s, ce[2]), ann2icl(ann));
-    //     }
-    //   } else {
-    //     rel(s, getIntVar(s, ce[1]), swap(irt), ce[0]->getInt(),
-    //            getBoolVar(s, ce[2]), ann2icl(ann));
-    //   }
-    // }
-
     /* Comparisons */
     void p_int_eq_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
@@ -493,14 +469,14 @@ namespace FlatZinc {
     void p_int_plus(Solver& s, FlatZincModel& m,
                     const ConExpr& ce, AST::Node* ann) {
       if (!ce[0]->isIntVar()) {
-        assert(0);
-        //post_eq(s, getIntVar(s, ce[1]), getIntVar(s, ce[2]), -ce[0]->getInt());
+        post_eq(s, getIntVar(s, m, ce[1]), getIntVar(s, m, ce[2]),
+                -ce[0]->getInt());
       } else if (!ce[1]->isIntVar()) {
-        assert(0);
-        //post_eq(s, getIntVar(s, ce[0]), getIntVar(s, ce[2]), -ce[1]->getInt());
+        post_eq(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[2]),
+                -ce[1]->getInt());
       } else if (!ce[2]->isIntVar()) {
-        assert(0);
-        // var(ce[0]) = -var(ce[1]) + int(ce[2])
+        post_neg(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[1]),
+                 ce[2]->getInt());
       } else {
         vector<cspvar> x(3);
         x[0] = getIntVar(s,m,ce[0]);
@@ -510,31 +486,35 @@ namespace FlatZinc {
         w[0] = 1;
         w[1] = 1;
         w[2] = -1;
-        post_lin_leq(s, x, w, 0);
-        w[0] = -1;
+        post_lin_eq(s, x, w, 0);
+      }
+    }
+
+    void p_int_minus(Solver& s, FlatZincModel& m,
+                     const ConExpr& ce, AST::Node* ann) {
+      if (!ce[0]->isIntVar()) {
+        post_neg(s, getIntVar(s, m, ce[2]), getIntVar(s, m, ce[1]),
+                 ce[0]->getInt());
+      } else if (!ce[1]->isIntVar()) {
+        post_eq(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[2]),
+                ce[1]->getInt());
+      } else if (!ce[2]->isIntVar()) {
+        post_eq(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[1]),
+                ce[2]->getInt());
+      } else {
+        vector<cspvar> x(3);
+        x[0] = getIntVar(s,m,ce[0]);
+        x[1] = getIntVar(s,m,ce[1]);
+        x[2] = getIntVar(s,m,ce[2]);
+        vector<int> w(3);
+        w[0] = 1;
         w[1] = -1;
-        w[2] = 1;
-        post_lin_leq(s, x, w, 0);
+        w[2] = -1;
+        post_lin_eq(s, x, w, 0);
       }
     }
 
 #if 0
-    void p_int_minus(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      if (!ce[0]->isIntVar()) {
-        rel(s, ce[0]->getInt() - getIntVar(s, ce[1])
-                == getIntVar(s,ce[2]), ann2icl(ann));
-      } else if (!ce[1]->isIntVar()) {
-        rel(s, getIntVar(s,ce[0]) - ce[1]->getInt()
-                == getIntVar(s,ce[2]), ann2icl(ann));
-      } else if (!ce[2]->isIntVar()) {
-        rel(s, getIntVar(s,ce[0]) - getIntVar(s,ce[1])
-                == ce[2]->getInt(), ann2icl(ann));
-      } else {
-        rel(s, getIntVar(s,ce[0]) - getIntVar(s,ce[1])
-                == getIntVar(s,ce[2]), ann2icl(ann));
-      }
-    }
-
     void p_int_times(Solver& s, const ConExpr& ce, AST::Node* ann) {
       IntVar x0 = getIntVar(s, ce[0]);
       IntVar x1 = getIntVar(s, ce[1]);
@@ -777,6 +757,8 @@ namespace FlatZinc {
         registry().add("int_lin_ge_reif", &p_int_lin_ge_reif);
         registry().add("int_lin_gt", &p_int_lin_gt);
         registry().add("int_lin_gt_reif", &p_int_lin_gt_reif);
+        registry().add("int_plus", &p_int_plus);
+        registry().add("int_minus", &p_int_minus);
       }
     };
     IntPoster __int_poster;
