@@ -37,6 +37,7 @@
 
 #include "flatzinc.hpp"
 #include "registry.hpp"
+#include <iomanip>
 
 #include <vector>
 #include <string>
@@ -132,7 +133,9 @@ namespace FlatZinc {
   FlatZincModel::FlatZincModel(Solver &s)
     : solver(s),
       intVarCount(-1), boolVarCount(-1), setVarCount(-1), _optVar(-1),
-      _solveAnnotations(NULL) {}
+      _solveAnnotations(NULL),
+      findall(false)
+  {}
 
   void
   FlatZincModel::init(int intVars, int boolVars, int setvars) {
@@ -195,8 +198,6 @@ namespace FlatZinc {
   FlatZincModel::postConstraint(const ConExpr& ce, AST::Node* ann) {
     try {
       registry().post(solver, *this, ce, ann);
-    } catch (unsat& e) {
-      throw FlatZinc::Error("unsat", e.what());
     } catch (AST::TypeError& e) {
       throw FlatZinc::Error("Type error", e.what());
     }
@@ -279,15 +280,35 @@ namespace FlatZinc {
 
   void
   FlatZincModel::run(std::ostream& out, const Printer& p) {
-    assert(0);
+    using std::setw;
+    using std::setfill;
     // solve it
-    switch (_method) {
-    case MIN:
-    case MAX:
-      break;
-    case SAT:
-      break;
-    }
+    bool sat = false, next;
+    do {
+      next = solver.solve();
+      sat = sat || next;
+      if( next ) {
+        print(out, p);
+        out << setw(10) << setfill('-') << "-" << "\n";
+        switch (_method) {
+        case MIN:
+        case MAX:
+          constrain();
+          break;
+        case SAT:
+          next = findall;
+          if( findall ) {
+            excludesolution();
+          }
+          break;
+        }
+      }
+    } while(next);
+    if( sat )
+      out << setw(10) << setfill('=') << '=' << "\n";
+    else
+      out << setw(5) << setfill('=') << '='
+          << "UNSATISFIABLE" << setw(5) << '=' << "\n";
   }
 
   void
@@ -296,8 +317,15 @@ namespace FlatZinc {
     if (_method == MIN) {
       iv[_optVar].setmax( solver, opt-1, NO_REASON );
     } else if (_method == MAX) {
-      iv[_optVar].setmax( solver, opt+1, NO_REASON );
+      iv[_optVar].setmin( solver, opt+1, NO_REASON );
     }
+  }
+
+  void
+  FlatZincModel::excludesolution()
+  {
+    vec<Lit> ps;
+    assert(0);
   }
 
   FlatZincModel::Meth

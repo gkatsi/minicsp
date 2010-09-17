@@ -2,6 +2,7 @@
 #include <fstream>
 #include <list>
 #include <string>
+#include <iomanip>
 
 #include "flatzinc.hpp"
 #include "solver.hpp"
@@ -19,8 +20,17 @@ int main(int argc, char *argv[])
 
   Solver s;
   FlatZinc::Printer p;
-  FlatZinc::FlatZincModel *fm = parse(args.front(), s, p);
-  s.solve();
-  fm->print(cout, p);
+  FlatZinc::FlatZincModel *fm;
+  try {
+    fm = parse(args.front(), s, p);
+  } catch (unsat& e) {
+    cout << setw(5) << setfill('=') << '='
+         << "UNSATISFIABLE" << setw(5) << '=' << "\n";
+  }
+  if( !fm ) return 0;
+
+  fm->run(cout , p);
   delete fm;
+
+  return 0;
 }

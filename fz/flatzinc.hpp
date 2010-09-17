@@ -201,6 +201,12 @@ namespace FlatZinc {
 
     /// Implement optimization
     virtual void constrain();
+
+    /// Finding all solutions: post a clause that excludes the current solution
+    virtual void excludesolution();
+
+    /// options
+    bool findall; // find all solutions
   };
 
   /// %Exception class for %FlatZinc errors
