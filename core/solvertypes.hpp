@@ -484,9 +484,9 @@ struct unassigned_var : public std::exception
     if( confl##__LINE__ ) throw unsat();        \
   } while(0)
 
-#define DO_OR_RETURN(action) do {               \
-    Clause *confl##__LINE__ = action;           \
-    if( confl##__LINE__ ) return confl##__LINE; \
+#define DO_OR_RETURN(action) do {                \
+    Clause *confl##__LINE__ = action;            \
+    if( confl##__LINE__ ) return confl##__LINE__;\
   } while(0)
 
 #endif
