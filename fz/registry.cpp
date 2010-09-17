@@ -361,91 +361,131 @@ namespace FlatZinc {
 
     /* linear (in-)equations */
     void p_int_lin(Solver& s, FlatZincModel& m,
-                   bool greater, bool strict, bool reif,
+                   domevent::event_type op, bool strict, bool reif,
                    const ConExpr& ce,
                    AST::Node* ann) {
       vector<int> ia = arg2intargs(ce[0]);
       if (isBoolArray(m,ce[1])) {
         int c = ce[2]->getInt();
-        if( !greater ) {
+        vector<cspvar> iv = arg2boolvarargs(s, m, ce[1]);
+        switch(op) {
+        case domevent::LEQ:
           for(size_t i = 0; i != ia.size(); ++i)
             ia[i] = -ia[i];
           c = -c;
-        }
-        if( strict )
-          ++c;
-        vector<cspvar> iv = arg2boolvarargs(s, m, ce[1]);
-        if( !reif )
-          post_pb(s, iv, ia, c);
-        else {
-          cspvar b = getBoolVar(s, m, ce[3]);
-          post_pb_iff_re(s, iv, ia, c, b);
+          // continue on to GEQ
+        case domevent::GEQ:
+          if( strict ) {
+            ++c;
+          }
+          if( !reif )
+            post_pb(s, iv, ia, c);
+          else {
+            cspvar b = getBoolVar(s, m, ce[3]);
+            post_pb_iff_re(s, iv, ia, c, b);
+          }
+          break;
+        case domevent::EQ:
+          assert(!strict);
+          // pseudo-boolean equality
+          break;
+        case domevent::NEQ:
+          assert(!strict);
+          // pseudo-boolean inequality
+          break;
+        case domevent::NONE: assert(0); break;
         }
       } else {
         vector<cspvar> iv = arg2intvarargs(s, m, ce[1]);
         int c = ce[2]->getInt();
-        if( greater ) {
+        switch(op) {
+        case domevent::GEQ:
           for(size_t i = 0; i != ia.size(); ++i)
             ia[i] = -ia[i];
           c = -c;
-        }
-        if( strict )
-          ++c;
-        if( !reif )
-          post_lin_leq(s, iv, ia, -c);
-        else {
-          cspvar b = getBoolVar(s, m, ce[3]);
-          post_lin_leq_iff_re(s, iv, ia, c, b);
+          // continue on to LEQ
+        case domevent::LEQ:
+          if( strict ) {
+            ++c;
+          }
+          if( !reif )
+            post_lin_leq(s, iv, ia, -c);
+          else {
+            cspvar b = getBoolVar(s, m, ce[3]);
+            post_lin_leq_iff_re(s, iv, ia, -c, b);
+          }
+          break;
+        case domevent::EQ:
+          assert(!strict);
+          if( !reif )
+            post_lin_eq(s, iv, ia, -c);
+          else {
+            cspvar b = getBoolVar(s, m, ce[3]);
+            post_lin_eq_iff_re(s, iv, ia, -c, b);
+          }
+          break;
+        case domevent::NEQ:
+          assert(!strict);
+          if( !reif )
+            post_lin_neq(s, iv, ia, -c);
+          else {
+            cspvar b = getBoolVar(s, m, ce[3]);
+            post_lin_neq_iff_re(s, iv, ia, -c, b);
+          }
+          break;
+        case domevent::NONE: assert(0); break;
         }
       }
     }
 
-#if 0
-    void p_int_lin_eq(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_int_lin_CMP(s, IRT_EQ, ce, ann);
+    void p_int_lin_eq(Solver& s, FlatZincModel& m,
+                      const ConExpr& ce, AST::Node* ann) {
+      p_int_lin(s, m, domevent::EQ, false, false, ce, ann);
     }
-    void p_int_lin_eq_reif(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_int_lin_CMP_reif(s, IRT_EQ, ce, ann);
+    void p_int_lin_eq_reif(Solver& s, FlatZincModel& m,
+                           const ConExpr& ce, AST::Node* ann) {
+      p_int_lin(s, m, domevent::EQ, false, true, ce, ann);
     }
-    void p_int_lin_ne(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_int_lin_CMP(s, IRT_NQ, ce, ann);
+    void p_int_lin_ne(Solver& s, FlatZincModel& m,
+                      const ConExpr& ce, AST::Node* ann) {
+      p_int_lin(s, m, domevent::NEQ, false, false, ce, ann);
     }
-    void p_int_lin_ne_reif(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_int_lin_CMP_reif(s, IRT_NQ, ce, ann);
+    void p_int_lin_ne_reif(Solver& s, FlatZincModel& m,
+                           const ConExpr& ce, AST::Node* ann) {
+      p_int_lin(s, m, domevent::NEQ, false, true, ce, ann);
     }
-#endif
 
     void p_int_lin_le(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
-      p_int_lin(s, m, false, false, false, ce, ann);
+      p_int_lin(s, m, domevent::LEQ, false, false, ce, ann);
     }
     void p_int_lin_le_reif(Solver& s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
-      p_int_lin(s, m, false, false, true, ce, ann);
+      p_int_lin(s, m, domevent::LEQ, false, true, ce, ann);
     }
     void p_int_lin_lt(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
-      p_int_lin(s, m, false, true, false, ce, ann);
+      p_int_lin(s, m, domevent::LEQ, true, false, ce, ann);
     }
     void p_int_lin_lt_reif(Solver& s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
-      p_int_lin(s, m, false, true, true, ce, ann);
+      p_int_lin(s, m, domevent::LEQ, true, true, ce, ann);
     }
     void p_int_lin_ge(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
-      p_int_lin(s, m, true, false, false, ce, ann);
+      p_int_lin(s, m, domevent::GEQ, false, false, ce, ann);
     }
     void p_int_lin_ge_reif(Solver& s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
-      p_int_lin(s, m, true, false, true, ce, ann);
+      p_int_lin(s, m, domevent::GEQ, false, true, ce, ann);
     }
     void p_int_lin_gt(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
-      p_int_lin(s, m, true, true, false, ce, ann);
+      p_int_lin(s, m, domevent::GEQ, true, false, ce, ann);
     }
     void p_int_lin_gt_reif(Solver& s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
-      p_int_lin(s, m, true, true, true, ce, ann);
+      p_int_lin(s, m, domevent::GEQ, true, true, ce, ann);
     }
 
     /* arithmetic constraints */
