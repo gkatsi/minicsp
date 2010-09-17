@@ -83,11 +83,11 @@ void post_lin_eq_left_imp_re(Solver &s,
                              int c,
                              cspvar b);
 // b=1 iff sum coeff[i]*vars[i] + c = 0
-void post_lin_iff_re(Solver &s,
-                     std::vector<cspvar> const& vars,
-                     std::vector<int> const& coeff,
-                     int c,
-                     cspvar b);
+void post_lin_eq_iff_re(Solver &s,
+                        std::vector<cspvar> const& vars,
+                        std::vector<int> const& coeff,
+                        int c,
+                        cspvar b);
 
 /* linear inequality: L != 0 */
 void post_lin_neq(Solver &s,
