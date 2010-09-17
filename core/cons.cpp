@@ -744,7 +744,7 @@ void post_lin_eq_left_imp_re(Solver &s,
 // b=1 iff sum coeff[i]*vars[i] + c = 0
 //
 // L >= 0 => b1, L <= 0 => b2, b <=> b1 /\ b2
-void post_lin_iff_eq_re(Solver &s,
+void post_lin_eq_iff_re(Solver &s,
                         std::vector<cspvar> const& vars,
                         std::vector<int> const& coeff,
                         int c,
