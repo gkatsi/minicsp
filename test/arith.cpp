@@ -2,6 +2,7 @@
 
 #include "solver.hpp"
 #include "cons.hpp"
+#include "test.hpp"
 
 using namespace std;
 
@@ -298,7 +299,131 @@ namespace {
     assert(caught);
   }
 
+  // abs, c == 0, x > 0
+  // abs, c == 0, x < 0
+  // abs, c == 0, min(x) < 0, max(x) > 0
+  void test15()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(12, 20);
+    cspvar y = s.newCSPVar(7, 15);
+    post_abs(s, x, y, 0);
+    assert( x.max(s) == 15 );
+    assert( y.min(s) == 12 );
 
+    cspvar x1 = s.newCSPVar(-20, -12);
+    cspvar y1 = s.newCSPVar(7, 15);
+    post_abs(s, x1, y1, 0);
+    assert( x1.min(s) == -15);
+    assert( y1.min(s) == 12);
+
+    cspvar x2 = s.newCSPVar(-5, 7);
+    cspvar y2 = s.newCSPVar(3, 8);
+
+    post_abs(s, x2, y2, 0);
+    for(int i = -2; i <= 2; ++i)
+      assert(!x2.indomain(s, i));
+    assert(y2.max(s) == 7);
+    assert(y2.min(s) == 3);
+    assert(x2.min(s) == -5);
+    assert(x2.max(s) == 7);
+
+    s.newDecisionLevel();
+    assert(! x2.remove(s, 4, NO_REASON) );
+    assert(! x2.remove(s, -4, NO_REASON) );
+    assert(! s.propagate() );
+    assert( !y2.indomain(s, 4) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    assert(! y2.remove(s, 5, NO_REASON) );
+    assert(! s.propagate() );
+    assert( !x2.indomain(s, 5) );
+    assert( !x2.indomain(s, -5) );
+    s.cancelUntil(0);
+  }
+
+  // abs, c != 0, x > 0
+  // abs, c != 0, x < 0
+  // abs, c != 0, min(x) < 0, max(x) > 0
+  void test16()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(12, 20);
+    cspvar y = s.newCSPVar(-3, 5);
+    post_abs(s, x, y, 10);
+    assert( x.max(s) == 15 );
+    assert( x.min(s) == 12 );
+    assert( y.min(s) == 2 );
+    assert( y.max(s) == 5 );
+
+    cspvar x1 = s.newCSPVar(-20, -12);
+    cspvar y1 = s.newCSPVar(-3, 5);
+    post_abs(s, x1, y1, 10);
+    assert( x1.min(s) == -15);
+    assert( y1.min(s) == 2);
+
+    cspvar x2 = s.newCSPVar(-5, 7);
+    cspvar y2 = s.newCSPVar(-7, -2);
+
+    post_abs(s, x2, y2, 10);
+    for(int i = -2; i <= 2; ++i)
+      assert(!x2.indomain(s, i));
+    assert(y2.max(s) == -3);
+    assert(y2.min(s) == -7);
+    assert(x2.min(s) == -5);
+    assert(x2.max(s) == 7);
+
+    s.newDecisionLevel();
+    assert(! x2.remove(s, 4, NO_REASON) );
+    assert(! x2.remove(s, -4, NO_REASON) );
+    assert(! s.propagate() );
+    assert( !y2.indomain(s, -6) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    assert(! y2.remove(s, -5, NO_REASON) );
+    assert(! s.propagate() );
+    assert( !x2.indomain(s, 5) );
+    assert( !x2.indomain(s, -5) );
+    s.cancelUntil(0);
+  }
+
+  // abs unsat by y < 0
+  // abs unsat by |x| < y
+  // abs unsat by |x| > y
+  void test17()
+  {
+    {
+      Solver s;
+      cspvar x = s.newCSPVar(5, 10);
+      cspvar y = s.newCSPVar(-5, -3);
+      MUST_BE_UNSAT(post_abs(s, x, y, 0));
+    }
+
+    {
+      Solver s;
+      cspvar x = s.newCSPVar(-10, 10);
+      cspvar y = s.newCSPVar(15, 20);
+      MUST_BE_UNSAT(post_abs(s, x, y, 0));
+    }
+
+    {
+      Solver s;
+      cspvar x = s.newCSPVar(-10, 10);
+      cspvar y = s.newCSPVar(0, 2);
+      for(int i = -2; i <= 2; ++i)
+        x.remove(s, i, NO_REASON);
+      MUST_BE_UNSAT(post_abs(s, x, y, 0));
+    }
+
+    {
+      Solver s;
+      cspvar x = s.newCSPVar(-10, -3);
+      cspvar y = s.newCSPVar(0, 2);
+      MUST_BE_UNSAT(post_abs(s, x, y, 0));
+    }
+  }
 }
 
 void le_test()
@@ -359,5 +484,17 @@ void le_test()
 
   cerr << "test 14 ... " << flush;
   test14();
+  cerr << "OK" << endl;
+
+  cerr << "test 15 ... " << flush;
+  test15();
+  cerr << "OK" << endl;
+
+  cerr << "test 16 ... " << flush;
+  test16();
+  cerr << "OK" << endl;
+
+  cerr << "test 17 ... " << flush;
+  test17();
   cerr << "OK" << endl;
 }

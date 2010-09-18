@@ -24,6 +24,9 @@ void post_leq(Solver& s, cspvar v1, cspvar v2, int c);
 // v1 < v2 + c
 void post_less(Solver& s, cspvar v1, cspvar v2, int c);
 
+/* |x| = y + c */
+void post_abs(Solver& s, cspvar v1, cspvar v2, int c);
+
 // sum coeff[i]*vars[i] + c <= 0
 void post_lin_leq(Solver &s, std::vector<cspvar> const& vars,
                    std::vector<int> const &coeff, int c);

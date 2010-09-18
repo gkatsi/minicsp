@@ -514,6 +514,30 @@ namespace FlatZinc {
       }
     }
 
+    void p_int_abs(Solver& s, FlatZincModel& m,
+                     const ConExpr& ce, AST::Node* ann) {
+      if( !ce[0]->isIntVar()) {
+        cspvar y = getIntVar(s, m, ce[1]);
+        y.assign(s, abs(ce[0]->getInt()), NO_REASON);
+      } else if( !ce[1]->isIntVar()) {
+        cspvar x = getIntVar(s, m, ce[0]);
+        int y = ce[1]->getInt();
+        if( y < 0 ) throw unsat();
+        if( x.min(s) <= -y )
+          x.setmin(s, -y, NO_REASON);
+        else
+          x.assign(s, y, NO_REASON);
+        if( x.max(s) >= y)
+          x.setmax(s, y, NO_REASON);
+        else
+          x.assign(s, -y, NO_REASON);
+        for(int i = x.min(s)+1; i < x.max(s); ++i)
+          x.remove(s, i, NO_REASON);
+      } else {
+        post_abs(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[1]), 0);
+      }
+    }
+
 #if 0
     void p_int_times(Solver& s, const ConExpr& ce, AST::Node* ann) {
       IntVar x0 = getIntVar(s, ce[0]);
@@ -759,6 +783,7 @@ namespace FlatZinc {
         registry().add("int_lin_gt_reif", &p_int_lin_gt_reif);
         registry().add("int_plus", &p_int_plus);
         registry().add("int_minus", &p_int_minus);
+        registry().add("int_abs", &p_int_abs);
       }
     };
     IntPoster __int_poster;

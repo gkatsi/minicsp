@@ -307,6 +307,122 @@ class cons_neq_re;
 class cons_lt_re;
 class cons_le_re;
 
+/* abs: |x| = y + c*/
+class cons_abs : public cons {
+  cspvar _x, _y;
+  int _c;
+  vec<Lit> _reason; // cache to avoid the cost of allocation
+public:
+  cons_abs(Solver &s,
+           cspvar x, cspvar y, int c) :
+    _x(x), _y(y), _c(c)
+  {
+    using std::max;
+    using std::min;
+
+    // we only wake on dom here, otherwise it is too complicated
+    s.wake_on_dom(x, this);
+    s.wake_on_dom(y, this);
+    _reason.capacity(3); _reason.growTo(2, lit_Undef);
+
+    if( y.min(s) + _c < 0 )
+      DO_OR_THROW(_y.setmin(s, 0, NO_REASON));
+
+    if( _y.min(s) + _c > max(abs(x.max(s)), abs(x.min(s))) ||
+        _y.max(s) + _c < min(abs(x.max(s)), abs(x.min(s))) )
+      throw unsat();
+
+    for(int i = _x.min(s), iend = _x.max(s)+1; i != iend; ++i) {
+      if( !_x.indomain(s, i) )
+        DO_OR_THROW(wake(s, _x.e_neq(s, i)));
+      if( !_y.indomain(s, abs(i)-_c) )
+        _x.remove(s, i, NO_REASON);
+    }
+
+    for(int i = _y.min(s), iend = _y.max(s)+1; i != iend; ++i) {
+      if( !_y.indomain(s, i) )
+        DO_OR_THROW(wake(s, _y.e_neq(s, i)));
+      if( !_x.indomain(s, i+_c) && !_x.indomain(s, -i-_c) )
+        _y.remove(s, i, NO_REASON);
+    }
+  }
+
+  Clause *wake(Solver& s, Lit p);
+  void clone(Solver& other);
+  ostream& print(ostream& os) const;
+  ostream& printstate(Solver& s, ostream& os) const;
+};
+
+Clause* cons_abs::wake(Solver &s, Lit event)
+{
+  domevent e = s.event(event);
+  _reason[0] = ~event;
+
+  if( e.x == _x ) {
+    if( _y.indomain(s, abs(e.d)-_c) && !_x.indomain(s, -e.d) ) {
+      _reason[1] = _x.r_neq( s, -e.d );
+      if( var(_reason[1]) == var_Undef ) {
+        _reason[1] = _y.e_neq(s, abs(e.d)-_c);
+        return _y.remove(s, abs(e.d)-_c, _reason);
+      }
+      _reason.push( _y.e_neq( s, abs(e.d)-_c) );
+      Clause *confl = _y.remove(s, abs(e.d)-_c, _reason);
+      _reason.shrink(1);
+      return confl;
+    }
+  } else {
+    if( _x.indomain(s, e.d+_c) ) {
+      _reason[1] = _x.e_neq( s, e.d+_c);
+      DO_OR_RETURN(_x.remove(s, e.d+_c, _reason));
+    }
+    if( _x.indomain(s, -e.d-_c) ) {
+      _reason[1] = _x.e_neq( s, -e.d-_c );
+      DO_OR_RETURN(_x.remove(s, -e.d-_c, _reason));
+    }
+  }
+
+  return 0L;
+}
+
+void cons_abs::clone(Solver &other)
+{
+  cons *con = new cons_abs(other, _x, _y, _c);
+  other.addConstraint(con);
+}
+
+ostream& cons_abs::print(ostream& os) const
+{
+  os << "abs(" << _x << ") = " << _y;
+  if( _c > 0 )
+    os << " + " << _c;
+  else if( _c < 0 )
+    os << " - " << -_c;
+  return os;
+}
+
+ostream& cons_abs::printstate(Solver& s, ostream& os) const
+{
+  print(os);
+  os << " (with ";
+  os << _x << " in [" << _x.min(s) << ", " << _x.max(s) << "], ";
+  os << _y << " in [" << _y.min(s) << ", " << _y.max(s) << "])";
+  return os;
+}
+
+void post_abs(Solver& s, cspvar v1, cspvar v2, int c)
+{
+  if( v1.min(s) >= 0 ) {
+    post_eq(s, v1, v2, c);
+    return;
+  }
+  if( v1.max(s) <= 0 ) {
+    post_neg(s, v2, v1, -c);
+    return;
+  }
+  cons *con = new cons_abs(s, v1, v2, c);
+  s.addConstraint(con);
+}
+
 /* cons_lin_le
 
    N-ary linear inequality
