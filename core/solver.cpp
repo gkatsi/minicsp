@@ -1089,7 +1089,14 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
     bool first = true;
 
     for (;;){
-        Clause* confl = propagate();
+        Clause *confl;
+        try {
+          confl = propagate();
+        } catch( unsat ) {
+          assert(decisionLevel() == 0);
+          ++conflicts;
+          return l_False;
+        }
         if (confl != NULL){
             // CONFLICT
             conflicts++; conflictC++;

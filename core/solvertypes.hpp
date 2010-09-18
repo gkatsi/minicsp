@@ -477,7 +477,7 @@ struct unassigned_var : public std::exception
 };
 
 //==================================================
-// convenience macros
+// convenience macros/inlines
 
 #define DO_OR_THROW(action) do {                \
     Clause *confl##__LINE__ = action;           \
@@ -488,5 +488,13 @@ struct unassigned_var : public std::exception
     Clause *confl##__LINE__ = action;            \
     if( confl##__LINE__ ) return confl##__LINE__;\
   } while(0)
+
+template<typename T>
+inline
+T* throw_if_null(T* t)
+{
+  if(!t) throw unsat();
+  return t;
+}
 
 #endif
