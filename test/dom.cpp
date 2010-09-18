@@ -196,8 +196,26 @@ namespace {
     assert( x.max(s) == 5 );
     assert( x.indomain(s, 5) );
 
-    // this requires more thought
-    //assert( x.remove(s, 5, NO_REASON) );
+    MUST_BE_UNSAT( x.remove(s, 5, NO_REASON) );
+  }
+
+  // really basic stuff that should have been tested from the
+  // beginning :(
+  void test12()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(5, 10);
+
+    assert(!x.indomain(s, 1));
+    assert(!x.indomain(s, 20));
+    MUST_BE_UNSAT( x.assign(s, 15, NO_REASON) );
+    MUST_BE_UNSAT( x.setmin(s, 15, NO_REASON) );
+    MUST_BE_UNSAT( x.setmax(s, 1, NO_REASON) );
+
+    Clause *c = (Clause*)0x12345678;
+    assert( x.assign(s, 15, c) );
+    assert( x.setmin(s, 15, c) );
+    assert( x.setmax(s, 1, c) );
   }
 }
 
@@ -247,5 +265,9 @@ void dom_test()
 
   cerr << "test11..." << flush;
   test11();
+  cerr << "OK\n";
+
+  cerr << "test12..." << flush;
+  test12();
   cerr << "OK\n";
 }
