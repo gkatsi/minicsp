@@ -428,6 +428,43 @@ std::ostream& operator<<(std::ostream& os, lit_printer lp)
   return os;
 }
 
+inline
+std::ostream& operator<<(std::ostream& os, domain_as_range d)
+{
+  cspvar x = d._x;
+  Solver &s = d._s;
+  os << "[" << x.min(s) << ".." << x.max(s) << "]";
+  return os;
+}
+
+inline
+std::ostream& operator<<(std::ostream& os, domain_as_set d)
+{
+  cspvar x = d._x;
+  Solver &s = d._s;
+  os << "{" << x.min(s);
+  int beg = x.min(s), end = beg;
+  for(int i = x.min(s)+1; i <= x.max(s); ++i) {
+    if( !x.indomain(s, i) ) {
+      if( end < i - 1 ) continue;
+      if( end > beg )
+        os << ".." << end;
+      os << ",";
+      beg = i;
+    } else {
+      if( beg > end ) {
+        os << i;
+        beg = i;
+      }
+      end = i;
+    }
+  }
+  if( end > beg )
+    os << ".." << end;
+  os << "}";
+  return os;
+}
+
 inline std::pair<int, int> Solver::cspModelRange(cspvar x) const
 {
   return cspmodel[x._id];

@@ -439,6 +439,21 @@ std::ostream& operator<<(std::ostream& os, clause_printer<T> cp)
   return os;
 }
 
+struct domain_as_range {
+  Solver& _s;
+  cspvar _x;
+  domain_as_range(Solver &s, cspvar x) : _s(s), _x(x) {}
+};
+
+struct domain_as_set {
+  Solver& _s;
+  cspvar _x;
+  domain_as_set(Solver &s, cspvar x) : _s(s), _x(x) {}
+};
+
+std::ostream& operator<<(std::ostream& os, domain_as_range x);
+std::ostream& operator<<(std::ostream& os, domain_as_set x);
+
 inline
 cons_printer print(Solver& s, cons const& c)
 {
