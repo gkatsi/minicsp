@@ -767,6 +767,13 @@ inline bool operator==(cspvar x1, cspvar x2)
 }
 
 //==================================================
+//
+inline void pushifdef(vec<Lit>& ps, Lit p)
+{
+  if( p != lit_Undef ) ps.push(p);
+}
+
+//==================================================
 // a trick to avoid branching
 // returns a1 if w >= 0, otherwise a2
 
