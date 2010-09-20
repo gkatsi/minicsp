@@ -302,7 +302,7 @@ namespace {
   // abs, c == 0, x > 0
   // abs, c == 0, x < 0
   // abs, c == 0, min(x) < 0, max(x) > 0
-  void test15()
+  void abs01()
   {
     Solver s;
     cspvar x = s.newCSPVar(12, 20);
@@ -346,7 +346,7 @@ namespace {
   // abs, c != 0, x > 0
   // abs, c != 0, x < 0
   // abs, c != 0, min(x) < 0, max(x) > 0
-  void test16()
+  void abs02()
   {
     Solver s;
     cspvar x = s.newCSPVar(12, 20);
@@ -392,7 +392,7 @@ namespace {
   // abs unsat by y < 0
   // abs unsat by |x| < y
   // abs unsat by |x| > y
-  void test17()
+  void abs03()
   {
     {
       Solver s;
@@ -486,15 +486,15 @@ void le_test()
   test14();
   cerr << "OK" << endl;
 
-  cerr << "test 15 ... " << flush;
-  test15();
+  cerr << "abs 01 ... " << flush;
+  abs01();
   cerr << "OK" << endl;
 
-  cerr << "test 16 ... " << flush;
-  test16();
+  cerr << "abs 02 ... " << flush;
+  abs02();
   cerr << "OK" << endl;
 
-  cerr << "test 17 ... " << flush;
-  test17();
+  cerr << "abs 03 ... " << flush;
+  abs03();
   cerr << "OK" << endl;
 }
