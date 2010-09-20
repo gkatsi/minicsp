@@ -610,6 +610,20 @@ inline Clause *cspvar::remove(Solver &s, int d, vec<Lit> &ps)
   return 0L;
 }
 
+inline Clause *cspvar::removef(Solver &s, int d, vec<Lit> &ps)
+{
+  Var xd = eqi(s, d);
+  if( xd == var_Undef ) return 0L;
+  if( s.value(xd) == l_False ) return 0L;
+  ps.push( ~Lit(xd) );
+  Clause *r = Clause_new(ps);
+  ps.pop();
+  s.addInactiveClause(r);
+  if( s.value(xd) == l_True ) return r;
+  s.uncheckedEnqueue( ~Lit(xd), r);
+  return 0L;
+}
+
 inline Clause *cspvar::setmin(Solver &s, int d, Clause *c)
 {
   Var xd = leqi(s, d-1);
@@ -634,6 +648,23 @@ inline Clause *cspvar::setmin(Solver &s, int d, vec<Lit> &ps)
   }
   if( s.value(xd) == l_False ) return 0L;
   Clause *r = Clause_new(ps);
+  s.addInactiveClause(r);
+  if( s.value(xd) == l_True ) return r;
+  s.uncheckedEnqueue( ~Lit(xd), r);
+  return 0L;
+}
+
+inline Clause *cspvar::setminf(Solver &s, int d, vec<Lit> &ps)
+{
+  Var xd = leqi(s, d-1);
+  if( xd == var_Undef ) {
+    if( d <= max(s) ) return 0L;
+    throw undefined_literal(s, domevent(*this, domevent::GEQ, d));
+  }
+  if( s.value(xd) == l_False ) return 0L;
+  ps.push( ~Lit(xd) );
+  Clause *r = Clause_new(ps);
+  ps.pop();
   s.addInactiveClause(r);
   if( s.value(xd) == l_True ) return r;
   s.uncheckedEnqueue( ~Lit(xd), r);
@@ -670,6 +701,23 @@ inline Clause *cspvar::setmax(Solver &s, int d, vec<Lit> &ps)
   return 0L;
 }
 
+inline Clause *cspvar::setmaxf(Solver &s, int d, vec<Lit> &ps)
+{
+  Var xd = leqi(s, d);
+  if( xd == var_Undef ) {
+    if( d >= min(s) ) return 0L;
+    throw undefined_literal(s, domevent(*this, domevent::LEQ, d));
+  }
+  if( s.value(xd) == l_True ) return 0L;
+  ps.push( Lit(xd) );
+  Clause *r = Clause_new(ps);
+  ps.pop();
+  s.addInactiveClause(r);
+  if( s.value(xd) == l_False ) return r;
+  s.uncheckedEnqueue( Lit(xd), r);
+  return 0L;
+}
+
 inline Clause *cspvar::assign(Solver &s, int d, Clause *c)
 {
   Var xd = eqi(s, d);
@@ -691,6 +739,22 @@ inline Clause *cspvar::assign(Solver &s, int d, vec<Lit> &ps)
   }
   if( s.value(xd) == l_True ) return 0L;
   Clause *r = Clause_new(ps);
+  s.addInactiveClause(r);
+  if( s.value(xd) == l_False ) return r;
+  s.uncheckedEnqueue( Lit(xd), r );
+  return 0L;
+}
+
+inline Clause *cspvar::assignf(Solver &s, int d, vec<Lit> &ps)
+{
+  Var xd = eqi(s, d);
+  if( xd == var_Undef ) {
+    throw undefined_literal(s, domevent(*this, domevent::EQ, d));
+  }
+  if( s.value(xd) == l_True ) return 0L;
+  ps.push( Lit(xd) );
+  Clause *r = Clause_new(ps);
+  ps.pop();
   s.addInactiveClause(r);
   if( s.value(xd) == l_False ) return r;
   s.uncheckedEnqueue( Lit(xd), r );
@@ -723,6 +787,16 @@ const char *unassigned_var::what() const throw()
   static const int l = strlen(s);
   static char exc[2*strlen(s)+1];
   snprintf(exc, 2*l, s, _x.id());
+  return exc;
+}
+
+inline
+const char *undefined_literal::what() const throw()
+{
+  const char s[] = "literal x%s %s %d is undefined";
+  static const int l = strlen(s);
+  static char exc[2*strlen(s)+1];
+  snprintf(exc, 2*l, s, _e.x.id(), opstring(_e.type), _e.d);
   return exc;
 }
 

@@ -1310,15 +1310,7 @@ ostream& operator<<(ostream& os, domevent pevent)
     return os;
   }
 
-  const char *op = 0L;
-  switch(pevent.type) {
-  case domevent::EQ: op = "=="; break;
-  case domevent::NEQ: op = "!="; break;
-  case domevent::LEQ: op = "<="; break;
-  case domevent::GEQ: op = ">="; break;
-  case domevent::NONE: op = "#$%#^%"; break;
-  }
-  os << "x" << pevent.x.id() << ' ' << op << ' '
+  os << "x" << pevent.x.id() << ' ' << opstring(pevent.type) << ' '
      << pevent.d;
   return os;
 }

@@ -255,6 +255,16 @@ class cspvar
   Clause *assign(Solver& s, int d, vec<Lit>& reason);
   Clause *assign(Solver& s, int d, cons *c);
 
+  /* the *f versions of the vec<Lit> overloads above fill in the
+     reason with the appropriate e_ literal. The literal is push()ed
+     into reason and pop()ed back before returning, so reason is
+     not const but is not modified.
+  */
+  Clause *removef(Solver& s, int d, vec<Lit>& reason);
+  Clause *setminf(Solver& s, int m, vec<Lit>& reason);
+  Clause *setmaxf(Solver& s, int m, vec<Lit>& reason);
+  Clause *assignf(Solver& s, int d, vec<Lit>& reason);
+
   /* Generating reasons */
   Var eqi(Solver &s, int d) const;
   Var leqi(Solver &s, int d) const;
@@ -392,6 +402,17 @@ struct domevent
 };
 
 inline bool noevent(domevent d) { return d.type == domevent::NONE; }
+inline
+const char *opstring(domevent::event_type t) {
+  switch(t) {
+  case domevent::EQ: return "==";
+  case domevent::NEQ: return "!=";
+  case domevent::LEQ: return "<=";
+  case domevent::GEQ: return ">=";
+  case domevent::NONE: return "#$%#^%";
+  }
+  return 0L; // gcc
+}
 
 //==================================================
 // output
@@ -493,6 +514,16 @@ struct unassigned_var : public std::exception
 
   unassigned_var(Solver const& s, cspvar x) : _s(s), _x(x) {}
   const char* what() const throw();
+};
+
+struct undefined_literal : public std::exception
+{
+  Solver const& _s;
+  domevent _e;
+
+  undefined_literal(Solver const& s, domevent e) :
+    _s(s), _e(e) {}
+  const char *what() const throw();
 };
 
 //==================================================
