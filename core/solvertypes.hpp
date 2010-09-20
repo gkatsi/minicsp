@@ -230,9 +230,10 @@ class cspvar
      from a vec<Lit> or a cons, which will lazily be called on to
      generate a clause later, if needed.
 
-     These return a Clause *, which is NULL if the operation does
-     not cause a conflict, otherwise a failed clause (i.e. all false
-     literals).
+     These return a Clause *, which is NULL if the operation does not
+     cause a conflict, otherwise return the reason, which is a failed
+     clause. Note if the reason is NULL (NO_REASON) and there is a
+     failure, they throw unsat().
   */
   Clause *remove(Solver& s, int d, Clause *c);
   Clause *remove(Solver& s, int d, vec<Lit>& reason);
