@@ -558,6 +558,16 @@ inline Lit cspvar::r_neq(Solver &s, int d) const
   return Lit( eqi(s, d) );
 }
 
+inline Lit cspvar::r_min(Solver &s) const
+{
+  return r_geq(s, min(s));
+}
+
+inline Lit cspvar::r_max(Solver &s) const
+{
+  return r_leq(s, max(s));
+}
+
 inline Lit cspvar::e_geq(Solver &s, int d) const
 {
   return ~Lit( leqi(s, d-1) );
