@@ -790,7 +790,7 @@ int select(int w, int a1, int a2)
 inline
 const char *unassigned_var::what() const throw()
 {
-  const char s[] = "expected var %s to be assigned";
+  const char s[] = "expected var x%d to be assigned";
   static const int l = strlen(s);
   static char exc[2*strlen(s)+1];
   snprintf(exc, 2*l, s, _x.id());
@@ -800,7 +800,7 @@ const char *unassigned_var::what() const throw()
 inline
 const char *undefined_literal::what() const throw()
 {
-  const char s[] = "literal x%s %s %d is undefined";
+  const char s[] = "literal x%d %s %d is undefined";
   static const int l = strlen(s);
   static char exc[2*strlen(s)+1];
   snprintf(exc, 2*l, s, _e.x.id(), opstring(_e.type), _e.d);
