@@ -1167,7 +1167,205 @@ Clause *cons_pb::wake(Solver& s, Lit)
   return conf;
 }
 
-class cons_div; // integer division
+/* x = y*z */
+class cons_mult : public cons {
+  cspvar _x, _y, _z;
+  vec<Lit> _reason;
+
+  // divide and round up
+  int divup(int d, int n) {
+    if( d > 0 ) {
+      if( n > 0 )
+        return (d+n-1)/n;
+      else
+        return d/n;
+    } else {
+      if( n > 0 )
+        return d/n;
+      else
+        return (d-n-1)/n;
+    }
+  }
+  // divide and round down
+  int divdn(int d, int n) {
+    if( d > 0 ) {
+      if( n > 0 )
+        return d/n;
+      else
+        return (d-n-1)/n;
+    } else {
+      if( n > 0 )
+        return (d-n+1)/n;
+      else
+        return d/n;
+    }
+  }
+public:
+  cons_mult(Solver &s, cspvar x, cspvar y, cspvar z) :
+    _x(x), _y(y), _z(z)
+  {
+    s.wake_on_lb(_x, this);
+    s.wake_on_ub(_x, this);
+    s.wake_on_lb(_y, this);
+    s.wake_on_ub(_y, this);
+    s.wake_on_lb(_z, this);
+    s.wake_on_ub(_z, this);
+
+    _reason.capacity(5);
+    wake(s, lit_Undef);
+  }
+
+  Clause *wake(Solver& s, Lit p);
+  void clone(Solver& other);
+  ostream& print(ostream& os) const;
+  ostream& printstate(Solver& s, ostream& os) const;
+};
+
+Clause* cons_mult::wake(Solver &s, Lit)
+{
+  using std::min;
+  using std::max;
+  if( _y.min(s) > 0 && _z.min(s) > 0 ) {
+    _reason.clear();
+    pushifdef(_reason, _z.r_min(s));
+    pushifdef(_reason, _y.r_min(s));
+    _x.setminf( s, _y.min(s)*_z.min(s), _reason );
+
+    _reason.clear();
+    pushifdef(_reason, _z.r_max(s));
+    pushifdef(_reason, _y.r_max(s));
+    _x.setmaxf( s, _y.max(s)*_z.max(s), _reason );
+
+    _reason.clear();
+    pushifdef(_reason, _x.r_min(s));
+    pushifdef(_reason, _z.r_max(s));
+    _y.setminf( s, divup(_x.min(s), _z.max(s)), _reason );
+
+    _reason.clear();
+    pushifdef(_reason, _x.r_max(s));
+    pushifdef(_reason, _z.r_min(s));
+    _y.setmaxf( s, divdn(_x.max(s), _z.min(s)), _reason );
+
+    _reason.clear();
+    pushifdef(_reason, _x.r_min(s));
+    pushifdef(_reason, _y.r_max(s));
+    _z.setminf( s, divup(_x.min(s), _y.max(s)), _reason );
+
+    _reason.clear();
+    pushifdef(_reason, _x.r_max(s));
+    pushifdef(_reason, _y.r_min(s));
+    _z.setmaxf( s, divdn(_x.max(s), _y.min(s)), _reason );
+  } if( _y.max(s) < 0 && _z.max(s) < 0 ) {
+    _reason.clear();
+    pushifdef(_reason, _z.r_max(s));
+    pushifdef(_reason, _y.r_max(s));
+    _x.setminf( s, _y.max(s)*_z.max(s), _reason );
+
+    _reason.clear();
+    pushifdef(_reason, _z.r_min(s));
+    pushifdef(_reason, _y.r_min(s));
+    _x.setmaxf( s, _y.min(s)*_z.min(s), _reason );
+
+    _reason.clear();
+    pushifdef(_reason, _x.r_max(s));
+    pushifdef(_reason, _z.r_max(s));
+    _y.setminf( s, divup(_x.max(s), _z.max(s)), _reason );
+
+    _reason.clear();
+    pushifdef(_reason, _x.r_min(s));
+    pushifdef(_reason, _z.r_min(s));
+    _y.setmaxf( s, divdn(_x.min(s), _z.min(s)), _reason );
+
+    _reason.clear();
+    pushifdef(_reason, _x.r_max(s));
+    pushifdef(_reason, _y.r_max(s));
+    _z.setminf( s, divup(_x.max(s), _y.max(s)), _reason );
+
+    _reason.clear();
+    pushifdef(_reason, _x.r_min(s));
+    pushifdef(_reason, _y.r_min(s));
+    _z.setmaxf( s, divdn(_x.min(s), _y.min(s)), _reason );
+  } else {
+    _reason.clear();
+    pushifdef(_reason, _y.r_min(s));
+    pushifdef(_reason, _y.r_max(s));
+    pushifdef(_reason, _z.r_min(s));
+    pushifdef(_reason, _z.r_max(s));
+    _x.setminf( s, min( min( _y.min(s)*_z.min(s),
+                             _y.min(s)*_z.max(s)),
+                        min( _y.max(s)*_z.min(s),
+                             _y.max(s)*_z.max(s))), _reason);
+    _x.setmaxf( s, max( max( _y.min(s)*_z.min(s),
+                             _y.min(s)*_z.max(s)),
+                        max( _y.max(s)*_z.min(s),
+                             _y.max(s)*_z.max(s))), _reason);
+    if( _y.min(s) > 0 ) {
+      _reason.clear();
+      pushifdef(_reason, _y.r_min(s));
+      pushifdef(_reason, _y.r_max(s));
+      pushifdef(_reason, _x.r_min(s));
+      pushifdef(_reason, _x.r_max(s));
+      _z.setminf( s, min( min( _x.min(s) / _y.min(s),
+                               _x.min(s) / _y.max(s)),
+                          min( _x.max(s) / _y.min(s),
+                               _x.max(s) / _y.max(s))), _reason);
+      _z.setmaxf( s, max( max( _x.min(s) / _y.min(s),
+                               _x.min(s) / _y.max(s)),
+                          max( _x.max(s) / _y.min(s),
+                               _x.max(s) / _y.max(s))), _reason);
+    }
+    if( _z.min(s) > 0 ) {
+      _reason.clear();
+      pushifdef(_reason, _z.r_min(s));
+      pushifdef(_reason, _z.r_max(s));
+      pushifdef(_reason, _x.r_min(s));
+      pushifdef(_reason, _x.r_max(s));
+      _y.setminf( s, min( min( _x.min(s) / _z.min(s),
+                               _x.min(s) / _z.max(s)),
+                          min( _x.max(s) / _z.min(s),
+                               _x.max(s) / _z.max(s))), _reason);
+      _y.setmaxf( s, max( max( _x.min(s) / _z.min(s),
+                               _x.min(s) / _z.max(s)),
+                          max( _x.max(s) / _z.min(s),
+                               _x.max(s) / _z.max(s))), _reason);
+    }
+  }
+  return 0L;
+}
+
+void cons_mult::clone(Solver& other)
+{
+  cons *con = new cons_mult(other, _x, _y, _z);
+  other.addConstraint(con);
+}
+
+ostream& cons_mult::print(ostream& os) const
+{
+  os << "_x" << " = " << _y << "*" << _z;
+  return os;
+}
+
+ostream& cons_mult::printstate(Solver &s, ostream& os) const
+{
+  print(os);
+  os << " (with " <<  _x << " in " << domain_as_range(s, _x)
+     << ", " <<   _y << " in " << domain_as_range(s, _y)
+     << ", " <<   _z << " in " << domain_as_range(s, _z);
+  return os;
+}
+
+void post_mult(Solver& s, cspvar x, cspvar y, cspvar z)
+{
+  cons *con = new cons_mult(s, x, y, z);
+  s.addConstraint(con);
+}
+
+void post_div(Solver& s, cspvar x, cspvar y, cspvar z)
+{
+  post_mult(s, y, x, z);
+}
+
+class cons_mod;
 class cons_min;
 class cons_max;
 class cons_abs;

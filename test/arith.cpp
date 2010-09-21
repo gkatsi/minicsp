@@ -424,7 +424,78 @@ namespace {
       MUST_BE_UNSAT(post_abs(s, x, y, 0));
     }
   }
+
+  // mult, all positive
+  void mult01()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(4,8);
+    cspvar y = s.newCSPVar(1,2);
+    cspvar z = s.newCSPVar(1,3);
+
+    post_mult(s, x, y, z);
+
+    assert(x.min(s) == 4);
+    assert(x.max(s) == 6);
+    assert(y.min(s) == 2);
+    assert(y.max(s) == 2);
+    assert(z.min(s) == 2);
+    assert(z.max(s) == 3);
+  }
+
+  // mult, y and z negative
+  void mult02()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(4,8);
+    cspvar y = s.newCSPVar(-2,-1);
+    cspvar z = s.newCSPVar(-3,-1);
+
+    post_mult(s, x, y, z);
+
+    assert(x.min(s) == 4);
+    assert(x.max(s) == 6);
+    assert(y.min(s) == -2);
+    assert(y.max(s) == -2);
+    assert(z.min(s) == -3);
+    assert(z.max(s) == -2);
+  }
+
+  // mixed positive/negative, become pure positive/pure negative after
+  // propagation
+  void mult03()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(-7, 9);
+    cspvar y = s.newCSPVar(-1, 2);
+    cspvar z = s.newCSPVar(-3, 4);
+
+    post_mult(s, x, y, z);
+    assert(x.min(s) == -6);
+    assert(x.max(s) == 8);
+
+    s.newDecisionLevel();
+    assert( !x.setmax(s, 3, NO_REASON));
+    assert( !s.propagate() );
+
+    s.newDecisionLevel();
+    assert(!y.setmin(s, 1, NO_REASON));
+    assert(!s.propagate());
+    assert( z.max(s) == 3 );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    assert( !x.setmin(s, 4, NO_REASON));
+    assert( !y.setmin(s, 1, NO_REASON));
+    assert( !z.setmin(s, 1, NO_REASON));
+    assert( !z.setmax(s, 3, NO_REASON));
+    assert( !s.propagate() );
+    assert( x.max(s) == 6);
+    assert( y.min(s) == 2);
+    assert( z.min(s) == 2);
+  }
 }
+
 
 void le_test()
 {
@@ -496,5 +567,17 @@ void le_test()
 
   cerr << "abs 03 ... " << flush;
   abs03();
+  cerr << "OK" << endl;
+
+  cerr << "mult 01 ... " << flush;
+  mult01();
+  cerr << "OK" << endl;
+
+  cerr << "mult 02 ... " << flush;
+  mult02();
+  cerr << "OK" << endl;
+
+  cerr << "mult 03 ... " << flush;
+  mult03();
   cerr << "OK" << endl;
 }

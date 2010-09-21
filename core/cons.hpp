@@ -136,6 +136,12 @@ void post_pb_iff_re(Solver& s, std::vector<cspvar> const& vars,
                     std::vector<int> const& weights, int lb,
                     cspvar b);
 
+/* x = y*z */
+void post_mult(Solver& s, cspvar x, cspvar y, cspvar z);
+
+/* x = y/z */
+void post_div(Solver& s, cspvar x, cspvar y, cspvar z);
+
 // alldiff
 void post_alldiff(Solver &s, std::vector<cspvar> const& vars);
 

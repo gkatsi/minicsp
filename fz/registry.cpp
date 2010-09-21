@@ -538,19 +538,29 @@ namespace FlatZinc {
       }
     }
 
+    void p_int_times(Solver& s, FlatZincModel& m,
+                     const ConExpr& ce, AST::Node* ann) {
+      cspvar x0 = getIntVar(s, m, ce[0]);
+      cspvar x1 = getIntVar(s, m, ce[1]);
+      cspvar x2 = getIntVar(s, m, ce[2]);
+      post_mult(s, x1, x2, x0); // note the order
+    }
+    void p_int_div(Solver& s, FlatZincModel& m,
+                   const ConExpr& ce, AST::Node* ann) {
+      cspvar x0 = getIntVar(s, m, ce[0]);
+      cspvar x1 = getIntVar(s, m, ce[1]);
+      cspvar x2 = getIntVar(s, m, ce[2]);
+      post_div(s, x1, x2, x0); // note the order
+    }
+
+    void p_int_negate(Solver& s, FlatZincModel& m,
+                      const ConExpr& ce, AST::Node* ann) {
+      cspvar x0 = getIntVar(s, m, ce[0]);
+      cspvar x1 = getIntVar(s, m, ce[1]);
+      post_neg(s, x0, x1, 0);
+    }
+
 #if 0
-    void p_int_times(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      IntVar x0 = getIntVar(s, ce[0]);
-      IntVar x1 = getIntVar(s, ce[1]);
-      IntVar x2 = getIntVar(s, ce[2]);
-      mult(s, x0, x1, x2, ann2icl(ann));
-    }
-    void p_int_div(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      IntVar x0 = getIntVar(s, ce[0]);
-      IntVar x1 = getIntVar(s, ce[1]);
-      IntVar x2 = getIntVar(s, ce[2]);
-      div(s,x0,x1,x2, ann2icl(ann));
-    }
     void p_int_mod(Solver& s, const ConExpr& ce, AST::Node* ann) {
       IntVar x0 = getIntVar(s, ce[0]);
       IntVar x1 = getIntVar(s, ce[1]);
@@ -569,11 +579,6 @@ namespace FlatZinc {
       IntVar x1 = getIntVar(s, ce[1]);
       IntVar x2 = getIntVar(s, ce[2]);
       max(s, x0, x1, x2, ann2icl(ann));
-    }
-    void p_int_negate(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      IntVar x0 = getIntVar(s, ce[0]);
-      IntVar x1 = getIntVar(s, ce[1]);
-      rel(s, x0 == -x1, ann2icl(ann));
     }
 
     /* Boolean constraints */
@@ -784,6 +789,9 @@ namespace FlatZinc {
         registry().add("int_plus", &p_int_plus);
         registry().add("int_minus", &p_int_minus);
         registry().add("int_abs", &p_int_abs);
+        registry().add("int_times", &p_int_times);
+        registry().add("int_div", &p_int_div);
+        registry().add("int_negate", &p_int_negate);
       }
     };
     IntPoster __int_poster;
