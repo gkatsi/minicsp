@@ -558,9 +558,22 @@ namespace FlatZinc {
 
     void p_int_negate(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
-      cspvar x0 = getIntVar(s, m, ce[0]);
-      cspvar x1 = getIntVar(s, m, ce[1]);
-      post_neg(s, x0, x1, 0);
+      if( !ce[0]->isIntVar() ) {
+        if( !ce[1]->isIntVar() ) {
+          if( ce[0]->getInt() != - ce[1]->getInt() )
+            throw unsat();
+          return;
+        }
+        cspvar x1 = getIntVar(s, m, ce[1]);
+        x1.assign(s, -ce[0]->getInt(), NO_REASON);
+      } else if( !ce[1]->isIntVar() ) {
+        cspvar x0 = getIntVar(s, m, ce[1]);
+        x0.assign(s, -ce[1]->getInt(), NO_REASON);
+      } else {
+        cspvar x0 = getIntVar(s, m, ce[0]);
+        cspvar x1 = getIntVar(s, m, ce[1]);
+        post_neg(s, x0, x1, 0);
+      }
     }
 
 #if 0
