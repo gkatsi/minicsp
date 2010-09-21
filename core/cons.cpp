@@ -41,10 +41,6 @@ public:
     s.wake_on_fix(y, this);
     _reason.push(); _reason.push();
 
-    if( _x.min(s) > W*_y.max(s)+_c ||
-        _y.min(s) > W*_x.max(s)-W*_c )
-      throw unsat();
-
     if( W > 0 ) {
       DO_OR_THROW(_y.setmin(s, _x.min(s)-_c, NO_REASON));
       DO_OR_THROW(_y.setmax(s, _x.max(s)-_c, NO_REASON));
@@ -57,12 +53,12 @@ public:
       DO_OR_THROW(_x.setmax(s, -_y.min(s)+_c, NO_REASON));
     }
 
-    for(int i = x.min(s)+1, iend = x.max(s); i != iend; ++i) {
+    for(int i = x.min(s)+1, iend = x.max(s); i < iend; ++i) {
       if( !x.indomain(s, i) )
         DO_OR_THROW(wake(s, x.e_neq(s, i)));
     }
 
-    for(int i = y.min(s)+1, iend = y.max(s); i != iend; ++i) {
+    for(int i = y.min(s)+1, iend = y.max(s); i < iend; ++i) {
       if( !y.indomain(s, i) )
         DO_OR_THROW(wake(s, y.e_neq(s, i)));
     }
