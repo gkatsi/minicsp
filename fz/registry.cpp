@@ -225,7 +225,10 @@ namespace FlatZinc {
       if (n->isIntVar()) {
         x0 = m.iv[n->getIntVar()];
       } else {
-        x0 = s.newCSPVar(n->getInt(), n->getInt());
+        int v = n->getInt();
+        if( m.constants.find(v) == m.constants.end() )
+          m.constants[v] = s.newCSPVar(v, v);
+        x0 = m.constants[v];
       }
       return x0;
     }
