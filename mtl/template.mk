@@ -23,6 +23,8 @@ LFLAGS    ?= -Wall
 
 COPTIMIZE ?= -O3
 
+GOOGLE_PROFILER ?= -lprofiler
+
 .PHONY : s p d r rs c lib libd clean 
 
 s:	$(EXEC)
@@ -42,7 +44,7 @@ libd:	lib$(LIB)d.a
 %.oc:                   CFLAGS +=-O0 -fprofile-arcs -ftest-coverage -ggdb -D DEBUG
 
 ## Link options
-$(EXEC):		LFLAGS := -ggdb $(LFLAGS)
+$(EXEC):		LFLAGS := -ggdb $(LFLAGS) $(GOOGLE_PROFILER)
 $(EXEC)_profile:	LFLAGS := -ggdb -pg $(LFLAGS)
 $(EXEC)_debug:		LFLAGS := -ggdb $(LFLAGS)
 $(EXEC)_release:	LFLAGS := $(LFLAGS)

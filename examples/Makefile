@@ -26,6 +26,8 @@ LFLAGS    ?= -Wall
 
 COPTIMIZE ?= -O3
 
+GOOGLE_PROFILER ?= -lprofiler
+
 .PHONY : s p d r rs c clean 
 
 s:         $(EXECS)
@@ -43,7 +45,7 @@ c:         $(EXECSc)
 %.oc:                   CFLAGS +=-O0 -fprofile-arcs -ftest-coverage -ggdb -D DEBUG
 
 ## Link options
-$(EXECS):		LFLAGS := -ggdb $(LFLAGS)
+$(EXECS):		LFLAGS := -ggdb $(LFLAGS) $(GOOGLE_PROFILER)
 $(EXECSp):	        LFLAGS := -ggdb -pg $(LFLAGS)
 $(EXECSd):		LFLAGS := -ggdb $(LFLAGS)
 $(EXECSr):	        LFLAGS := $(LFLAGS)
@@ -86,7 +88,7 @@ $(EXECSc): $(CCOBJS)
 ## Build rule
 %.o %.op %.od %.or %.oc:	%.cpp
 	@echo Compiling: "$@ ( $< )"
-	$(CXX) $(CFLAGS) -c -o $@ $<
+	@$(CXX) $(CFLAGS) -c -o $@ $<
 
 
 clean:
