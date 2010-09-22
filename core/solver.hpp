@@ -553,6 +553,13 @@ inline Lit cspvar::r_eq(Solver &s, int d) const
   return ~Lit( eqi(s, d) );
 }
 
+inline Lit cspvar::r_eq(Solver &s) const
+{
+  Lit l = ~Lit( eqi(s, min(s)));
+  assert( s.value(l) == l_False );
+  return l;
+}
+
 inline Lit cspvar::r_neq(Solver &s, int d) const
 {
   return Lit( eqi(s, d) );
@@ -778,6 +785,18 @@ inline void pushifdef(vec<Lit>& ps, Lit p)
 {
   if( p != lit_Undef ) ps.push(p);
 }
+
+struct push_temp_p {
+  vec<Lit> & _ps;
+  Lit _p;
+  push_temp_p(vec<Lit>& ps, Lit p) : _ps(ps), _p(p) {
+    if( _p != lit_Undef ) _ps.push(_p);
+  }
+  ~push_temp_p() { if(_p != lit_Undef ) _ps.pop(); }
+};
+
+#define PUSH_TEMP(x, y) push_temp_p pp##__LINE__ \
+  __attribute__((unused)) (x,y)
 
 //==================================================
 // a trick to avoid branching

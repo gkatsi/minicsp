@@ -284,6 +284,7 @@ class cspvar
 
   Lit r_min(Solver &s) const;
   Lit r_max(Solver &s) const;
+  Lit r_eq(Solver &s) const;
 
   Lit e_geq(Solver &s, int d) const;
   Lit e_leq(Solver &s, int d) const;
