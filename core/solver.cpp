@@ -1016,6 +1016,17 @@ void Solver::reduceDB()
     learnts.shrink(i - j);
 }
 
+void Solver::gcInactive()
+{
+  int i,j;
+  for(i = j = 0; i < inactive.size(); ++i) {
+    if( !locked(*inactive[i]) )
+      free(inactive[i]);
+    else
+      inactive[j++] = inactive[i];
+  }
+  inactive.shrink(i - j);
+}
 
 void Solver::removeSatisfied(vec<Clause*>& cs)
 {
@@ -1160,6 +1171,9 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             // Simplify the set of problem clauses:
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
+
+            if ( decisionLevel() == 0 || inactive.size() > 10*nAssigns() )
+              gcInactive();
 
             if (*nof_learnts >= 0 && learnts.size()-nAssigns() >= *nof_learnts) {
                 // Reduce the set of learnt clauses:

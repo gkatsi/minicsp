@@ -233,6 +233,7 @@ protected:
     bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
     lbool    search           (int nof_conflicts, double * nof_learnts);               // Search for a given number of conflicts.
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.
+    void     gcInactive       ();                                                      // Collect inactive and unlocked clauses
     void     removeSatisfied  (vec<Clause*>& cs);                                      // Shrink 'cs' to contain only non-satisfied clauses.
     void     uncheckedEnqueue_np(Lit p, Clause *from);                                 // uncheckedEnqueue with no CSP propagation
 
@@ -610,7 +611,7 @@ inline Clause *cspvar::remove(Solver &s, int d, vec<Lit> &ps)
   Var xd = eqi(s, d);
   if( xd == var_Undef ) return 0L;
   if( s.value(xd) == l_False ) return 0L;
-  Clause *r = Clause_new(ps);
+  Clause *r = Clause_new(ps, false, ~Lit(xd));
   s.addInactiveClause(r);
   if( s.value(xd) == l_True ) return r;
   s.uncheckedEnqueue( ~Lit(xd), r);
@@ -623,7 +624,7 @@ inline Clause *cspvar::removef(Solver &s, int d, vec<Lit> &ps)
   if( xd == var_Undef ) return 0L;
   if( s.value(xd) == l_False ) return 0L;
   ps.push( ~Lit(xd) );
-  Clause *r = Clause_new(ps);
+  Clause *r = Clause_new(ps, false, ~Lit(xd));
   ps.pop();
   s.addInactiveClause(r);
   if( s.value(xd) == l_True ) return r;
@@ -654,7 +655,7 @@ inline Clause *cspvar::setmin(Solver &s, int d, vec<Lit> &ps)
     return r;
   }
   if( s.value(xd) == l_False ) return 0L;
-  Clause *r = Clause_new(ps);
+  Clause *r = Clause_new(ps, false, ~Lit(xd) );
   s.addInactiveClause(r);
   if( s.value(xd) == l_True ) return r;
   s.uncheckedEnqueue( ~Lit(xd), r);
@@ -672,7 +673,7 @@ inline Clause *cspvar::setminf(Solver &s, int d, vec<Lit> &ps)
   }
   if( s.value(xd) == l_False ) return 0L;
   ps.push( ~Lit(xd) );
-  Clause *r = Clause_new(ps);
+  Clause *r = Clause_new(ps, false, ~Lit(xd) );
   ps.pop();
   s.addInactiveClause(r);
   if( s.value(xd) == l_True ) return r;
@@ -703,7 +704,7 @@ inline Clause *cspvar::setmax(Solver &s, int d, vec<Lit> &ps)
     return r;
   }
   if( s.value(xd) == l_True ) return 0L;
-  Clause *r = Clause_new(ps);
+  Clause *r = Clause_new(ps, false, Lit(xd) );
   s.addInactiveClause(r);
   if( s.value(xd) == l_False ) return r;
   s.uncheckedEnqueue( Lit(xd), r);
@@ -721,7 +722,7 @@ inline Clause *cspvar::setmaxf(Solver &s, int d, vec<Lit> &ps)
   }
   if( s.value(xd) == l_True ) return 0L;
   ps.push( Lit(xd) );
-  Clause *r = Clause_new(ps);
+  Clause *r = Clause_new(ps, false, Lit(xd) );
   ps.pop();
   s.addInactiveClause(r);
   if( s.value(xd) == l_False ) return r;
@@ -749,7 +750,7 @@ inline Clause *cspvar::assign(Solver &s, int d, vec<Lit> &ps)
     return r;
   }
   if( s.value(xd) == l_True ) return 0L;
-  Clause *r = Clause_new(ps);
+  Clause *r = Clause_new(ps, false, Lit(xd) );
   s.addInactiveClause(r);
   if( s.value(xd) == l_False ) return r;
   s.uncheckedEnqueue( Lit(xd), r );
@@ -766,7 +767,7 @@ inline Clause *cspvar::assignf(Solver &s, int d, vec<Lit> &ps)
   }
   if( s.value(xd) == l_True ) return 0L;
   ps.push( Lit(xd) );
-  Clause *r = Clause_new(ps);
+  Clause *r = Clause_new(ps, false, Lit(xd) );
   ps.pop();
   s.addInactiveClause(r);
   if( s.value(xd) == l_False ) return r;
