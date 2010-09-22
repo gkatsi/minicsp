@@ -15,6 +15,127 @@ using std::vector;
 
    implemented as x = W*y + c, but with W == 1 or W == -1
 */
+namespace eq {
+  template<int W>
+  Clause *eq_propagate(Solver &s, cspvar _x, cspvar _y, int _c, Lit event,
+                       vec<Lit>& _reason)
+  {
+    domevent e = s.event(event);
+    _reason.push(~event);
+    switch(e.type) {
+    case domevent::EQ:
+      if( e.x == _x ) {
+        return _y.assignf(s, W*e.d-W*_c, _reason);
+      } else {
+        return _x.assignf(s, W*e.d+_c, _reason);
+      }
+      break;
+    case domevent::NEQ:
+      if( e.x == _x ) {
+        return _y.removef(s, W*e.d-W*_c, _reason);
+      } else {
+        return _x.removef(s, W*e.d+_c, _reason);
+      }
+      break;
+    case domevent::GEQ:
+      if( e.x == _x ) {
+        if( W > 0 ) {
+          return _y.setminf(s, e.d-_c, _reason);
+        } else {
+          return _y.setmaxf(s, -e.d+_c, _reason);
+        }
+      } else {
+        if( W > 0 ) {
+          return _x.setminf(s, e.d+_c, _reason);
+        } else {
+          return _x.setmaxf(s, -e.d+_c, _reason);
+        }
+      }
+      break;
+    case domevent::LEQ:
+      if( e.x == _x ) {
+        if( W > 0 ) {
+          return _y.setmaxf(s, e.d-_c, _reason);
+        } else {
+          _reason.push(_y.e_geq(s, -e.d+_c));
+          return _y.setminf(s, -e.d+_c, _reason);
+        }
+      } else {
+        if( W > 0 ) {
+          return _x.setmaxf(s, e.d+_c, _reason);
+        } else {
+          return _x.setmaxf(s, -e.d+_c, _reason);
+        }
+      }
+      break;
+    case domevent::NONE:
+      assert(0);
+    }
+    return 0L;
+  }
+
+  template<int W>
+  Clause *eq_initialize(Solver &s, cspvar _x, cspvar _y, int _c,
+                        vec<Lit>& _reason)
+  {
+    if( W > 0 ) {
+      {
+        PUSH_TEMP( _reason,  _x.r_min(s) );
+        DO_OR_RETURN(_y.setminf(s, _x.min(s)-_c, _reason));
+      }
+
+      {
+        PUSH_TEMP( _reason,  _x.r_max(s) );
+        DO_OR_RETURN(_y.setmaxf(s, _x.max(s)-_c, _reason));
+      }
+
+      {
+        PUSH_TEMP( _reason,  _y.r_min(s) );
+        DO_OR_RETURN(_x.setminf(s, _y.min(s)+_c, _reason));
+      }
+
+      {
+        PUSH_TEMP( _reason,  _y.r_max(s) );
+        DO_OR_RETURN(_x.setmaxf(s, _y.max(s)+_c, _reason));
+      }
+    } else {
+      {
+        PUSH_TEMP( _reason,  _x.r_max(s) );
+        DO_OR_RETURN(_y.setminf(s, -_x.max(s)+_c, _reason));
+      }
+
+      {
+        PUSH_TEMP( _reason,  _x.r_min(s) );
+        DO_OR_RETURN(_y.setmaxf(s, -_x.min(s)+_c, _reason));
+      }
+
+      {
+        PUSH_TEMP( _reason,  _y.r_max(s) );
+        DO_OR_RETURN(_x.setminf(s, -_y.max(s)+_c, _reason));
+      }
+
+      {
+        PUSH_TEMP( _reason,  _y.r_min(s) );
+        DO_OR_RETURN(_x.setmaxf(s, -_y.min(s)+_c, _reason));
+      }
+    }
+
+    for(int i = _x.min(s)+1, iend = _x.max(s); i < iend; ++i) {
+      if( !_x.indomain(s, i) )
+        DO_OR_RETURN(eq_propagate<W>(s, _x, _y, _c, _x.e_neq(s, i),
+                                     _reason));
+    }
+
+    for(int i = _y.min(s)+1, iend = _y.max(s); i < iend; ++i) {
+      if( !_y.indomain(s, i) )
+        DO_OR_RETURN(eq_propagate<W>(s, _x, _y, _c, _y.e_neq(s, i),
+                                     _reason));
+    }
+
+    return 0L;
+  }
+}
+
 template<int W>
 class cons_eq : public cons {
   cspvar _x, _y;
@@ -39,101 +160,17 @@ public:
     s.wake_on_lb(y, this);
     s.wake_on_ub(y, this);
     s.wake_on_fix(y, this);
-    _reason.push(); _reason.push();
+    _reason.capacity(2);
 
-    if( W > 0 ) {
-      DO_OR_THROW(_y.setmin(s, _x.min(s)-_c, NO_REASON));
-      DO_OR_THROW(_y.setmax(s, _x.max(s)-_c, NO_REASON));
-      DO_OR_THROW(_x.setmin(s, _y.min(s)+_c, NO_REASON));
-      DO_OR_THROW(_x.setmax(s, _y.max(s)+_c, NO_REASON));
-    } else {
-      DO_OR_THROW(_y.setmin(s, -_x.max(s)+_c, NO_REASON));
-      DO_OR_THROW(_y.setmax(s, -_x.min(s)+_c, NO_REASON));
-      DO_OR_THROW(_x.setmin(s, -_y.max(s)+_c, NO_REASON));
-      DO_OR_THROW(_x.setmax(s, -_y.min(s)+_c, NO_REASON));
-    }
-
-    for(int i = x.min(s)+1, iend = x.max(s); i < iend; ++i) {
-      if( !x.indomain(s, i) )
-        DO_OR_THROW(wake(s, x.e_neq(s, i)));
-    }
-
-    for(int i = y.min(s)+1, iend = y.max(s); i < iend; ++i) {
-      if( !y.indomain(s, i) )
-        DO_OR_THROW(wake(s, y.e_neq(s, i)));
-    }
+    if( eq::eq_initialize<W>(s, _x, _y, _c, _reason) )
+      throw unsat();
   }
 
-  virtual Clause *wake(Solver& s, Lit p);
+  virtual Clause *wake(Solver& s, Lit p) {
+    _reason.clear();
+    return eq::eq_propagate<W>(s, _x, _y, _c, p, _reason);
+  }
 };
-
-template<int W>
-Clause *cons_eq<W>::wake(Solver& s, Lit event)
-{
-  domevent e = s.event(event);
-  _reason[0] = ~event;
-  switch(e.type) {
-  case domevent::EQ:
-    if( e.x == _x ) {
-      _reason[1] = _y.e_eq(s, W*e.d-W*_c);
-      return _y.assign(s, W*e.d-W*_c, _reason);
-    } else {
-      _reason[1] = _x.e_eq(s, W*e.d+_c);
-      return _x.assign(s, W*e.d+_c, _reason);
-    }
-    break;
-  case domevent::NEQ:
-    if( e.x == _x ) {
-      _reason[1] = _y.e_neq(s, W*e.d-W*_c);
-      return _y.remove(s, W*e.d-W*_c, _reason);
-    } else {
-      _reason[1] = _x.e_neq(s, W*e.d+_c);
-      return _x.remove(s, W*e.d+_c, _reason);
-    }
-    break;
-  case domevent::GEQ:
-    if( e.x == _x ) {
-      if( W > 0 ) {
-        _reason[1] = _y.e_geq(s, e.d-_c);
-        return _y.setmin(s, e.d-_c, _reason);
-      } else {
-        _reason[1] = _y.e_leq(s, -e.d+_c);
-        return _y.setmax(s, -e.d+_c, _reason);
-      }
-    } else {
-      if( W > 0 ) {
-        _reason[1] = _x.e_geq(s, e.d+_c);
-        return _x.setmin(s, e.d+_c, _reason);
-      } else {
-        _reason[1] = _x.e_geq(s, -e.d+_c);
-        return _x.setmax(s, -e.d+_c, _reason);
-      }
-    }
-    break;
-  case domevent::LEQ:
-    if( e.x == _x ) {
-      if( W > 0 ) {
-        _reason[1] = _y.e_leq(s, e.d-_c);
-        return _y.setmax(s, e.d-_c, _reason);
-      } else {
-        _reason[1] = _y.e_geq(s, -e.d+_c);
-        return _y.setmin(s, -e.d+_c, _reason);
-      }
-    } else {
-      if( W > 0 ) {
-        _reason[1] = _x.e_leq(s, e.d+_c);
-        return _x.setmax(s, e.d+_c, _reason);
-      } else {
-        _reason[1] = _x.e_leq(s, -e.d+_c);
-        return _x.setmax(s, -e.d+_c, _reason);
-      }
-    }
-    break;
-  case domevent::NONE:
-    assert(0);
-  }
-  return 0L;
-}
 
 /* x == y + c */
 void post_eq(Solver& s, cspvar x, cspvar y, int c)
@@ -150,6 +187,40 @@ void post_neg(Solver &s, cspvar x, cspvar y, int c)
 }
 
 /* x != y + c */
+namespace neq {
+  Clause *neq_propagate(Solver &s, cspvar _x, cspvar _y, int _c, Lit event,
+                        vec<Lit>& _reason);
+
+  Clause *neq_initialize(Solver &s, cspvar _x, cspvar _y, int _c,
+                       vec<Lit>& _reason)
+  {
+    if( _x.min(s) == _x.max(s) )
+      return neq_propagate(s, _x, _y, _c,
+                           _x.e_eq(s, _x.min(s)),
+                           _reason);
+    else if( _y.min(s) == _y.max(s) )
+      return neq_propagate(s, _x, _y, _c,
+                           _y.e_eq(s, _y.min(s)),
+                           _reason);
+    return 0L;
+  }
+
+  Clause *neq_propagate(Solver &s, cspvar _x, cspvar _y, int _c, Lit event,
+                       vec<Lit>& _reason)
+  {
+    domevent e = s.event(event);
+    if( e.type != domevent::EQ )
+      return 0L;
+    _reason.push(~event);
+    if( e.x == _x ) {
+      return _y.removef(s, e.d-_c, _reason);
+    } else {
+      return _x.removef(s, e.d+_c, _reason);
+    }
+    return 0L;
+  }
+}
+
 class cons_neq : public cons {
   cspvar _x, _y;
   int _c;
@@ -161,14 +232,8 @@ public:
   {
     s.wake_on_fix(x, this);
     s.wake_on_fix(y, this);
-    _reason.push(); _reason.push();
-    if( x.min(s) == x.max(s) ) {
-      Clause *c = wake(s, x.e_eq(s, x.min(s)));
-      if(c) throw unsat();
-    } else if( y.min(s) == y.max(s) ) {
-      Clause *c = wake(s, y.e_eq(s, y.min(s)));
-      if(c) throw unsat();
-    }
+    _reason.capacity(2);
+    DO_OR_THROW(neq::neq_initialize(s, _x, _y, _c, _reason));
   }
 
   virtual Clause *wake(Solver& s, Lit p);
@@ -178,17 +243,8 @@ public:
 
 Clause *cons_neq::wake(Solver& s, Lit event)
 {
-  domevent e = s.event(event);
-  assert( e.type == domevent::EQ );
-  if( e.x == _x ) {
-    _reason[0] = ~event;
-    _reason[1] = _y.e_neq(s, e.d-_c);
-    return _y.remove(s, e.d-_c, _reason);
-  } else {
-    _reason[0] = ~event;
-    _reason[1] = _x.e_neq(s, e.d+_c);
-    return _x.remove(s, e.d+_c, _reason);
-  }
+  _reason.clear();
+  return neq::neq_propagate(s, _x, _y, _c, event, _reason);
 }
 
 void cons_neq::clone(Solver &other)
@@ -213,6 +269,154 @@ void post_neq(Solver& s, cspvar x, cspvar y, int c)
   cons *con = new cons_neq(s, x, y, c);
   s.addConstraint(con);
 }
+
+/* x = y + c <=> b */
+namespace eq_re {
+  /* Return true if the domains of _x and _y are disjoint (offset
+     _c). Also describe the prunings that made it so in _reason. Note
+     if it returns false, _reason contains garbage. */
+  bool disjoint_domains(Solver &s, cspvar _x, cspvar _y, int _c,
+                        vec<Lit>& _reason) {
+    using std::min;
+    using std::max;
+    if( _x.min(s) > _y.max(s) + _c ) {
+      _reason.push(_x.r_min(s));
+      _reason.push(_y.r_max(s));
+      return true;
+    } else if( _x.max(s) < _y.min(s) + _c ) {
+      _reason.push(_x.r_max(s));
+      _reason.push(_y.r_min(s));
+      return true;
+    } else {
+      for(int i = max(_x.min(s), _y.min(s) + _c),
+            iend = min(_x.max(s), _y.max(s) + _c)+1; i != iend; ++i) {
+        if( _x.indomain(s, i) ) {
+          if( _y.indomain(s, i-_c) )
+            return false;
+          else
+            pushifdef(_reason, _y.r_neq(s, i-_c) );
+        } else
+          pushifdef(_reason, _x.r_neq(s,i));
+      }
+      return true;
+    }
+  }
+}
+class cons_eq_re : public cons {
+  cspvar _x, _y;
+  int _c;
+  cspvar _b;
+  vec<Lit> _reason;
+public:
+  cons_eq_re(Solver &s,
+             cspvar x, cspvar y, int c,
+             cspvar b) :
+    _x(x), _y(y), _c(c), _b(b)
+  {
+    s.wake_on_dom(_x, this);
+    s.wake_on_lb(_x, this);
+    s.wake_on_ub(_x, this);
+    s.wake_on_fix(_x, this);
+    s.wake_on_dom(_y, this);
+    s.wake_on_lb(_y, this);
+    s.wake_on_ub(_y, this);
+    s.wake_on_fix(_y, this);
+    s.wake_on_fix(_b, this);
+    _reason.capacity(5);
+  }
+
+  Clause *wake(Solver& s, Lit p);
+  void clone(Solver& other);
+  ostream& print(ostream& os) const;
+  ostream& printstate(Solver& s, ostream& os) const;
+};
+
+Clause *cons_eq_re::wake(Solver &s, Lit p)
+{
+  domevent pevent = s.event(p);
+  _reason.clear();
+  if( _b.min(s) == 1 ) {
+    _reason.push( _b.r_min(s) );
+    if( pevent.x == _b )
+      return eq::eq_initialize<1>(s, _x, _y, _c, _reason);
+    else
+      return eq::eq_propagate<1>(s, _x, _y, _c, p, _reason);
+  } else if( _b.max(s) == 0 ) {
+    _reason.push( _b.r_max(s) );
+    if( pevent.x == _b )
+      return neq::neq_initialize(s, _x, _y, _c, _reason);
+    else
+      return neq::neq_propagate(s, _x, _y, _c, p, _reason);
+  }
+
+  if( eq_re::disjoint_domains(s, _x, _y, _c, _reason) ) {
+    _b.assignf(s, 0, _reason);
+  } else if( _x.min(s) == _y.min(s)+_c &&
+             _x.min(s) == _x.max(s) &&
+             _x.min(s) == _y.max(s)+_c ) {
+    _reason.clear(); // disjoint_domains may have put garbage here
+    _reason.push(_x.r_eq(s));
+    _reason.push(_y.r_eq(s));
+    _b.assignf(s, 1, _reason);
+  }
+
+  return 0L;
+}
+
+void cons_eq_re::clone(Solver & other)
+{
+  cons *con = new cons_eq_re(other, _x, _y, _c, _b);
+  other.addConstraint(con);
+}
+
+ostream& cons_eq_re::print(ostream& os) const
+{
+  os << "(" << _x << " = " << _y;
+  if( _c > 0 )
+    os << " + " << _c;
+  else if( _c < 0 )
+    os << " - " << -_c;
+  os << ") <=> " << _b;
+  return os;
+}
+
+ostream& cons_eq_re::printstate(Solver & s, ostream& os) const
+{
+  print(os);
+  os << " (with " << _x << " in " << domain_as_set(s, _x)
+     << ", " << _y << " in " << domain_as_set(s, _y)
+     << ", " << _b << " in " << domain_as_set(s, _b)
+     << ")";
+  return os;
+}
+
+void post_eq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  assert( b.min(s) >= 0 && b.max(s) <= 1 );
+
+  if( b.min(s) == 1 ) {
+    post_eq(s, x, y, c);
+    return;
+  } else if( b.max(s) == 0 ) {
+    post_neq(s, x, y, c);
+    return;
+  }
+
+  vec<Lit> reason;
+  if( eq_re::disjoint_domains(s, x, y, c, reason) ) {
+    b.assign(s, 0, NO_REASON);
+    return;
+  } else if( x.min(s) == y.min(s)+c &&
+             x.min(s) == x.max(s) &&
+             x.min(s) == y.max(s)+c ) {
+    b.assign(s, 1, NO_REASON);
+    return;
+  }
+
+  cons *con = new cons_eq_re(s, x, y, c, b);
+  s.addConstraint(con);
+}
+
 
 /* x <= y + c */
 class cons_le : public cons {
@@ -1364,7 +1568,6 @@ void post_div(Solver& s, cspvar x, cspvar y, cspvar z)
 class cons_mod;
 class cons_min;
 class cons_max;
-class cons_abs;
 
 /* Element */
 class cons_element;

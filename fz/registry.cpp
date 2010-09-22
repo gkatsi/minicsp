@@ -315,7 +315,8 @@ namespace FlatZinc {
     /* Comparisons */
     void p_int_eq_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-      assert(0);
+      post_eq_re(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[1]), 0,
+                 getBoolVar(s, m, ce[2]));
     }
     void p_int_ne_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
@@ -790,6 +791,7 @@ namespace FlatZinc {
         registry().add("int_gt", &p_int_gt);
         registry().add("int_le", &p_int_leq);
         registry().add("int_lt", &p_int_lt);
+        registry().add("int_eq_reif", &p_int_eq_reif);
         registry().add("int_ge_reif", &p_int_ge_reif);
         registry().add("int_gt_reif", &p_int_gt_reif);
         registry().add("int_le_reif", &p_int_le_reif);

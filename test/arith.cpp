@@ -494,6 +494,129 @@ namespace {
     assert( y.min(s) == 2);
     assert( z.min(s) == 2);
   }
+
+  // eq_re, c = 0
+  void eq_re01()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(5, 10);
+    cspvar y = s.newCSPVar(2, 7);
+    cspvar b = s.newCSPVar(0, 1);
+
+    post_eq_re(s, x, y, 0, b);
+    assert( !s.propagate() );
+    assert( b.min(s) == 0 );
+    assert( b.max(s) == 1 );
+
+    s.newDecisionLevel();
+    b.setmin(s, 1, NO_REASON);
+    assert( !s.propagate() );
+    assert( x.max(s) == 7 );
+    assert( y.min(s) == 5 );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    b.setmax(s, 0, NO_REASON);
+    assert( !s.propagate() );
+    x.assign(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( !y.indomain(s, 6) );
+    assert( y.min(s) == 2 );
+    assert( y.max(s) == 7);
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    x.setmin(s, 9, NO_REASON);
+    assert( !s.propagate() );
+    assert( b.max(s) == 0 );
+    s.cancelUntil(0);
+
+    // this tests that if we set b to true and the constraint is
+    // already violated by the time we process b=1, we will detect the
+    // conflict
+    s.newDecisionLevel();
+    b.setmin(s, 1, NO_REASON);
+    x.setmin(s, 9, NO_REASON);
+    assert( s.propagate() );
+    s.cancelUntil(0);
+  }
+
+  // eq_re, c != 0
+  void eq02()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(15, 20);
+    cspvar y = s.newCSPVar(2, 7);
+    cspvar b = s.newCSPVar(0, 1);
+
+    post_eq_re(s, x, y, 10, b);
+    assert( !s.propagate() );
+    assert( b.min(s) == 0 );
+    assert( b.max(s) == 1 );
+
+    s.newDecisionLevel();
+    b.setmin(s, 1, NO_REASON);
+    assert( !s.propagate() );
+    assert( x.max(s) == 17 );
+    assert( y.min(s) == 5 );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    b.setmax(s, 0, NO_REASON);
+    assert( !s.propagate() );
+    x.assign(s, 16, NO_REASON);
+    assert( !s.propagate() );
+    assert( !y.indomain(s, 6) );
+    assert( y.min(s) == 2 );
+    assert( y.max(s) == 7);
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    x.setmin(s, 19, NO_REASON);
+    assert( !s.propagate() );
+    assert( b.max(s) == 0 );
+    s.cancelUntil(0);
+  }
+
+  // eq_re, degenerate cases
+  void eq03()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(5, 10);
+    cspvar y = s.newCSPVar(2, 7);
+    cspvar b = s.newCSPVar(1, 1);
+    post_eq_re(s, x, y, 0, b);
+    s.propagate();
+    assert(x.max(s) == 10);
+    assert(y.min(s) == 5);
+
+    cspvar x1 = s.newCSPVar(5,5);
+    cspvar y1 = s.newCSPVar(5, 5);
+    cspvar b1 = s.newCSPVar(0, 1);
+    post_eq_re(s, x1, y1, 0, b1);
+    assert(b1.min(s) == 1);
+
+    cspvar x2 = s.newCSPVar(2, 5);
+    cspvar y2 = s.newCSPVar(7, 10);
+    cspvar b2 = s.newCSPVar(0, 1);
+    post_eq_re(s, x2, y2, 0, b2);
+    assert(b2.max(s) == 0);
+
+    cspvar x3 = s.newCSPVar(5, 5);
+    cspvar y3 = s.newCSPVar(2, 7);
+    cspvar b3 = s.newCSPVar(1, 1);
+    post_eq_re(s, x3, y3, 0, b3);
+    assert(y3.min(s) == 5);
+    assert(y3.max(s) == 5);
+
+    cspvar x4 = s.newCSPVar(5, 5);
+    cspvar y4 = s.newCSPVar(2, 7);
+    cspvar b4 = s.newCSPVar(0, 0);
+    post_eq_re(s, x4, y4, 0, b4);
+    assert(!y4.indomain(s, 5));
+    assert(y4.min(s) == 2);
+    assert(y4.max(s) == 7);
+  }
 }
 
 
@@ -579,5 +702,17 @@ void le_test()
 
   cerr << "mult 03 ... " << flush;
   mult03();
+  cerr << "OK" << endl;
+
+  cerr << "eq_re 01 ... " << flush;
+  eq_re01();
+  cerr << "OK" << endl;
+
+  cerr << "eq_re 02 ... " << flush;
+  eq_re01();
+  cerr << "OK" << endl;
+
+  cerr << "eq_re 03 ... " << flush;
+  eq_re01();
   cerr << "OK" << endl;
 }
