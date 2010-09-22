@@ -659,7 +659,9 @@ inline Clause *cspvar::setminf(Solver &s, int d, vec<Lit> &ps)
   Var xd = leqi(s, d-1);
   if( xd == var_Undef ) {
     if( d <= max(s) ) return 0L;
-    throw undefined_literal(s, domevent(*this, domevent::GEQ, d));
+    Clause *r = Clause_new(ps);
+    s.addInactiveClause(r);
+    return r;
   }
   if( s.value(xd) == l_False ) return 0L;
   ps.push( ~Lit(xd) );
@@ -706,7 +708,9 @@ inline Clause *cspvar::setmaxf(Solver &s, int d, vec<Lit> &ps)
   Var xd = leqi(s, d);
   if( xd == var_Undef ) {
     if( d >= min(s) ) return 0L;
-    throw undefined_literal(s, domevent(*this, domevent::LEQ, d));
+    Clause *r = Clause_new(ps);
+    s.addInactiveClause(r);
+    return r;
   }
   if( s.value(xd) == l_True ) return 0L;
   ps.push( Lit(xd) );
@@ -749,7 +753,9 @@ inline Clause *cspvar::assignf(Solver &s, int d, vec<Lit> &ps)
 {
   Var xd = eqi(s, d);
   if( xd == var_Undef ) {
-    throw undefined_literal(s, domevent(*this, domevent::EQ, d));
+    Clause *r = Clause_new(ps);
+    s.addInactiveClause(r);
+    return r;
   }
   if( s.value(xd) == l_True ) return 0L;
   ps.push( Lit(xd) );
