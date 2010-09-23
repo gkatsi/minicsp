@@ -146,6 +146,7 @@ public:
     void     debugclause      (Clause *from, cons *c);                                 // check whether clause *from causes a failure given constraint c
     void     uncheckedEnqueue (Lit p, Clause* from = NULL);                            // Enqueue a literal. Assumes value of literal is undefined.
     bool     enqueue          (Lit p, Clause* from = NULL);                            // Test if fact 'p' contradicts current state, enqueue otherwise.
+    Clause*  enqueueFill      (Lit p, vec<Lit>& ps);                                   // Create an inactive clause that includes p and ps and force p
     Clause*  propagate        ();                                                      // Perform unit propagation. Returns possibly conflicting clause.
 
     void     newDecisionLevel ();                                                      // Begins a new decision level.

@@ -866,6 +866,18 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
 #endif
 }
 
+Clause *Solver::enqueueFill(Lit p, vec<Lit>& ps)
+{
+  if( value(p) == l_True ) return 0L;
+  ps.push( p );
+  Clause *r = Clause_new(ps, false, p);
+  ps.pop();
+  addInactiveClause(r);
+  if( value(p) == l_False ) return r;
+  uncheckedEnqueue( p, r );
+  return 0L;
+}
+
 /*_________________________________________________________________________________________________
 |
 |  propagate : [void]  ->  [Clause*]
