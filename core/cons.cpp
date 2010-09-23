@@ -302,15 +302,16 @@ namespace eq_re {
     }
   }
 }
+
 class cons_eq_re : public cons {
   cspvar _x, _y;
   int _c;
-  cspvar _b;
+  Lit _b;
   vec<Lit> _reason;
 public:
   cons_eq_re(Solver &s,
              cspvar x, cspvar y, int c,
-             cspvar b) :
+             Lit b) :
     _x(x), _y(y), _c(c), _b(b)
   {
     s.wake_on_dom(_x, this);
@@ -321,7 +322,7 @@ public:
     s.wake_on_lb(_y, this);
     s.wake_on_ub(_y, this);
     s.wake_on_fix(_y, this);
-    s.wake_on_fix(_b, this);
+    s.wake_on_lit(var(_b), this);
     _reason.capacity(5);
   }
 
@@ -335,29 +336,29 @@ Clause *cons_eq_re::wake(Solver &s, Lit p)
 {
   domevent pevent = s.event(p);
   _reason.clear();
-  if( _b.min(s) == 1 ) {
-    _reason.push( _b.r_min(s) );
-    if( pevent.x == _b )
+  if( s.value(_b) == l_True ) {
+    _reason.push( ~_b );
+    if( p == _b )
       return eq::eq_initialize<1>(s, _x, _y, _c, _reason);
     else
       return eq::eq_propagate<1>(s, _x, _y, _c, p, _reason);
-  } else if( _b.max(s) == 0 ) {
-    _reason.push( _b.r_max(s) );
-    if( pevent.x == _b )
+  } else if( s.value(_b) == l_False ) {
+    _reason.push( _b );
+    if( p == ~_b )
       return neq::neq_initialize(s, _x, _y, _c, _reason);
     else
       return neq::neq_propagate(s, _x, _y, _c, p, _reason);
   }
 
   if( eq_re::disjoint_domains(s, _x, _y, _c, _reason) ) {
-    _b.assignf(s, 0, _reason);
+    s.enqueueFill(~_b, _reason);
   } else if( _x.min(s) == _y.min(s)+_c &&
              _x.min(s) == _x.max(s) &&
              _x.min(s) == _y.max(s)+_c ) {
-    _reason.clear(); // disjoint_domains may have put garbage here
+    _reason.clear(); // disjoint_domains() may have put garbage here
     _reason.push(_x.r_eq(s));
     _reason.push(_y.r_eq(s));
-    _b.assignf(s, 1, _reason);
+    s.enqueueFill(_b, _reason);
   }
 
   return 0L;
@@ -385,15 +386,32 @@ ostream& cons_eq_re::printstate(Solver & s, ostream& os) const
   print(os);
   os << " (with " << _x << " in " << domain_as_set(s, _x)
      << ", " << _y << " in " << domain_as_set(s, _y)
-     << ", " << _b << " in " << domain_as_set(s, _b)
+     << ", " << _b << " in " << ::print(s, _b)
      << ")";
   return os;
+}
+
+void post_eqneq_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+  vec<Lit> reason;
+  if( eq_re::disjoint_domains(s, x, y, c, reason) ) {
+    s.uncheckedEnqueue(~b); // will not cause unsat, because b is
+                            // unset by if test above
+    return;
+  } else if( x.min(s) == y.min(s)+c &&
+             x.min(s) == x.max(s) &&
+             x.min(s) == y.max(s)+c ) {
+    s.uncheckedEnqueue(b);
+    return;
+  }
+
+  cons *con = new cons_eq_re(s, x, y, c, b);
+  s.addConstraint(con);
 }
 
 void post_eq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
 {
   assert( b.min(s) >= 0 && b.max(s) <= 1 );
-
   if( b.min(s) == 1 ) {
     post_eq(s, x, y, c);
     return;
@@ -402,21 +420,22 @@ void post_eq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
     return;
   }
 
-  vec<Lit> reason;
-  if( eq_re::disjoint_domains(s, x, y, c, reason) ) {
-    b.assign(s, 0, NO_REASON);
+  post_eqneq_re(s, x, y, c, Lit(b.eqi(s, 1)));
+}
+
+void post_neq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  assert( b.min(s) >= 0 && b.max(s) <= 1 );
+  if( b.min(s) == 1 ) {
+    post_neq(s, x, y, c);
     return;
-  } else if( x.min(s) == y.min(s)+c &&
-             x.min(s) == x.max(s) &&
-             x.min(s) == y.max(s)+c ) {
-    b.assign(s, 1, NO_REASON);
+  } else if( b.max(s) == 0 ) {
+    post_eq(s, x, y, c);
     return;
   }
 
-  cons *con = new cons_eq_re(s, x, y, c, b);
-  s.addConstraint(con);
+  post_eqneq_re(s, x, y, c, ~Lit(b.eqi(s, 1)));
 }
-
 
 /* x <= y + c */
 class cons_le : public cons {

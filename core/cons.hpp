@@ -27,6 +27,9 @@ void post_less(Solver& s, cspvar v1, cspvar v2, int c);
 /* v1 == v2 + c <=> b */
 void post_eq_re(Solver &s, cspvar v1, cspvar v2, int c, cspvar b);
 
+/* v1 != v2 + c <=> b */
+void post_neq_re(Solver &s, cspvar v1, cspvar v2, int c, cspvar b);
+
 /* |x| = y + c */
 void post_abs(Solver& s, cspvar v1, cspvar v2, int c);
 
