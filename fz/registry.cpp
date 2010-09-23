@@ -325,19 +325,23 @@ namespace FlatZinc {
     }
     void p_int_ge_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-      assert(0);
+      post_geq_re(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[1]), 0,
+                  getBoolVar(s, m, ce[2]));
     }
     void p_int_gt_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-      assert(0);
+      post_gt_re(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[1]), 0,
+                 getBoolVar(s, m, ce[2]));
     }
     void p_int_le_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-      assert(0);
+      post_leq_re(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[1]), 0,
+                  getBoolVar(s, m, ce[2]));
     }
     void p_int_lt_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-      assert(0);
+      post_less_re(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[1]), 0,
+                  getBoolVar(s, m, ce[2]));
     }
 
     /* linear (in-)equations */

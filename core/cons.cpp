@@ -438,6 +438,31 @@ void post_neq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
 }
 
 /* x <= y + c */
+namespace leq {
+  Clause *leq_propagate(Solver &s, cspvar _x, cspvar _y, int _c,
+                        vec<Lit>& _reason)
+  {
+    if( _y.max(s) + _c < _x.min(s) ) { // failure
+      pushifdef(_reason, _x.r_min(s));
+      pushifdef(_reason, _y.r_leq( s, _x.min(s) - _c ));
+      Clause *r = Clause_new(_reason);
+      s.addInactiveClause(r);
+      return r;
+    }
+
+    if( _y.min(s) + _c < _x.min(s) ) {
+      pushifdef(_reason, _x.r_min(s));
+      _y.setminf(s, _x.min(s) - _c, _reason);
+    }
+    if( _x.max(s) - _c > _y.max(s) ) {
+      pushifdef(_reason, _y.r_max(s));
+      _x.setmaxf(s, _y.max(s) + _c, _reason);
+    }
+
+    return 0L;
+  }
+}
+
 class cons_le : public cons {
   cspvar _x, _y;
   int _c;
@@ -461,32 +486,8 @@ public:
 
 Clause *cons_le::wake(Solver& s, Lit)
 {
-  if( _y.max(s) + _c < _x.min(s) ) { // failure
-    _reason[0] = _x.r_geq( s, _x.min(s) );
-    _reason[1] = _y.r_leq( s, _x.min(s) - _c );
-    Clause *r = Clause_new(_reason);
-    s.addInactiveClause(r);
-    return r;
-  }
-
-  if( _y.min(s) + _c < _x.min(s) ) {
-    _reason[1] = _x.r_geq(s, _x.min(s));
-    _reason[0] = _y.e_geq(s, _x.min(s) - _c);
-    if( _reason[1] == lit_Undef )
-      _y.setmin(s, _x.min(s) - _c, NO_REASON);
-    else
-      _y.setmin(s, _x.min(s) - _c, _reason);
-  }
-  if( _x.max(s) - _c > _y.max(s) ) {
-    _reason[1] = _y.r_leq( s, _y.max(s));
-    _reason[0] = _x.e_leq( s, _y.max(s) + _c );
-    if( _reason[1] == lit_Undef )
-      _x.setmax(s, _y.max(s) + _c, NO_REASON);
-    else
-      _x.setmax(s, _y.max(s) + _c, _reason);
-  }
-
-  return 0L;
+  _reason.clear();
+  return leq::leq_propagate(s, _x, _y, _c, _reason);
 }
 
 void cons_le::clone(Solver &other)
@@ -520,11 +521,120 @@ void post_less(Solver& s, cspvar v1, cspvar v2, int c)
 }
 
 
-/* Reified versions */
-class cons_eq_re;
-class cons_neq_re;
-class cons_lt_re;
-class cons_le_re;
+/* (x <= y + c) <=> b*/
+class cons_leq_re : public cons {
+  cspvar _x, _y;
+  int _c;
+  Lit _b;
+  vec<Lit> _reason;
+public:
+  cons_leq_re(Solver &s,
+              cspvar x, cspvar y, int c, Lit b) :
+    _x(x), _y(y), _c(c), _b(b)
+  {
+    s.wake_on_lb(_x, this);
+    s.wake_on_ub(_x, this);
+    s.wake_on_lb(_y, this);
+    s.wake_on_ub(_y, this);
+    s.wake_on_lit(var(_b), this);
+  }
+
+  Clause *wake(Solver& s, Lit p);
+  void clone(Solver& other);
+  ostream& print(ostream& os) const;
+  ostream& printstate(Solver& s, ostream& os) const;
+};
+
+Clause *cons_leq_re::wake(Solver &s, Lit p)
+{
+  domevent pevent = s.event(p);
+  _reason.clear();
+
+  if( s.value(_b) == l_True ) {
+    _reason.push( ~_b );
+    return leq::leq_propagate(s, _x, _y, _c, _reason);
+  } else if( s.value(_b) == l_False ) {
+    _reason.push( _b );
+    return leq::leq_propagate(s, _y, _x, -_c-1, _reason);
+  }
+
+  if( _x.min(s) > _y.max(s) + _c ) {
+    _reason.push(_x.r_min(s));
+    _reason.push(_y.r_max(s));
+    s.enqueueFill(~_b, _reason);
+  } else if( _x.max(s) <= _y.min(s) + _c ) {
+    _reason.push(_x.r_max(s));
+    _reason.push(_y.r_min(s));
+    s.enqueueFill(_b, _reason);
+  }
+
+  return 0L;
+}
+
+void cons_leq_re::clone(Solver & other)
+{
+  cons *con = new cons_leq_re(other, _x, _y, _c, _b);
+  other.addConstraint(con);
+}
+
+ostream& cons_leq_re::print(ostream& os) const
+{
+  os << "(" << _x << " <= " << _y;
+  if( _c > 0 )
+    os << " + " << _c;
+  else if( _c < 0 )
+    os << " - " << -_c;
+  os << ") <=> " << _b;
+  return os;
+}
+
+ostream& cons_leq_re::printstate(Solver & s, ostream& os) const
+{
+  print(os);
+  os << " (with " << _x << " in " << domain_as_set(s, _x)
+     << ", " << _y << " in " << domain_as_set(s, _y)
+     << ", " << _b << " in " << ::print(s, _b)
+     << ")";
+  return os;
+}
+
+void post_leq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  assert( b.min(s) >= 0 && b.max(s) <= 1 );
+  if( b.min(s) == 1 ) {
+    post_leq(s, x, y, c);
+    return;
+  } else if( b.max(s) == 0 ) {
+    post_less(s, y, x, -c);
+    return;
+  }
+
+  if( x.max(s) <= y.min(s) + c ) {
+    b.setmin(s, 1, NO_REASON);
+    return;
+  } else if( x.min(s) > y.max(s) + c ) {
+    b.setmax(s, 0, NO_REASON);
+    return;
+  }
+
+  cons *con = new cons_leq_re(s, x, y, c, Lit(b.eqi(s, 1)));
+  s.addConstraint(con);
+}
+
+void post_less_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  post_leq_re(s, x, y, c-1, b);
+}
+
+void post_geq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  post_leq_re(s, y, x, -c, b);
+}
+
+void post_gt_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  post_leq_re(s, y, x, -c-1, b);
+}
 
 /* abs: |x| = y + c*/
 class cons_abs : public cons {
