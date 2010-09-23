@@ -30,7 +30,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "solvertypes.hpp"
 
-
 //=================================================================================================
 // Solver -- the main class:
 
@@ -797,7 +796,11 @@ struct push_temp_p {
   ~push_temp_p() { if(_p != lit_Undef ) _ps.pop(); }
 };
 
-#define PUSH_TEMP(x, y) push_temp_p pp##__LINE__ \
+// copied from boost/preprocessor/cat.hpp
+#define BOOST_PP_CAT(a, b) BOOST_PP_CAT_I(a, b)
+#define BOOST_PP_CAT_I(a, b) a ## b
+
+#define PUSH_TEMP(x, y) push_temp_p BOOST_PP_CAT(pp, __LINE__) \
   __attribute__((unused)) (x,y)
 
 //==================================================
