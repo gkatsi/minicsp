@@ -35,18 +35,18 @@ struct test_container {
 };
 
 namespace { // diff singleton for each translation unit
-  inline
   test_container& the_test_container() {
     static test_container t;
     return t;
   }
-}
 
-struct register_actor {
-  register_actor(test t, std::string s) {
-    the_test_container().add(t, s);
-  }
-};
+  struct register_actor {
+    register_actor(test t, std::string s) {
+      the_test_container().add(t, s);
+    }
+  };
+
+}
 
 #define REGISTER_TEST(x)                                 \
   register_actor BOOST_PP_CAT(register_actor_, __LINE__) \
