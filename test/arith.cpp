@@ -739,6 +739,64 @@ namespace {
     assert(y3.max(s) == 5);
   }
   REGISTER_TEST(leq_re03);
+
+  void max01()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 10);
+    cspvar y = s.newCSPVar(1, 10);
+    cspvar z = s.newCSPVar(1, 10);
+    post_max(s, x, y, z);
+
+    s.newDecisionLevel();
+    x.setmax(s, 5, NO_REASON);
+    assert(! s.propagate() );
+    assert( y.max(s) == 5 );
+    assert( z.max(s) == 5 );
+
+    s.newDecisionLevel();
+    y.setmin(s, 2, NO_REASON);
+    z.setmin(s, 2, NO_REASON);
+    assert( !s.propagate());
+    assert( x.min(s) == 2 );
+
+    s.newDecisionLevel();
+    y.setmin(s, 3, NO_REASON);
+    z.setmax(s, 2, NO_REASON);
+    assert( !s.propagate() );
+    assert( x.min(s) == 3);
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(max01);
+
+  void min01()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 10);
+    cspvar y = s.newCSPVar(1, 10);
+    cspvar z = s.newCSPVar(1, 10);
+    post_min(s, x, y, z);
+
+    s.newDecisionLevel();
+    x.setmin(s, 5, NO_REASON);
+    assert(! s.propagate() );
+    assert( y.min(s) == 5 );
+    assert( z.min(s) == 5 );
+
+    s.newDecisionLevel();
+    y.setmax(s, 8, NO_REASON);
+    z.setmax(s, 8, NO_REASON);
+    assert( !s.propagate());
+    assert( x.max(s) == 8 );
+
+    s.newDecisionLevel();
+    y.setmax(s, 7, NO_REASON);
+    z.setmin(s, 8, NO_REASON);
+    assert( !s.propagate() );
+    assert( x.max(s) == 7);
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(min01);
 }
 
 

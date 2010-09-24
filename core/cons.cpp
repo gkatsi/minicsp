@@ -1695,8 +1695,165 @@ void post_div(Solver& s, cspvar x, cspvar y, cspvar z)
 }
 
 class cons_mod;
-class cons_min;
-class cons_max;
+
+// x = min(y,z)
+class cons_min : public cons {
+  cspvar _x, _y, _z;
+  int _c;
+  vec<Lit> _reason;
+public:
+  cons_min(Solver &s,
+           cspvar x, cspvar y, cspvar z) :
+    _x(x), _y(y), _z(z)
+  {
+    s.wake_on_lb(_x, this);
+    s.wake_on_ub(_x, this);
+    s.wake_on_lb(_y, this);
+    s.wake_on_ub(_y, this);
+    s.wake_on_lb(_z, this);
+    s.wake_on_ub(_z, this);
+    wake(s, lit_Undef);
+  }
+
+  Clause *wake(Solver& s, Lit p);
+  void clone(Solver& other);
+  ostream& print(ostream& os) const;
+  ostream& printstate(Solver& s, ostream& os) const;
+};
+
+Clause *cons_min::wake(Solver &s, Lit p)
+{
+  using std::min;
+
+  domevent pevent = s.event(p);
+  _reason.clear();
+
+  {
+    PUSH_TEMP(_reason, _y.r_min(s));
+    PUSH_TEMP(_reason, _z.r_min(s));
+    _x.setminf(s, min(_y.min(s), _z.min(s)), _reason);
+  }
+  {
+    PUSH_TEMP(_reason, _y.r_max(s));
+    PUSH_TEMP(_reason, _z.r_max(s));
+    _x.setmaxf(s, min(_y.max(s), _z.max(s)), _reason);
+  }
+
+  _reason.clear();
+  pushifdef(_reason,_x.r_min(s));
+  _y.setminf(s, _x.min(s), _reason);
+  _z.setminf(s, _x.min(s), _reason);
+
+  return 0L;
+}
+
+void cons_min::clone(Solver & other)
+{
+  cons *con = new cons_min(other, _x, _y, _z);
+  other.addConstraint(con);
+}
+
+ostream& cons_min::print(ostream& os) const
+{
+  os << _x << " = min(" << _y << ", " << _z << ")";
+  return os;
+}
+
+ostream& cons_min::printstate(Solver & s, ostream& os) const
+{
+  print(os);
+  os << " (with " << _x << " in " << domain_as_set(s, _x)
+     << ", " << _y << " in " << domain_as_set(s, _y)
+     << ", " << _z << " in " << domain_as_set(s, _z)
+     << ")";
+  return os;
+}
+
+void post_min(Solver &s, cspvar x, cspvar y, cspvar z)
+{
+  cons *con = new cons_min(s, x, y, z);
+  s.addConstraint(con);
+}
+
+// x = max(y,z)
+class cons_max : public cons {
+  cspvar _x, _y, _z;
+  int _c;
+  vec<Lit> _reason;
+public:
+  cons_max(Solver &s,
+           cspvar x, cspvar y, cspvar z) :
+    _x(x), _y(y), _z(z)
+  {
+    s.wake_on_lb(_x, this);
+    s.wake_on_ub(_x, this);
+    s.wake_on_lb(_y, this);
+    s.wake_on_ub(_y, this);
+    s.wake_on_lb(_z, this);
+    s.wake_on_ub(_z, this);
+    wake(s, lit_Undef);
+  }
+
+  Clause *wake(Solver& s, Lit p);
+  void clone(Solver& other);
+  ostream& print(ostream& os) const;
+  ostream& printstate(Solver& s, ostream& os) const;
+};
+
+Clause *cons_max::wake(Solver &s, Lit p)
+{
+  using std::max;
+
+  domevent pevent = s.event(p);
+  _reason.clear();
+
+  {
+    PUSH_TEMP(_reason, _y.r_min(s));
+    PUSH_TEMP(_reason, _z.r_min(s));
+    _x.setminf(s, max(_y.min(s), _z.min(s)), _reason);
+  }
+  {
+    PUSH_TEMP(_reason, _y.r_max(s));
+    PUSH_TEMP(_reason, _z.r_max(s));
+    _x.setmaxf(s, max(_y.max(s), _z.max(s)), _reason);
+  }
+
+  _reason.clear();
+  pushifdef(_reason,_x.r_max(s));
+  _y.setmaxf(s, _x.max(s), _reason);
+  _z.setmaxf(s, _x.max(s), _reason);
+
+  return 0L;
+}
+
+void cons_max::clone(Solver & other)
+{
+  cons *con = new cons_max(other, _x, _y, _z);
+  other.addConstraint(con);
+}
+
+ostream& cons_max::print(ostream& os) const
+{
+  os << _x << " = max(" << _y << ", " << _z << ")";
+  return os;
+}
+
+ostream& cons_max::printstate(Solver & s, ostream& os) const
+{
+  print(os);
+  os << " (with " << _x << " in " << domain_as_set(s, _x)
+     << ", " << _y << " in " << domain_as_set(s, _y)
+     << ", " << _z << " in " << domain_as_set(s, _z)
+     << ")";
+  return os;
+}
+
+void post_max(Solver &s, cspvar x, cspvar y, cspvar z)
+{
+  cons *con = new cons_max(s, x, y, z);
+  s.addConstraint(con);
+}
+
 
 /* Element */
 class cons_element;

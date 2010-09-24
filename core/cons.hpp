@@ -157,6 +157,11 @@ void post_mult(Solver& s, cspvar x, cspvar y, cspvar z);
 /* x = y/z */
 void post_div(Solver& s, cspvar x, cspvar y, cspvar z);
 
+/* x = min(y,z) */
+void post_min(Solver &s, cspvar x, cspvar y, cspvar z);
+/* x = max(y,z) */
+void post_max(Solver &s, cspvar x, cspvar y, cspvar z);
+
 // alldiff
 void post_alldiff(Solver &s, std::vector<cspvar> const& vars);
 
