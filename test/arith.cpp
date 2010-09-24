@@ -24,6 +24,7 @@ namespace {
     s.propagate();
     assert( x.max(s) == 4 );
   }
+  REGISTER_TEST(test01);
 
   void test02()
   {
@@ -42,6 +43,7 @@ namespace {
     s.propagate();
     assert( x.max(s) == 5 );
   }
+  REGISTER_TEST(test02);
 
   void test03()
   {
@@ -60,6 +62,7 @@ namespace {
     s.propagate();
     assert( x.max(s) == 4 );
   }
+  REGISTER_TEST(test03);
 
   void test04()
   {
@@ -78,6 +81,7 @@ namespace {
     s.propagate();
     assert( x.max(s) == 4 );
   }
+  REGISTER_TEST(test04);
 
   void test05()
   {
@@ -92,6 +96,7 @@ namespace {
     Clause *c = s.propagate();
     assert(c);
   }
+  REGISTER_TEST(test05);
 
   void test06()
   {
@@ -142,6 +147,7 @@ namespace {
     }
     assert(caught);
   }
+  REGISTER_TEST(test06);
 
   void test07()
   {
@@ -152,6 +158,7 @@ namespace {
     post_neq(s, p, q, 0);
     assert( !q.indomain(s, 5) );
   }
+  REGISTER_TEST(test07);
 
   void test08()
   {
@@ -176,6 +183,7 @@ namespace {
     assert( !x.indomain(s, 8));
     s.cancelUntil(0);
   }
+  REGISTER_TEST(test08);
 
   // eq, c == 0
   void test09()
@@ -199,6 +207,7 @@ namespace {
     s.propagate();
     assert(y.min(s) == 10 && y.max(s) == 10);
   }
+  REGISTER_TEST(test09);
 
   // eq, c != 0
   void test10()
@@ -222,6 +231,7 @@ namespace {
     s.propagate();
     assert(y.min(s) == 10 && y.max(s) == 10);
   }
+  REGISTER_TEST(test10);
 
   // eq unsat
   void test11()
@@ -229,14 +239,9 @@ namespace {
     Solver s;
     cspvar x = s.newCSPVar(15, 20);
     cspvar y = s.newCSPVar(7, 12);
-    bool caught = false;
-    try {
-      post_eq(s, x, y, 0);
-    } catch( unsat ) {
-      caught = true;
-    }
-    assert(caught);
+    MUST_BE_UNSAT(post_eq(s, x, y, 0));
   }
+  REGISTER_TEST(test11);
 
   // neg, c == 0
   void test12()
@@ -260,6 +265,7 @@ namespace {
     s.propagate();
     assert(y.min(s) == -10 && y.max(s) == -10);
   }
+  REGISTER_TEST(test12);
 
   // neg, c != 0
   void test13()
@@ -283,6 +289,7 @@ namespace {
     s.propagate();
     assert(y.min(s) == -10 && y.max(s) == -10);
   }
+  REGISTER_TEST(test13);
 
   // neg unsat
   void test14()
@@ -298,6 +305,7 @@ namespace {
     }
     assert(caught);
   }
+  REGISTER_TEST(test14);
 
   // abs, c == 0, x > 0
   // abs, c == 0, x < 0
@@ -342,6 +350,7 @@ namespace {
     assert( !x2.indomain(s, -5) );
     s.cancelUntil(0);
   }
+  REGISTER_TEST(abs01);
 
   // abs, c != 0, x > 0
   // abs, c != 0, x < 0
@@ -388,6 +397,7 @@ namespace {
     assert( !x2.indomain(s, -5) );
     s.cancelUntil(0);
   }
+  REGISTER_TEST(abs02);
 
   // abs unsat by y < 0
   // abs unsat by |x| < y
@@ -424,6 +434,7 @@ namespace {
       MUST_BE_UNSAT(post_abs(s, x, y, 0));
     }
   }
+  REGISTER_TEST(abs03);
 
   // mult, all positive
   void mult01()
@@ -442,6 +453,7 @@ namespace {
     assert(z.min(s) == 2);
     assert(z.max(s) == 3);
   }
+  REGISTER_TEST(mult01);
 
   // mult, y and z negative
   void mult02()
@@ -460,6 +472,7 @@ namespace {
     assert(z.min(s) == -3);
     assert(z.max(s) == -2);
   }
+  REGISTER_TEST(mult02);
 
   // mixed positive/negative, become pure positive/pure negative after
   // propagation
@@ -494,6 +507,7 @@ namespace {
     assert( y.min(s) == 2);
     assert( z.min(s) == 2);
   }
+  REGISTER_TEST(mult03);
 
   // eq_re, c = 0
   void eq_re01()
@@ -540,6 +554,7 @@ namespace {
     assert( s.propagate() );
     s.cancelUntil(0);
   }
+  REGISTER_TEST(eq_re01);
 
   // eq_re, c != 0
   void eq_re02()
@@ -577,6 +592,7 @@ namespace {
     assert( b.max(s) == 0 );
     s.cancelUntil(0);
   }
+  REGISTER_TEST(eq_re02);
 
   // eq_re, degenerate cases
   void eq_re03()
@@ -617,6 +633,7 @@ namespace {
     assert(y4.min(s) == 2);
     assert(y4.max(s) == 7);
   }
+  REGISTER_TEST(eq_re03);
 
   // leq_re, c == 0
   void leq_re01()
@@ -652,6 +669,7 @@ namespace {
     assert( b.max(s) == 0 );
     s.cancelUntil(0);
   }
+  REGISTER_TEST(leq_re01);
 
   // leq_re, c != 0
   void leq_re02()
@@ -687,6 +705,7 @@ namespace {
     assert( b.max(s) == 0 );
     s.cancelUntil(0);
   }
+  REGISTER_TEST(leq_re02);
 
   // leq_re, degenerate cases
   void leq_re03()
@@ -719,7 +738,7 @@ namespace {
     assert(x3.min(s) == 3);
     assert(y3.max(s) == 5);
   }
-
+  REGISTER_TEST(leq_re03);
 }
 
 
@@ -727,107 +746,5 @@ void le_test()
 {
   cerr << "arithmetic relation tests\n";
 
-  cerr << "test 01 ... " << flush;
-  test01();
-  cerr << "OK" << endl;
-
-  cerr << "test 02 ... " << flush;
-  test02();
-  cerr << "OK" << endl;
-
-  cerr << "test 03 ... " << flush;
-  test03();
-  cerr << "OK" << endl;
-
-  cerr << "test 04 ... " << flush;
-  test04();
-  cerr << "OK" << endl;
-
-  cerr << "test 05 ... " << flush;
-  test05();
-  cerr << "OK" << endl;
-
-  cerr << "test 06 ... " << flush;
-  test06();
-  cerr << "OK" << endl;
-
-  cerr << "test 07 ... " << flush;
-  test07();
-  cerr << "OK" << endl;
-
-  cerr << "test 08 ... " << flush;
-  test08();
-  cerr << "OK" << endl;
-
-  cerr << "test 09 ... " << flush;
-  test09();
-  cerr << "OK" << endl;
-
-  cerr << "test 10 ... " << flush;
-  test10();
-  cerr << "OK" << endl;
-
-  cerr << "test 11 ... " << flush;
-  test11();
-  cerr << "OK" << endl;
-
-  cerr << "test 12 ... " << flush;
-  test12();
-  cerr << "OK" << endl;
-
-  cerr << "test 13 ... " << flush;
-  test13();
-  cerr << "OK" << endl;
-
-  cerr << "test 14 ... " << flush;
-  test14();
-  cerr << "OK" << endl;
-
-  cerr << "abs 01 ... " << flush;
-  abs01();
-  cerr << "OK" << endl;
-
-  cerr << "abs 02 ... " << flush;
-  abs02();
-  cerr << "OK" << endl;
-
-  cerr << "abs 03 ... " << flush;
-  abs03();
-  cerr << "OK" << endl;
-
-  cerr << "mult 01 ... " << flush;
-  mult01();
-  cerr << "OK" << endl;
-
-  cerr << "mult 02 ... " << flush;
-  mult02();
-  cerr << "OK" << endl;
-
-  cerr << "mult 03 ... " << flush;
-  mult03();
-  cerr << "OK" << endl;
-
-  cerr << "eq_re 01 ... " << flush;
-  eq_re01();
-  cerr << "OK" << endl;
-
-  cerr << "eq_re 02 ... " << flush;
-  eq_re02();
-  cerr << "OK" << endl;
-
-  cerr << "eq_re 03 ... " << flush;
-  eq_re03();
-  cerr << "OK" << endl;
-
-  cerr << "leq_re 01 ... " << flush;
-  leq_re01();
-  cerr << "OK" << endl;
-
-  cerr << "leq_re 02 ... " << flush;
-  leq_re02();
-  cerr << "OK" << endl;
-
-  cerr << "leq_re 03 ... " << flush;
-  leq_re03();
-  cerr << "OK" << endl;
+  the_test_container().run();
 }

@@ -19,3 +19,26 @@ void assert_clause_contains(Clause *to_test, vec<Lit> const& expected)
     assert(f);
   }
 }
+
+const char *duplicate_test::what() const throw()
+{
+  return tname.c_str();
+}
+
+void test_container::add(test t, std::string s)
+{
+  if( tset.find(t) != tset.end() )
+    throw duplicate_test( tset[t]);
+  tests.push_back(make_pair(s, t));
+  tset[t] = s;
+}
+
+void test_container::run()
+{
+  using namespace std;
+  for(size_t i = 0; i != tests.size(); ++i) {
+    cout << tests[i].first << "..." << flush;
+    (*tests[i].second)();
+    cout << "OK\n";
+  }
+}
