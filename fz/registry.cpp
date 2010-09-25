@@ -678,6 +678,24 @@ namespace FlatZinc {
       s.addClause(up);
     }
 
+    void p_array_bool_or(Solver& s, FlatZincModel& m,
+                         const ConExpr& ce, AST::Node* ann) {
+      vector<cspvar> bv = arg2boolvarargs(s, m, ce[0]);
+      cspvar r = getBoolVar(s, m, ce[1]);
+
+      vec<Lit> up;
+      up.push( ~safeLit(s, r) );
+      for(size_t i = 0; i != bv.size(); ++i) {
+        vec<Lit> down;
+        down.push( safeLit(s, r) );
+        down.push( ~safeLit(s, bv[i]) );
+        s.addClause(down);
+
+        up.push( safeLit(s, bv[i]) );
+      }
+      s.addClause(up);
+    }
+
     class IntPoster {
     public:
       IntPoster(void) {
@@ -718,6 +736,7 @@ namespace FlatZinc {
         registry().add("bool2int", &p_bool2int);
 
         registry().add("array_bool_and", &p_array_bool_and);
+        registry().add("array_bool_or", &p_array_bool_or);
       }
     };
     IntPoster __int_poster;
