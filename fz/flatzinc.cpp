@@ -365,7 +365,7 @@ namespace FlatZinc {
       else
         out << v.first << ".." << v.second;
     } else if (ai->isBoolVar()) {
-      pair<int, int> v = solver.cspModelRange(iv[ai->getBoolVar()]);
+      pair<int, int> v = solver.cspModelRange(bv[ai->getBoolVar()]);
       if (v.first == 1) {
         out << "true";
       } else if (v.second == 0) {
