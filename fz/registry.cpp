@@ -597,6 +597,22 @@ namespace FlatZinc {
       post_max(s, x2, x0, x1);
     }
 
+    /* element constraints */
+    void p_array_int_element(Solver& s, FlatZincModel& m,
+                             const ConExpr& ce, AST::Node* ann) {
+      cspvar selector = getIntVar(s, m, ce[0]);
+      cspvar result = getIntVar(s, m, ce[2]);
+      vector<cspvar> iv = arg2intvarargs(s, m, ce[1]);
+      post_element(s, result, selector, iv, 1);
+    }
+    void p_array_bool_element(Solver& s, FlatZincModel& m,
+                              const ConExpr& ce, AST::Node* ann) {
+      cspvar selector = getIntVar(s, m, ce[0]);
+      cspvar result = getBoolVar(s, m, ce[2]);
+      vector<cspvar> iv = arg2boolvarargs(s, m, ce[1]);
+      post_element(s, result, selector, iv, 1);
+    }
+
 #if 0
     void p_int_mod(Solver& s, const ConExpr& ce, AST::Node* ann) {
       IntVar x0 = getIntVar(s, ce[0]);
@@ -718,48 +734,6 @@ namespace FlatZinc {
       rel(s, x0, BOT_XOR, x1, 1, ann2icl(ann));
     }
 
-    /* element constraints */
-    void p_array_int_element(Solver& s, const ConExpr& ce,
-                                 AST::Node* ann) {
-      bool isConstant = true;
-      AST::Array* a = ce[1]->getArray();
-      for (int i=a->a.size(); i--;) {
-        if (!a->a[i]->isInt()) {
-          isConstant = false;
-          break;
-        }
-      }
-      IntVar selector = getIntVar(s, ce[0]);
-      rel(s, selector > 0);
-      if (isConstant) {
-        IntArgs ia = arg2intargs(ce[1], 1);
-        element(s, ia, selector, getIntVar(s, ce[2]), ann2icl(ann));
-      } else {
-        IntVarArgs iv = arg2intvarargs(s, ce[1], 1);
-        element(s, iv, selector, getIntVar(s, ce[2]), ann2icl(ann));
-      }
-    }
-    void p_array_bool_element(Solver& s, const ConExpr& ce,
-                                  AST::Node* ann) {
-      bool isConstant = true;
-      AST::Array* a = ce[1]->getArray();
-      for (int i=a->a.size(); i--;) {
-        if (!a->a[i]->isBool()) {
-          isConstant = false;
-          break;
-        }
-      }
-      IntVar selector = getIntVar(s, ce[0]);
-      rel(s, selector > 0);
-      if (isConstant) {
-        IntArgs ia = arg2boolargs(ce[1], 1);
-        element(s, ia, selector, getBoolVar(s, ce[2]), ann2icl(ann));
-      } else {
-        BoolVarArgs iv = arg2boolvarargs(s, ce[1], 1);
-        element(s, iv, selector, getBoolVar(s, ce[2]), ann2icl(ann));
-      }
-    }
-
     /* coercion constraints */
     void p_bool2int(Solver& s, const ConExpr& ce, AST::Node* ann) {
       BoolVar x0 = getBoolVar(s, ce[0]);
@@ -820,6 +794,11 @@ namespace FlatZinc {
         registry().add("int_negate", &p_int_negate);
         registry().add("int_min", &p_int_min);
         registry().add("int_max", &p_int_max);
+
+        registry().add("array_var_int_element", &p_array_int_element);
+        registry().add("array_int_element", &p_array_int_element);
+        registry().add("array_var_bool_element", &p_array_bool_element);
+        registry().add("array_bool_element", &p_array_bool_element);
       }
     };
     IntPoster __int_poster;

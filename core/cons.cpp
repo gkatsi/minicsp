@@ -1855,8 +1855,145 @@ void post_max(Solver &s, cspvar x, cspvar y, cspvar z)
 }
 
 
-/* Element */
-class cons_element;
+/* Element: R = X[I]
+
+   Note that indexing is 1-based here, following flatzinc's element */
+namespace element {
+  size_t idx(int i, int imin,
+             int j, int rmin,
+             int n) {
+    return (j-rmin)*n + (i - imin);
+  }
+}
+
+void post_element(Solver &s, cspvar R, cspvar I,
+                  vector<cspvar> X,
+                  int offset)
+{
+  using std::min;
+  using std::max;
+
+  assert(!X.empty());
+
+  I.setmin(s, offset, NO_REASON);
+  I.setmax(s, X.size()+offset-1, NO_REASON);
+
+  int imin = I.min(s),
+    imax = I.max(s);
+
+  int rmin = X[imin-offset].min(s), rmax = X[imax-offset].max(s);
+  for(int i = imin+1, iend = imax+1; i < iend; ++i) {
+    rmin = min(rmin, X[i-offset].min(s));
+    rmax = max(rmax, X[i-offset].max(s));
+  }
+  rmin = max(rmin, R.min(s));
+  rmax = min(rmax, R.max(s));
+  R.setmin(s, rmin, NO_REASON);
+  R.setmax(s, rmax, NO_REASON);
+
+  // -I=i -Xi=j R=j
+  for(int i = imin; i <= imax; ++i) {
+    for(int j = rmin; j <= rmax; ++j) {
+      vec<Lit> ps;
+      Lit xij = Lit(X[i-offset].eqi(s, j));
+      if( xij == lit_Undef || s.value(xij) == l_False)
+        continue; // true clause
+      Lit rj = Lit(R.eqi(s, j));
+      if( s.value(rj) == l_True )
+        continue; // true clause
+      ps.push( ~xij );
+      ps.push( ~Lit(I.eqi(s, i)) );
+      pushifdef( ps, rj );
+      s.addClause(ps);
+    }
+  }
+
+  int n = imax-imin+1;
+  int d = rmax-rmin+1;
+
+  vector<Var> y(n*d), w(n*d);
+  for(int i = 0; i != n*d; ++i) {
+    y[i] = s.newVar();
+    w[i] = s.newVar();
+  }
+
+  using element::idx;
+
+  // define y_ij <=> R=j or Xi=j
+  for(int i = imin; i <= imax; ++i)
+    for(int j = rmin; j <= rmax; ++j) {
+      Var yij = y[idx(i, imin, j, rmin, n)];
+      vec<Lit> ps1, ps2, ps3;
+      // R=j y_ij
+      pushifdef(ps1, Lit(R.eqi(s, j)));
+      ps1.push( Lit(yij) );
+      s.addClause(ps1);
+
+      // Xi=j y_ij
+      pushifdef(ps2, Lit(X[i-offset].eqi(s, j)));
+      ps2.push( Lit(yij) );
+      s.addClause(ps2);
+
+      // -y_ij -R=j -Xi=j
+      Var rij, xij;
+      rij = R.eqi(s, j);
+      xij = X[i-offset].eqi(s, j);
+      if( rij == var_Undef || xij == var_Undef )
+        continue;
+      ps3.push( ~Lit(yij) );
+      ps3.push( ~Lit(rij) );
+      ps3.push( ~Lit(xij) );
+      s.addClause(ps3);
+    }
+
+  // -y_i1 ... -y_id -I=i
+  for(int i = imin; i <= imax; ++i) {
+    vec<Lit> ps;
+    if( !I.indomain(s, i) ) continue;
+    ps.push( ~Lit(I.eqi(s, i)));
+    for(int j = rmin; j <= rmax; ++j) {
+      Var yij = y[idx(i, imin, j, rmin, n)];
+      ps.push( ~Lit(yij) );
+    }
+    s.addClause(ps);
+  }
+
+  // define w_ij <=> -I=i or -Xi=j
+  for(int i = imin; i <= imax; ++i)
+    for(int j = rmin; j <= rmax; ++j) {
+      Var wij = w[idx(i, imin, j, rmin, n)];
+      vec<Lit> ps1, ps2, ps3;
+      // I=i, w_ij
+      pushifdef( ps1, Lit(I.eqi(s,i)));
+      ps1.push( Lit(wij) );
+      s.addClause(ps1);
+
+      // Xi=j, w_ij
+      pushifdef( ps2, Lit(X[i-offset].eqi(s, j)));
+      ps2.push( Lit(wij) );
+      s.addClause(ps2);
+
+      // -w_ij, -I=i, -Xi=j
+      if( I.indomain(s, i) && X[i-offset].indomain(s, i) ) {
+        ps3.push( ~Lit( wij) );
+        ps3.push( ~Lit(I.eqi(s, i)));
+        ps3.push( ~Lit(X[i-offset].eqi(s, j)));
+        s.addClause(ps3);
+      }
+    }
+
+  // -R=j, -w_1j ..., -wnj
+  for(int j = rmin; j <= rmax; ++j) {
+    if( !R.indomain(s, j) ) continue;
+    vec<Lit> ps;
+    ps.push( ~Lit(R.eqi(s, j)) );
+    for(int i = imin; i <= imax; ++i) {
+      Var wij = w[idx(i, imin, j, rmin, n)];
+      ps.push( ~Lit(wij) );
+    }
+    s.addClause(ps);
+  }
+}
 
 /* Set constraints */
 class cons_set_in;

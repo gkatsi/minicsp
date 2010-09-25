@@ -3,6 +3,7 @@ void dom_test();
 void pb_test();
 void le_test();
 void lin_test();
+void element_test();
 
 int main()
 {
@@ -11,5 +12,6 @@ int main()
   pb_test();
   le_test();
   lin_test();
+  element_test();
   return 0;
 }
