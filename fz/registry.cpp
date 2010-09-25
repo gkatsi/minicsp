@@ -613,6 +613,17 @@ namespace FlatZinc {
       post_element(s, result, selector, iv, 1);
     }
 
+    /* coercion constraints */
+    void p_bool2int(Solver& s, FlatZincModel& m,
+                    const ConExpr& ce, AST::Node* ann) {
+      cspvar x0 = getBoolVar(s, m, ce[0]);
+      cspvar x1 = getIntVar(s, m, ce[1]);
+      if (ce[0]->isBoolVar() && ce[1]->isIntVar()) {
+        m.aliasBool2Int(ce[1]->getIntVar(), ce[0]->getBoolVar());
+      }
+      post_eq(s, x0, x1, 0);
+    }
+
 #if 0
     void p_int_mod(Solver& s, const ConExpr& ce, AST::Node* ann) {
       IntVar x0 = getIntVar(s, ce[0]);
@@ -621,128 +632,6 @@ namespace FlatZinc {
       mod(s,x0,x1,x2, ann2icl(ann));
     }
 
-    /* Boolean constraints */
-    void p_bool_CMP(Solver& s, IntRelType irt, const ConExpr& ce,
-                   AST::Node* ann) {
-      rel(s, getBoolVar(s, ce[0]), irt, getBoolVar(s, ce[1]),
-          ann2icl(ann));
-    }
-    void p_bool_CMP_reif(Solver& s, IntRelType irt, const ConExpr& ce,
-                   AST::Node* ann) {
-      rel(s, getBoolVar(s, ce[0]), irt, getBoolVar(s, ce[1]),
-          getBoolVar(s, ce[2]), ann2icl(ann));
-    }
-    void p_bool_eq(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP(s, IRT_EQ, ce, ann);
-    }
-    void p_bool_eq_reif(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP_reif(s, IRT_EQ, ce, ann);
-    }
-    void p_bool_ne(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP(s, IRT_NQ, ce, ann);
-    }
-    void p_bool_ne_reif(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP_reif(s, IRT_NQ, ce, ann);
-    }
-    void p_bool_ge(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP(s, IRT_GQ, ce, ann);
-    }
-    void p_bool_ge_reif(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP_reif(s, IRT_GQ, ce, ann);
-    }
-    void p_bool_le(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP(s, IRT_LQ, ce, ann);
-    }
-    void p_bool_le_reif(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP_reif(s, IRT_LQ, ce, ann);
-    }
-    void p_bool_gt(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP(s, IRT_GR, ce, ann);
-    }
-    void p_bool_gt_reif(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP_reif(s, IRT_GR, ce, ann);
-    }
-    void p_bool_lt(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP(s, IRT_LE, ce, ann);
-    }
-    void p_bool_lt_reif(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      p_bool_CMP_reif(s, IRT_LE, ce, ann);
-    }
-
-#define BOOL_OP(op) \
-    BoolVar b0 = getBoolVar(s, ce[0]); \
-    BoolVar b1 = getBoolVar(s, ce[1]); \
-    if (ce[2]->isBool()) { \
-      rel(s, b0, op, b1, ce[2]->getBool(), ann2icl(ann)); \
-    } else { \
-      rel(s, b0, op, b1, s.bv[ce[2]->getBoolVar()], ann2icl(ann)); \
-    }
-
-#define BOOL_ARRAY_OP(op) \
-    BoolVarArgs bv = arg2boolvarargs(s, ce[0]); \
-    if (ce[1]->isBool()) { \
-      rel(s, op, bv, ce[1]->getBool(), ann2icl(ann)); \
-    } else { \
-      rel(s, op, bv, s.bv[ce[1]->getBoolVar()], ann2icl(ann)); \
-    }
-
-    void p_bool_or(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      BOOL_OP(BOT_OR);
-    }
-    void p_bool_and(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      BOOL_OP(BOT_AND);
-    }
-    void p_array_bool_and(Solver& s, const ConExpr& ce, AST::Node* ann)
-    {
-      BOOL_ARRAY_OP(BOT_AND);
-    }
-    void p_array_bool_or(Solver& s, const ConExpr& ce, AST::Node* ann)
-    {
-      BOOL_ARRAY_OP(BOT_OR);
-    }
-    void p_array_bool_clause(Solver& s, const ConExpr& ce,
-                             AST::Node* ann) {
-      BoolVarArgs bvp = arg2boolvarargs(s, ce[0]);
-      BoolVarArgs bvn = arg2boolvarargs(s, ce[1]);
-      clause(s, BOT_OR, bvp, bvn, 1, ann2icl(ann));
-    }
-    void p_array_bool_clause_reif(Solver& s, const ConExpr& ce,
-                             AST::Node* ann) {
-      BoolVarArgs bvp = arg2boolvarargs(s, ce[0]);
-      BoolVarArgs bvn = arg2boolvarargs(s, ce[1]);
-      BoolVar b0 = getBoolVar(s, ce[2]);
-      clause(s, BOT_OR, bvp, bvn, b0, ann2icl(ann));
-    }
-    void p_bool_xor(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      BOOL_OP(BOT_XOR);
-    }
-    void p_bool_l_imp(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      BoolVar b0 = getBoolVar(s, ce[0]);
-      BoolVar b1 = getBoolVar(s, ce[1]);
-      if (ce[2]->isBool()) {
-        rel(s, b1, BOT_IMP, b0, ce[2]->getBool(), ann2icl(ann));
-      } else {
-        rel(s, b1, BOT_IMP, b0, s.bv[ce[2]->getBoolVar()], ann2icl(ann));
-      }
-    }
-    void p_bool_r_imp(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      BOOL_OP(BOT_IMP);
-    }
-    void p_bool_not(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      BoolVar x0 = getBoolVar(s, ce[0]);
-      BoolVar x1 = getBoolVar(s, ce[1]);
-      rel(s, x0, BOT_XOR, x1, 1, ann2icl(ann));
-    }
-
-    /* coercion constraints */
-    void p_bool2int(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      BoolVar x0 = getBoolVar(s, ce[0]);
-      IntVar x1 = getIntVar(s, ce[1]);
-      if (ce[0]->isBoolVar() && ce[1]->isIntVar()) {
-        s.aliasBool2Int(ce[1]->getIntVar(), ce[0]->getBoolVar());
-      }
-      channel(s, x0, x1, ann2icl(ann));
-    }
 
     void p_int_in(Solver& s, const ConExpr& ce, AST::Node *) {
       IntSet d = arg2intset(s,ce[1]);
@@ -799,6 +688,8 @@ namespace FlatZinc {
         registry().add("array_int_element", &p_array_int_element);
         registry().add("array_var_bool_element", &p_array_bool_element);
         registry().add("array_bool_element", &p_array_bool_element);
+
+        registry().add("bool2int", &p_bool2int);
       }
     };
     IntPoster __int_poster;
