@@ -227,37 +227,38 @@ std::vector<cspvar> Solver::newCSPVarArray(int n, int min, int max)
   return rv;
 }
 
-bool Solver::addClause(vec<Lit>& ps)
+void Solver::addClause(vec<Lit>& ps)
 {
     assert(decisionLevel() == 0);
 
     if (!ok)
-        return false;
+      throw unsat();
     else{
         // Check if clause is satisfied and remove false/duplicate literals:
         sort(ps);
         Lit p; int i, j;
         for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
             if (value(ps[i]) == l_True || ps[i] == ~p)
-                return true;
+                return;
             else if (value(ps[i]) != l_False && ps[i] != p)
                 ps[j++] = p = ps[i];
         ps.shrink(i - j);
     }
 
-    if (ps.size() == 0)
-        return ok = false;
-    else if (ps.size() == 1){
+    if (ps.size() == 0) {
+      ok = false;
+      throw unsat();
+    } else if (ps.size() == 1){
         assert(value(ps[0]) == l_Undef);
         uncheckedEnqueue(ps[0]);
-        return ok = (propagate() == NULL);
+        ok = (propagate() == NULL);
+        if( !ok ) throw unsat();
+        return;
     }else{
         Clause* c = Clause_new(ps, false);
         clauses.push(c);
         attachClause(*c);
     }
-
-    return true;
 }
 
 void Solver::addInactiveClause(Clause* c)
