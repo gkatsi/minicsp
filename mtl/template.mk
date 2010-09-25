@@ -23,7 +23,8 @@ LFLAGS    ?= -Wall
 
 COPTIMIZE ?= -O3 --param inline-unit-growth=60
 
-GOOGLE_PROFILER ?= -lprofiler
+#GOOGLE_PROFILER ?= -lprofiler
+GOOGLE_PROFILER ?= 
 
 .PHONY : s p d r rs c lib libd clean 
 
