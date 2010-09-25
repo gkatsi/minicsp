@@ -696,6 +696,189 @@ namespace FlatZinc {
       s.addClause(up);
     }
 
+    void p_bool_and(Solver& s, FlatZincModel& m,
+                    const ConExpr& ce, AST::Node* ann) {
+      cspvar x0 = getBoolVar(s, m, ce[0]);
+      cspvar x1 = getBoolVar(s, m, ce[1]);
+      cspvar r = getBoolVar(s, m, ce[2]);
+
+      vec<Lit> ps1, ps2, ps3;
+      ps1.push( ~safeLit(s, r) );
+      ps1.push( safeLit(s, x0) );
+      ps2.push( ~safeLit(s, r) );
+      ps2.push( safeLit(s, x1) );
+      ps3.push( ~safeLit(s, x0) );
+      ps3.push( ~safeLit(s, x1) );
+      ps3.push( safeLit(s, r) );
+      s.addClause(ps1);
+      s.addClause(ps2);
+      s.addClause(ps3);
+    }
+
+    void p_bool_or(Solver& s, FlatZincModel& m,
+                   const ConExpr& ce, AST::Node* ann) {
+      cspvar x0 = getBoolVar(s, m, ce[0]);
+      cspvar x1 = getBoolVar(s, m, ce[1]);
+      cspvar r = getBoolVar(s, m, ce[2]);
+
+      vec<Lit> ps1, ps2, ps3;
+      ps1.push( safeLit(s, r) );
+      ps1.push( ~safeLit(s, x0) );
+      ps2.push( safeLit(s, r) );
+      ps2.push( ~safeLit(s, x1) );
+      ps3.push( safeLit(s, x0) );
+      ps3.push( safeLit(s, x1) );
+      ps3.push( ~safeLit(s, r) );
+      s.addClause(ps1);
+      s.addClause(ps2);
+      s.addClause(ps3);
+    }
+
+    void p_bool_clause(Solver& s, FlatZincModel& m,
+                       const ConExpr& ce, AST::Node* ann) {
+      vector<cspvar> x0 = arg2boolvarargs(s, m, ce[0]);
+      vector<cspvar> x1 = arg2boolvarargs(s, m, ce[1]);
+
+      vec<Lit> ps;
+      for(size_t i = 0; i != x0.size(); ++i)
+        ps.push(safeLit(s, x0[i]));
+      for(size_t i = 0; i != x1.size(); ++i)
+        ps.push(~safeLit(s, x1[i]));
+      s.addClause(ps);
+    }
+
+    void p_bool_clause_reif(Solver& s, FlatZincModel& m,
+                            const ConExpr& ce, AST::Node* ann) {
+      vector<cspvar> x0 = arg2boolvarargs(s, m, ce[0]);
+      vector<cspvar> x1 = arg2boolvarargs(s, m, ce[1]);
+      cspvar r = getBoolVar(s, m, ce[2]);
+
+      vec<Lit> ps;
+      ps.push( ~safeLit(s, r) );
+      for(size_t i = 0; i != x0.size(); ++i) {
+        ps.push(safeLit(s, x0[i]));
+        vec<Lit> ps1;
+        ps1.push(~safeLit(s, x0[i]));
+        ps1.push(safeLit(s, r));
+        s.addClause(ps1);
+      }
+      for(size_t i = 0; i != x1.size(); ++i) {
+        ps.push(~safeLit(s, x1[i]));
+        vec<Lit> ps1;
+        ps1.push(safeLit(s, x1[i]));
+        ps1.push(safeLit(s, r));
+        s.addClause(ps1);
+      }
+      s.addClause(ps);
+    }
+
+    void p_bool_eq(Solver& s, FlatZincModel& m,
+                   const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[0]);
+      cspvar b = getBoolVar(s, m, ce[1]);
+
+      vec<Lit> ps1, ps2;
+      ps1.push(~safeLit(s, a));
+      ps1.push(safeLit(s, b));
+
+      ps2.push(~safeLit(s, b));
+      ps2.push(safeLit(s, a));
+
+      s.addClause(ps1);
+      s.addClause(ps2);
+    }
+
+    void p_bool_eq_reif(Solver& s, FlatZincModel& m,
+                        const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[0]);
+      cspvar b = getBoolVar(s, m, ce[1]);
+      cspvar r = getBoolVar(s, m, ce[2]);
+
+      vec<Lit> ps1, ps2, ps3, ps4;
+      ps1.push(~safeLit(s, a));
+      ps1.push(~safeLit(s, b));
+      ps1.push(safeLit(s, r));
+
+      ps2.push(safeLit(s, a));
+      ps2.push(safeLit(s, b));
+      ps2.push(safeLit(s, r));
+
+      ps3.push(safeLit(s, a));
+      ps3.push(~safeLit(s, b));
+      ps3.push(~safeLit(s, r));
+
+      ps4.push(~safeLit(s, a));
+      ps4.push(safeLit(s, b));
+      ps4.push(~safeLit(s, r));
+
+      s.addClause(ps1);
+      s.addClause(ps2);
+      s.addClause(ps3);
+      s.addClause(ps4);
+    }
+
+    void p_bool_ge(Solver& s, FlatZincModel& m,
+                   const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[0]);
+      cspvar b = getBoolVar(s, m, ce[1]);
+      vec<Lit> ps;
+      ps.push( safeLit(s, a) );
+      ps.push( ~safeLit(s, b) );
+      s.addClause(ps);
+    }
+
+    void p_bool_ge_reif(Solver& s, FlatZincModel& m,
+                        const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[0]);
+      cspvar b = getBoolVar(s, m, ce[1]);
+      cspvar r = getBoolVar(s, m, ce[2]);
+
+      vec<Lit> ps1, ps2, ps3;
+      ps1.push( safeLit(s, a) );
+      ps1.push( ~safeLit(s, b) );
+      ps1.push( ~safeLit(s, r) );
+      ps2.push( ~safeLit(s, a) );
+      ps2.push( safeLit(s, r) );
+      ps3.push( safeLit(s, b));
+      ps3.push( safeLit(s, r));
+      s.addClause(ps1);
+      s.addClause(ps2);
+      s.addClause(ps3);
+    }
+
+    void p_bool_gt(Solver& s, FlatZincModel& m,
+                   const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[0]);
+      cspvar b = getBoolVar(s, m, ce[1]);
+      if( s.value(safeLit(s, a)) == l_False )
+        throw unsat();
+      if( s.value(~safeLit(s, b)) == l_False )
+        throw unsat();
+      s.enqueue(safeLit(s, a));
+      s.enqueue(~safeLit(s, b));
+    }
+
+    void p_bool_gt_reif(Solver& s, FlatZincModel& m,
+                        const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[0]);
+      cspvar b = getBoolVar(s, m, ce[1]);
+      cspvar r = getBoolVar(s, m, ce[2]);
+
+      vec<Lit> ps1, ps2, ps3;
+      ps1.push( ~safeLit(s, a) );
+      ps1.push( safeLit(s, b) );
+      ps1.push( safeLit(s, r) );
+
+      ps2.push( safeLit(s, a) );
+      ps2.push( ~safeLit(s, r) );
+      ps3.push( ~safeLit(s, b));
+      ps3.push( ~safeLit(s, r));
+      s.addClause(ps1);
+      s.addClause(ps2);
+      s.addClause(ps3);
+    }
+
+
     class IntPoster {
     public:
       IntPoster(void) {
@@ -737,6 +920,16 @@ namespace FlatZinc {
 
         registry().add("array_bool_and", &p_array_bool_and);
         registry().add("array_bool_or", &p_array_bool_or);
+        registry().add("bool_and", &p_bool_and);
+        registry().add("bool_or", &p_bool_or);
+        registry().add("bool_eq", &p_bool_eq);
+        registry().add("bool_eq_reif", &p_bool_eq_reif);
+        registry().add("bool_ge", &p_bool_ge);
+        registry().add("bool_ge_reif", &p_bool_ge_reif);
+        registry().add("bool_gt", &p_bool_gt);
+        registry().add("bool_gt_reif", &p_bool_gt_reif);
+        registry().add("bool_clause", &p_bool_clause);
+        registry().add("bool_clause_reif", &p_bool_clause_reif);
       }
     };
     IntPoster __int_poster;
