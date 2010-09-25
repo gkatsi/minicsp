@@ -652,6 +652,67 @@ namespace FlatZinc {
     }
 #endif
 
+    void p_array_bool_and(Solver& s, FlatZincModel& m,
+                          const ConExpr& ce, AST::Node* ann) {
+      vector<cspvar> bv = arg2boolvarargs(s, m, ce[0]);
+      cspvar r = getBoolVar(s, m, ce[1]);
+
+      if( r.min(s) == 1 ) {
+        for(size_t i = 0; i != bv.size(); ++i) {
+          if( bv[i].max(s) == 0 ) throw unsat();
+          if( bv[i].min(s) == 1 ) continue;
+          s.uncheckedEnqueue( Lit(bv[i].eqi(s, 1)) );
+        }
+        return;
+      } else if( r.min(s) == 0 ) {
+        vec<Lit> ps;
+        bool foundfalse = false;
+        for(size_t i = 0; i != bv.size(); ++i) {
+          if( bv[i].max(s) == 0 ) {
+            foundfalse = true;
+            break;
+          }
+          Var vi = bv[i].eqi(s, 1);
+          if( vi != var_Undef )
+            ps.push( ~Lit(vi) );
+        }
+        if( !foundfalse )
+          s.addClause(ps);
+        return;
+      }
+
+      bool alltrue=true;
+      for(size_t i = 0; i != bv.size(); ++i) {
+        if( bv[i].max(s) == 0 ) {
+          if( r.min(s) == 1 ) throw unsat();
+          if( r.max(s) == 0 ) return;
+          s.uncheckedEnqueue( ~Lit(r.eqi(s, 1)) );
+          return;
+        }
+        if( bv[i].min(s) == 0 ) {
+          alltrue = false;
+        }
+      }
+      if( alltrue ) {
+        if( r.max(s) == 0 ) throw unsat();
+        if( r.min(s) == 1 ) return;
+        s.uncheckedEnqueue( Lit(r.eqi(s, 1) ) );
+        return;
+      }
+
+      vec<Lit> up;
+      up.push( Lit(r.eqi(s, 1)) );
+      for(size_t i = 0; i != bv.size(); ++i) {
+        vec<Lit> down;
+        down.push( ~Lit(r.eqi(s, 1)) );
+        down.push( Lit(bv[i].eqi(s, 1)) );
+        s.addClause(down);
+
+        up.push( ~Lit(bv[i].eqi(s, 1)) );
+      }
+      s.addClause(up);
+    }
+
     class IntPoster {
     public:
       IntPoster(void) {
@@ -690,6 +751,8 @@ namespace FlatZinc {
         registry().add("array_bool_element", &p_array_bool_element);
 
         registry().add("bool2int", &p_bool2int);
+
+        registry().add("array_bool_and", &p_array_bool_and);
       }
     };
     IntPoster __int_poster;
