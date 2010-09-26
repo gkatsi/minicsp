@@ -19,6 +19,7 @@ namespace {
     post_lin_leq(s, x, w, 0);
     s.propagate();
   }
+  REGISTER_TEST(test01);
 
   /* sum x1 .. x5 >= 24
      x1 .. x5 \in [3,5]
@@ -41,6 +42,7 @@ namespace {
       assert( x[i].min(s) == 4 );
     }
   }
+  REGISTER_TEST(test02);
 
   /* sum x1 .. x5 <= 20
      x1 .. x5 \in [3, 9]
@@ -63,6 +65,7 @@ namespace {
       assert( x[i].max(s) == 8 );
     }
   }
+  REGISTER_TEST(test03);
 
   /* sum x1...x4 - x5 <= 20
      x1 .. x5 \in [7,10]
@@ -90,6 +93,7 @@ namespace {
     }
     assert( x[4].min(s) == 8 );
   }
+  REGISTER_TEST(test04);
 
   /* sum x1 .. x4 <= 20 implies b
      x1 .. x4 \in [3, 5]
@@ -110,6 +114,7 @@ namespace {
     s.propagate();
     assert( b.min(s) == 1 );
   }
+  REGISTER_TEST(test05);
 
   /* sum x1 .. x4 <= 20 implies b
      x1 .. x4 \in [1,6]
@@ -149,6 +154,7 @@ namespace {
     for(int i = 0; i != 4; ++i)
       assert( x[i].min(s) == 3 );
   }
+  REGISTER_TEST(test06);
 
   /* b --> sum x1 .. x4 <= 20
      x1 .. x4 \in 6..10
@@ -169,6 +175,7 @@ namespace {
     s.propagate();
     assert(b.max(s) == 0);
   }
+  REGISTER_TEST(test07);
 
   /* b --> sum -x1 .. -x4 <= -20
      x1 .. x4 \in [1,6]
@@ -206,6 +213,7 @@ namespace {
     for(int i = 0; i != 4; ++i)
       assert( x[i].min(s) == 2 );
   }
+  REGISTER_TEST(test08);
 
   /* not-so-black-box. this tests that the clause produced from
      lin_leq contains the right literals, even though x[1].r_geq(1)
@@ -230,6 +238,7 @@ namespace {
     assert(x[0].max(s) == 3);
     assert(x[3].max(s) == 2);
   }
+  REGISTER_TEST(test09);
 
   /* sum x1..x4 <= 18 ===> b
      x1..x4 in [1..5]
@@ -251,6 +260,7 @@ namespace {
     post_lin_leq_right_imp_re(s, x, c, -18, b);
     assert(x[0].min(s) == 4);
   }
+  REGISTER_TEST(test10);
 
   /* b ===> sum x1..x4 <= 18
      x1..x4 in [4, 7]
@@ -272,6 +282,7 @@ namespace {
     post_lin_leq_left_imp_re(s, x, c, -18, b);
     assert(x[0].max(s) == 6);
   }
+  REGISTER_TEST(test11);
 
   /* sum x1..x5 <= 25
      x1 .. x4 in [4, 10]
@@ -293,6 +304,19 @@ namespace {
     for(int i = 0; i != 5; ++i) c[i] = 1;
     post_lin_leq(s, x, c, -25);
   }
+  REGISTER_TEST(test12);
+
+  // unary constraint
+  void test13()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(1, 5, 10);
+    vector<int> c(1); c[0] = 1;
+    post_lin_eq(s, x, c, -7);
+    s.propagate();
+    assert(x[0].max(s) == 7);
+  }
+  REGISTER_TEST(test13);
 
   /* SEND+MORE=MONEY */
   void test_money()
@@ -350,62 +374,12 @@ namespace {
       1000*m[5].first + 100*m[2].first + 10*m[1].first + m[7].first;
     assert(send+more==money);
   }
-
+  REGISTER_TEST(test_money);
 }
 
 void lin_test()
 {
   cerr << "lin tests\n";
 
-  cerr << "test01..." << flush;
-  test01();
-  cerr << "OK\n";
-
-  cerr << "test02..." << flush;
-  test02();
-  cerr << "OK\n";
-
-  cerr << "test03..." << flush;
-  test03();
-  cerr << "OK\n";
-
-  cerr << "test04..." << flush;
-  test04();
-  cerr << "OK\n";
-
-  cerr << "test05..." << flush;
-  test05();
-  cerr << "OK\n";
-
-  cerr << "test06..." << flush;
-  test06();
-  cerr << "OK\n";
-
-  cerr << "test07..." << flush;
-  test07();
-  cerr << "OK\n";
-
-  cerr << "test08..." << flush;
-  test08();
-  cerr << "OK\n";
-
-  cerr << "test09..." << flush;
-  test09();
-  cerr << "OK\n";
-
-  cerr << "test10..." << flush;
-  test10();
-  cerr << "OK\n";
-
-  cerr << "test11..." << flush;
-  test11();
-  cerr << "OK\n";
-
-  cerr << "test12..." << flush;
-  test12();
-  cerr << "OK\n";
-
-  cerr << "send more money..." << flush;
-  test_money();
-  cerr << "OK\n";
+  the_test_container().run();
 }
