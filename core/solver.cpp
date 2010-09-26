@@ -1321,6 +1321,19 @@ bool Solver::solve(const vec<Lit>& assumps)
     return status == l_True;
 }
 
+void Solver::excludeLast()
+{
+  vec<Lit> exclude;
+  for(int i = 0; i != cspvars.size(); ++i) {
+    cspvar x(i);
+    cspvar_fixed & xf = cspvars[i];
+    pair<int, int> pi = cspmodel[i];
+    assert( pi.first == pi.second );
+    exclude.push( ~Lit(xf.eqi( pi.first )) );
+  }
+  addClause(exclude);
+}
+
 //==================================================
 // output
 

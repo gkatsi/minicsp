@@ -298,7 +298,7 @@ namespace FlatZinc {
         case SAT:
           next = findall;
           if( findall ) {
-            excludesolution();
+            solver.excludeLast();
           }
           break;
         }
@@ -319,13 +319,6 @@ namespace FlatZinc {
     } else if (_method == MAX) {
       iv[_optVar].setmin( solver, opt+1, NO_REASON );
     }
-  }
-
-  void
-  FlatZincModel::excludesolution()
-  {
-    vec<Lit> ps;
-    assert(0);
   }
 
   FlatZincModel::Meth

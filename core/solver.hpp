@@ -88,6 +88,7 @@ public:
     bool    solve        (const vec<Lit>& assumps); // Search for a model that respects a given set of assumptions.
     bool    solve        ();                        // Search without assumptions.
     bool    okay         () const;                  // FALSE means solver is in a conflicting state
+    void    excludeLast  ();                        // add a clause that excludes the last solution
 
     // Explaining
     void    addInactiveClause(Clause *c);           // add a clause that will not be propagated, just as a reason or a conflict clause
