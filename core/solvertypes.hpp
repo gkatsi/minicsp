@@ -359,6 +359,9 @@ class cspvar_fixed
       ? firstbool+2*(i-omin)+1
       : var_Undef; }
 
+  Var eqiUnsafe(int i) const { return firstbool + 2*(i-omin); }
+  Var leqiUnsafe(int i) const { return firstbool + 2*(i-omin)+1; }
+
   void copyclauses(vec<Clause*>& target, vec<Clause*> const& source)
   {
     target.growTo(source.size(), 0L);
