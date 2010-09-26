@@ -878,6 +878,125 @@ namespace FlatZinc {
       s.addClause(ps3);
     }
 
+    void p_bool_le(Solver& s, FlatZincModel& m,
+                   const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[1]); // note inverted from ge
+      cspvar b = getBoolVar(s, m, ce[0]);
+      vec<Lit> ps;
+      ps.push( safeLit(s, a) );
+      ps.push( ~safeLit(s, b) );
+      s.addClause(ps);
+    }
+
+    void p_bool_le_reif(Solver& s, FlatZincModel& m,
+                        const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[1]); // note inverted from ge
+      cspvar b = getBoolVar(s, m, ce[0]);
+      cspvar r = getBoolVar(s, m, ce[2]);
+
+      vec<Lit> ps1, ps2, ps3;
+      ps1.push( safeLit(s, a) );
+      ps1.push( ~safeLit(s, b) );
+      ps1.push( ~safeLit(s, r) );
+      ps2.push( ~safeLit(s, a) );
+      ps2.push( safeLit(s, r) );
+      ps3.push( safeLit(s, b));
+      ps3.push( safeLit(s, r));
+      s.addClause(ps1);
+      s.addClause(ps2);
+      s.addClause(ps3);
+    }
+
+    void p_bool_lt(Solver& s, FlatZincModel& m,
+                   const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[1]); // note inverted from gt
+      cspvar b = getBoolVar(s, m, ce[0]);
+      if( s.value(safeLit(s, a)) == l_False )
+        throw unsat();
+      if( s.value(~safeLit(s, b)) == l_False )
+        throw unsat();
+      s.enqueue(safeLit(s, a));
+      s.enqueue(~safeLit(s, b));
+    }
+
+    void p_bool_lt_reif(Solver& s, FlatZincModel& m,
+                        const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[1]); // note inverted from gt
+      cspvar b = getBoolVar(s, m, ce[0]);
+      cspvar r = getBoolVar(s, m, ce[2]);
+
+      vec<Lit> ps1, ps2, ps3;
+      ps1.push( ~safeLit(s, a) );
+      ps1.push( safeLit(s, b) );
+      ps1.push( safeLit(s, r) );
+
+      ps2.push( safeLit(s, a) );
+      ps2.push( ~safeLit(s, r) );
+      ps3.push( ~safeLit(s, b));
+      ps3.push( ~safeLit(s, r));
+      s.addClause(ps1);
+      s.addClause(ps2);
+      s.addClause(ps3);
+    }
+
+    void p_bool_left_imp(Solver& s, FlatZincModel& m,
+                         const ConExpr& ce, AST::Node* ann) {
+      p_bool_ge_reif(s, m, ce, ann);
+    }
+
+    void p_bool_right_imp(Solver& s, FlatZincModel& m,
+                          const ConExpr& ce, AST::Node* ann) {
+      p_bool_le_reif(s, m, ce, ann);
+    }
+
+    void p_bool_ne(Solver& s, FlatZincModel& m,
+                   const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[0]);
+      cspvar b = getBoolVar(s, m, ce[1]);
+
+      vec<Lit> ps1, ps2;
+      ps1.push( ~safeLit(s, a) );
+      ps1.push( ~safeLit(s, b) );
+      ps2.push( safeLit(s, a) );
+      ps2.push( safeLit(s, b) );
+      s.addClause(ps1);
+      s.addClause(ps2);
+    }
+
+    void p_bool_ne_reif(Solver& s, FlatZincModel& m,
+                        const ConExpr& ce, AST::Node* ann) {
+      cspvar a = getBoolVar(s, m, ce[0]);
+      cspvar b = getBoolVar(s, m, ce[1]);
+      cspvar r = getBoolVar(s, m, ce[2]);
+
+      vec<Lit> ps1, ps2, ps3, ps4;
+      ps1.push( ~safeLit(s, a) );
+      ps1.push( ~safeLit(s, b) );
+      ps1.push( ~safeLit(s, r) );
+      ps2.push( safeLit(s, a) );
+      ps2.push( safeLit(s, b) );
+      ps2.push( ~safeLit(s, r) );
+      ps3.push( ~safeLit(s, a) );
+      ps3.push( safeLit(s, b) );
+      ps3.push( safeLit(s, r) );
+      ps4.push( safeLit(s, a) );
+      ps4.push( ~safeLit(s, b) );
+      ps4.push( safeLit(s, r) );
+      s.addClause(ps1);
+      s.addClause(ps2);
+      s.addClause(ps3);
+      s.addClause(ps4);
+    }
+
+    void p_bool_xor(Solver& s, FlatZincModel& m,
+                    const ConExpr& ce, AST::Node* ann) {
+      p_bool_ne_reif(s, m, ce, ann);
+    }
+
+    void p_bool_not(Solver& s, FlatZincModel& m,
+                    const ConExpr& ce, AST::Node* ann) {
+      p_bool_ne(s, m, ce, ann);
+    }
 
     class IntPoster {
     public:
@@ -928,6 +1047,16 @@ namespace FlatZinc {
         registry().add("bool_ge_reif", &p_bool_ge_reif);
         registry().add("bool_gt", &p_bool_gt);
         registry().add("bool_gt_reif", &p_bool_gt_reif);
+        registry().add("bool_le", &p_bool_le);
+        registry().add("bool_le_reif", &p_bool_le_reif);
+        registry().add("bool_lt", &p_bool_lt);
+        registry().add("bool_lt_reif", &p_bool_lt_reif);
+        registry().add("bool_left_imp", &p_bool_left_imp);
+        registry().add("bool_right_imp", &p_bool_right_imp);
+        registry().add("bool_ne", &p_bool_ne);
+        registry().add("bool_ne_reif", &p_bool_ne_reif);
+        registry().add("bool_xor", &p_bool_xor);
+        registry().add("bool_not", &p_bool_not);
         registry().add("bool_clause", &p_bool_clause);
         registry().add("bool_clause_reif", &p_bool_clause_reif);
       }
