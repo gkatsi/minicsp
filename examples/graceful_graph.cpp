@@ -1,0 +1,132 @@
+#include <iostream>
+#include "solver.hpp"
+#include "cons.hpp"
+
+using namespace std;
+
+int main(int argc, char *argv[])
+{
+  if( argc != 2 ) {
+    cerr << "usage " << argv[0] << " <# marks>\n";
+    return 1;
+  }
+
+  size_t g = atoi(argv[1]);
+  int n = 2 * g + 1;
+  int q = 2 * g + 2 * g;
+  Solver s;
+  vector<cspvar> x = s.newCSPVarArray(n, 0, q);
+  vector<cspvar> diff = s.newCSPVarArray(q, -q, q);
+  vector<cspvar> abs_diff = s.newCSPVarArray(q, 1, q);
+
+
+  post_alldiff(s, x);
+  post_alldiff(s, abs_diff);
+
+
+  // the first circle
+  int k = 0;
+  for(size_t i = 0; i < g; ++i) {
+      vector<cspvar> v(3);
+      vector<int> c(3);
+      v[0] = x[i]; c[0] = -1;
+      v[1] = x[(i + 1) % g]; c[1] = 1;
+      v[2] = diff[k]; c[2] = -1;
+      post_lin_eq(s, v, c, 0);
+      k++;
+    }
+  // the second circle
+  for(size_t i = 0; i < g; ++i) {
+      vector<cspvar> v(3);
+      vector<int> c(3);
+      v[0] = x[g + i]; c[0] = -1;
+      v[1] = x[g + (i + 1) % g]; c[1] = 1;
+      v[2] = diff[k]; c[2] = -1;
+      post_lin_eq(s, v, c, 0);
+      k++;
+    }
+  // connections
+  for(size_t i = 0; i < 2 * g; ++i) {
+      vector<cspvar> v(3);
+      vector<int> c(3);
+      v[0] = x[i]; c[0] = -1;
+      v[1] = x[2 * g]; c[1] = 1;
+      v[2] = diff[k]; c[2] = -1;
+      post_lin_eq(s, v, c, 0);
+      k++;
+  }
+cout << " k " << k - 1 << " q " << q << endl;
+  for(size_t i = 0; i < q; ++i) {
+	  post_abs(s, diff[i], abs_diff[i], 0);
+  }
+
+ // circle 1: x[0] < others
+  for(size_t i = 1; i < g; ++i)
+    post_less(s, x[0], x[i], 0);
+// +
+  post_less(s, x[1], x[g - 1], 0);
+
+// circle 2: x[g] < others
+  for(size_t i = 1; i < g; ++i)
+    post_less(s, x[g], x[i + g], 0);
+// +
+  post_less(s, x[1 + g], x[g + g - 1], 0);
+
+// between circles
+    post_less(s, x[0], x[g], 0);
+
+// inner symmetry
+    x[2 * g].assign(s, 0, NO_REASON);
+
+// circle 1: x[0]  = 1 x[2] = 3 ...
+    for(size_t i = 0; i < g - 3; i = i + 2)
+     x[i].assign(s, i + 1, NO_REASON);
+
+// circle 2: x[0]  = 2 x[2] = 4 ...
+   for(size_t i = 0; i < g - 3; i = i + 2)
+    	x[i + g].assign(s, i + 2, NO_REASON);
+
+  bool sol = false, next = false;
+  //s.verbosity = 2;
+  sol = s.solve();
+
+  //cout << "optimal length " << opt << "\n";
+  cout << s.conflicts << " conflicts\n";
+  if( !sol ) {
+    cout << "unsat\n";
+    return 0;
+  }
+  cout << "the first circle " << endl;
+  for(size_t i = 0; i < g; ++i) {
+	  cout << " n [" <<  i << "] " << s.cspModelValue(x[i]) << "; ";
+  }
+  cout << endl;
+  cout << "the second circle " << endl;
+  for(size_t i = 0; i < g; ++i) {
+  	  cout << " n [" <<  g + i << "] " << s.cspModelValue(x[g + i]) << "; ";
+    }
+  cout << endl;
+
+  k = 0;
+  cout << "diff: the first circle " << endl;
+  for(size_t i = 0; i < g; ++i) {
+	  cout << " n [" <<  i << "," <<  (i + 1) % g  <<  "] = |" << s.cspModelValue(x[i]) - s.cspModelValue(x[(i + 1) % g]) << "| =  "<< s.cspModelValue(abs_diff[k]) << "; ";		  k++;
+  }
+  cout << endl;
+  cout << "diff: the second circle " << endl;
+    for(size_t i = 0; i < g; ++i) {
+  		cout << " n [" <<  i + g << "," << g + (i + 1) % g  <<  "] = |" << s.cspModelValue(x[i + g]) - s.cspModelValue(x[(i + 1) % g + g]) << "| =  " << s.cspModelValue(abs_diff[k]) << "; ";
+  		  k++;
+    }
+    cout << endl;
+
+
+    cout << "diff: connections " << endl;
+    for(size_t i = 0; i < 2*g; ++i) {
+  		cout << " n [" <<  2*g << "," <<  i <<  "] = |" << s.cspModelValue(x[2*g]) - s.cspModelValue(x[i]) << "| =  " << s.cspModelValue(abs_diff[k]) << "; ";
+		  k++;
+    }
+    cout << endl;
+
+  return 0;
+}
