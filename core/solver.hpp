@@ -110,6 +110,8 @@ public:
     int     nClauses   ()      const;       // The current number of original clauses.
     int     nLearnts   ()      const;       // The current number of learnt clauses.
     int     nVars      ()      const;       // The current number of variables.
+    int     nCSPVars   ()      const;        // The number of CSP variables
+    int     nConstraints()     const;        // The number of original constraints
 
     // Extra results: (read-only member variable)
     //
@@ -362,6 +364,8 @@ inline int      Solver::nAssigns      ()      const   { return trail.size(); }
 inline int      Solver::nClauses      ()      const   { return clauses.size(); }
 inline int      Solver::nLearnts      ()      const   { return learnts.size(); }
 inline int      Solver::nVars         ()      const   { return assigns.size(); }
+inline int      Solver::nCSPVars      ()      const   { return cspvars.size(); }
+inline int      Solver::nConstraints  ()      const   { return conses.size(); }
 inline void     Solver::setPolarity   (Var v, bool b) { polarity    [v] = (char)b; }
 inline void     Solver::setDecisionVar(Var v, bool b) { decision_var[v] = (char)b; if (b) { insertVarOrder(v); } }
 inline bool     Solver::solve         ()              { vec<Lit> tmp; return solve(tmp); }

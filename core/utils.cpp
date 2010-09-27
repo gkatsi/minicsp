@@ -60,6 +60,10 @@ void printStats(Solver& solver, const char *comment)
 
     double   cpu_time = cpuTime();
     uint64_t mem_used = memUsed();
+    reportf("%sBoolean variables     : %d\n", comment, solver.nVars());
+    reportf("%sCSP variables         : %d\n", comment, solver.nCSPVars());
+    reportf("%sClauses               : %d\n", comment, solver.nClauses());
+    reportf("%sConstraints           : %d\n", comment, solver.nConstraints());
     reportf("%srestarts              : %" PRIu64 "\n", comment,
             solver.starts);
     reportf("%sconflicts             : %-12" PRIu64 "   (%.0f /sec)\n", comment,
