@@ -11,5 +11,10 @@ namespace cmdline {
       has_argoption<int>(args, "--base-restart");
     if( has_base_restart.first )
       s.restart_first = has_base_restart.second;
+
+    std::pair<bool, int> has_verbosity =
+      has_argoption<int>(args, "--verbosity");
+    if( has_verbosity.first )
+      s.verbosity = has_verbosity.second;
   }
 }

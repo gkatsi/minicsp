@@ -22,23 +22,32 @@ namespace cmdline {
   inline std::pair<bool, T> has_argoption(arglist& args,
                                           const std::string& option) {
     T t = T();
-    arglist::iterator i = std::find(args.begin(), args.end(), option);
-    if( i != args.end() ) {
-      arglist::iterator arg = boost::next(i);
-      if( arg == args.end() ) {
-        std::string message = option + " needs an argument";
-        throw cmd_line_error(message);
-      }
+    for(arglist::iterator i = args.begin(), iend = args.end();
+        i != iend; ++i) {
+      std::string arg;
+      if( *i == option ) {
+        arglist::iterator argi = boost::next(i);
+        if( argi == args.end() ) {
+          std::string message = option + " needs an argument";
+          throw cmd_line_error(message);
+        }
+        arg = *argi;
+        args.erase(i, boost::next(argi));
+      } else if( i->compare(0, option.size(), option) == 0 &&
+                 (*i)[option.size()] == '=' ) {
+        arg.assign( i->begin() + option.size() + 1, i->end() );
+        args.erase(i, boost::next(i));
+      } else
+        continue;
       try {
-        t = boost::lexical_cast<T>(*arg);
+        t = boost::lexical_cast<T>(arg);
       } catch (...) {
-        std::string message = *arg + " is not a suitable argument for " + option;
+        std::string message = arg + " is not a suitable argument for " + option;
         throw cmd_line_error(message);
       }
-      args.erase(i, boost::next(arg));
       return std::make_pair(true, t);
-    } else
-      return std::make_pair(false, t);
+    }
+    return std::make_pair(false, t);
   }
 
   inline
