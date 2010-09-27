@@ -26,53 +26,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <zlib.h>
 
 #include "solver.hpp"
-
-/*************************************************************************************/
-#ifdef _MSC_VER
-#include <ctime>
-
-static inline double cpuTime(void) {
-    return (double)clock() / CLOCKS_PER_SEC; }
-#else
-
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <unistd.h>
-
-static inline double cpuTime(void) {
-    struct rusage ru;
-    getrusage(RUSAGE_SELF, &ru);
-    return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000; }
-#endif
-
-
-#if defined(__linux__)
-static inline int memReadStat(int field)
-{
-    char    name[256];
-    pid_t pid = getpid();
-    sprintf(name, "/proc/%d/statm", pid);
-    FILE*   in = fopen(name, "rb");
-    if (in == NULL) return 0;
-    int     value;
-    for (; field >= 0; field--)
-        fscanf(in, "%d", &value);
-    fclose(in);
-    return value;
-}
-static inline uint64_t memUsed() { return (uint64_t)memReadStat(0) * (uint64_t)getpagesize(); }
-
-
-#elif defined(__FreeBSD__)
-static inline uint64_t memUsed(void) {
-    struct rusage ru;
-    getrusage(RUSAGE_SELF, &ru);
-    return ru.ru_maxrss*1024; }
-
-
-#else
-static inline uint64_t memUsed() { return 0; }
-#endif
+#include "utils.hpp"
 
 #if defined(__linux__)
 #include <fpu_control.h>
@@ -143,7 +97,7 @@ static void readClause(B& in, Solver& S, vec<Lit>& lits) {
 }
 
 template<class B>
-static bool match(B& in, char* str) {
+static bool match(B& in, const char* str) {
     for (; *str != 0; ++str, ++in)
         if (*str != *in)
             return false;
@@ -183,20 +137,6 @@ static void parse_DIMACS(gzFile input_stream, Solver& S) {
 
 
 //=================================================================================================
-
-
-void printStats(Solver& solver)
-{
-    double   cpu_time = cpuTime();
-    uint64_t mem_used = memUsed();
-    reportf("restarts              : %lld\n", solver.starts);
-    reportf("conflicts             : %-12lld   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
-    reportf("decisions             : %-12lld   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
-    reportf("propagations          : %-12lld   (%.0f /sec)\n", solver.propagations, solver.propagations/cpu_time);
-    reportf("conflict literals     : %-12lld   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
-    if (mem_used != 0) reportf("Memory used           : %.2f MB\n", mem_used / 1048576.0);
-    reportf("CPU time              : %g s\n", cpu_time);
-}
 
 Solver* solver;
 static void SIGINT_handler(int signum) {

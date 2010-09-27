@@ -7,6 +7,7 @@
 #include "flatzinc.hpp"
 #include "solver.hpp"
 #include "cmdline.hpp"
+#include "utils.hpp"
 
 using namespace std;
 
@@ -22,9 +23,13 @@ int main(int argc, char *argv[])
   Solver s;
 
   cmdline::parse_solver_options(s, args);
+  bool stat = cmdline::has_option(args, "--stat");
+  setup_signal_handlers(&s);
+
+  double cpu_time = cpuTime();
 
   FlatZinc::Printer p;
-  FlatZinc::FlatZincModel *fm;
+  FlatZinc::FlatZincModel *fm = 0L;
   try {
     fm = parse(args.back(), s, p);
   } catch (unsat& e) {
@@ -33,10 +38,17 @@ int main(int argc, char *argv[])
   }
   if( !fm ) return 0;
 
+  double parse_time = cpuTime() - cpu_time;
+
   fm->findall = cmdline::has_option(args, "--all");
 
   fm->run(cout , p);
   delete fm;
+
+  if( stat ) {
+    printStats(s, "%% ");
+    reportf("%sParse time            : %g s\n", "%% ", parse_time);
+  }
 
   return 0;
 }

@@ -2,6 +2,7 @@
 #include "solver.hpp"
 #include "cons.hpp"
 #include "cmdline.hpp"
+#include "utils.hpp"
 
 using namespace std;
 
@@ -10,6 +11,8 @@ int main(int argc, char *argv[])
   cmdline::arglist args(argv+1, argv+argc);
   Solver s;
   cmdline::parse_solver_options(s, args);
+  bool stat = cmdline::has_option(args, "--stat");
+  setup_signal_handlers(&s);
 
   if( args.empty() ) {
     cerr << "usage " << argv[0] << " [options] <# marks>\n";
@@ -57,11 +60,13 @@ int main(int argc, char *argv[])
   } while(next);
 
   cout << "optimal length " << opt << "\n";
-  cout << s.conflicts << " conflicts\n";
   if( !sol ) {
     cout << "unsat\n";
     return 0;
   }
+
+  if( stat )
+    printStats(s);
 
   return 0;
 }
