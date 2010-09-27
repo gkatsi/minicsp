@@ -122,6 +122,8 @@ public:
     // Mode of operation:
     //
     bool      trace;              // if true, will output all prunings
+    bool      learning;           // can be set to false to disable learning
+    bool      restarting;         // can be set to false to disable restarting
     double    var_decay;          // Inverse of the variable activity decay factor.                                            (default 1 / 0.95)
     double    clause_decay;       // Inverse of the clause activity decay factor.                                              (1 / 0.999)
     double    random_var_freq;    // The frequency with which the decision heuristic tries to choose a random variable.        (default 0.02)

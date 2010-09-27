@@ -32,6 +32,8 @@ Solver::Solver() :
 
     // Parameters: (formerly in 'SearchParams')
     trace(false)
+  , learning(true)
+  , restarting(true)
   , var_decay(1 / 0.95), clause_decay(1 / 0.999), random_var_freq(0.02)
   , restart_first(32), restart_inc(1.5), learntsize_factor((double)1/(double)3), learntsize_inc(1.1)
 

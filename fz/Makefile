@@ -5,7 +5,7 @@ EXEC      = minicsp-fz
 CFLAGS    = -I$(MTL) -I$(CORE) -Wall -ffloat-store
 LFLAGS    = -lz
 
-COREOBJS  = $(CORE)/solver.o $(CORE)/cons.o
+COREOBJS  = $(CORE)/solver.o $(CORE)/cons.o $(CORE)/cmdline.o
 CSRCS     = $(wildcard *.cpp) lexer.yy.cpp parser.tab.cpp
 COBJS     = $(addsuffix .o, $(basename $(CSRCS))) $(COREOBJS)
 
