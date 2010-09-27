@@ -1130,6 +1130,13 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
 
             first = false;
 
+            if( !learning ) {
+              Lit flip = trail[ trail_lim[ decisionLevel() - 1 ] ];
+              cancelUntil( decisionLevel() - 1 );
+              uncheckedEnqueue(~flip, 0L);
+              continue;
+            }
+
             learnt_clause.clear();
             analyze(confl, learnt_clause, backtrack_level);
             cancelUntil(backtrack_level);
@@ -1177,7 +1184,8 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             newDecisionLevel();
 
 
-            if (nof_conflicts >= 0 && conflictC >= nof_conflicts){
+            if (restarting &&
+                nof_conflicts >= 0 && conflictC >= nof_conflicts){
                 // Reached bound on number of conflicts:
                 progress_estimate = progressEstimate();
                 cancelUntil(0);
