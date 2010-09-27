@@ -631,26 +631,46 @@ namespace FlatZinc {
       IntVar x2 = getIntVar(s, ce[2]);
       mod(s,x0,x1,x2, ann2icl(ann));
     }
+#endif
 
-
-    void p_int_in(Solver& s, const ConExpr& ce, AST::Node *) {
-      IntSet d = arg2intset(s,ce[1]);
+    void p_int_in(Solver& s, FlatZincModel& m,
+                  const ConExpr& ce, AST::Node *) {
+      set<int> d = arg2intset(s,ce[1]);
       if (ce[0]->isBoolVar()) {
-        IntSetRanges dr(d);
-        Iter::Ranges::Singleton sr(0,1);
-        Iter::Ranges::Inter<IntSetRanges,Iter::Ranges::Singleton> i(dr,sr);
-        IntSet d01(i);
-        if (d01.size() == 0) {
-          s.fail();
-        } else {
-          rel(s, getBoolVar(s, ce[0]), IRT_GQ, d01.min());
-          rel(s, getBoolVar(s, ce[0]), IRT_LQ, d01.max());
+        cspvar x = getBoolVar(s, m, ce[0]);
+        cout << "restricting bool var " << x
+             << "(" << domain_as_set(s, x) << ")"
+             << " to { ";
+        for(set<int>::iterator i = d.begin(), iend = d.end();
+            i != iend; ++i)
+          cout << *i << ' ';
+        cout << "}\n";
+        if( d.find(0) == d.end() ) {
+          cout << "\tpruning " << 0 << "\n";
+          x.setmin(s, 1, NO_REASON);
+        }
+        if( d.find(1) == d.end() ) {
+          cout << "\tpruning " << 1 << "\n";
+          x.setmax(s, 0, NO_REASON);
         }
       } else {
-        dom(s, getIntVar(s, ce[0]), d);
+        cspvar x = getIntVar(s, m, ce[0]);
+        cout << "restricting int var " << x
+             << "(" << domain_as_set(s, x) << ")"
+             << " to { ";
+        for(set<int>::iterator i = d.begin(), iend = d.end();
+            i != iend; ++i)
+          cout << *i << ' ';
+        cout << "}\n";
+        // FIXME: this can be more efficient by traversing the set
+        for(int i = x.min(s), iend = x.max(s); i != iend; ++i) {
+          if( d.find(i) == d.end() ) {
+            cout << "\tpruning " << i << "\n";
+            x.remove(s, i, NO_REASON);
+          }
+        }
       }
     }
-#endif
 
     Lit safeLit(Solver &s, cspvar v) {
       assert(v.min(s) >= 0 && v.max(s) <= 1);
@@ -1029,6 +1049,8 @@ namespace FlatZinc {
         registry().add("int_negate", &p_int_negate);
         registry().add("int_min", &p_int_min);
         registry().add("int_max", &p_int_max);
+
+        registry().add("int_in", &p_int_in);
 
         registry().add("array_var_int_element", &p_array_int_element);
         registry().add("array_int_element", &p_array_int_element);
