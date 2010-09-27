@@ -1,20 +1,24 @@
 #include <iostream>
 #include "solver.hpp"
 #include "cons.hpp"
+#include "cmdline.hpp"
 
 using namespace std;
 
 int main(int argc, char *argv[])
 {
-  if( argc != 2 ) {
-    cerr << "usage " << argv[0] << " <# marks>\n";
+  cmdline::arglist args(argv+1, argv+argc);
+  Solver s;
+  cmdline::parse_solver_options(s, args);
+
+  if( args.empty() ) {
+    cerr << "usage " << argv[0] << " [options] <# marks>\n";
     return 1;
   }
 
-  size_t m = atoi(argv[1]);
+  size_t m = atoi(args.back().c_str());
   int l = m*m;
 
-  Solver s;
   vector<cspvar> x = s.newCSPVarArray(m, 0, l);
 
   for(size_t i = 1; i != m; ++i)
