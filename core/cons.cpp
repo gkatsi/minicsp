@@ -1892,9 +1892,10 @@ void post_element(Solver &s, cspvar R, cspvar I,
   R.setmax(s, rmax, NO_REASON);
 
   // -I=i -Xi=j R=j
+  vec<Lit> ps;
   for(int i = imin; i <= imax; ++i) {
     for(int j = rmin; j <= rmax; ++j) {
-      vec<Lit> ps;
+      ps.clear();
       Lit xij = Lit(X[i-offset].eqi(s, j));
       if( xij == lit_Undef || s.value(xij) == l_False)
         continue; // true clause
@@ -1911,19 +1912,24 @@ void post_element(Solver &s, cspvar R, cspvar I,
   int n = imax-imin+1;
   int d = rmax-rmin+1;
 
-  vector<Var> y(n*d), w(n*d);
-  for(int i = 0; i != n*d; ++i) {
-    y[i] = s.newVar();
-    w[i] = s.newVar();
-  }
+  Var yfirst, wfirst;
+
+  yfirst = s.newVar();
+  for(int i = 1; i != n*d; ++i)
+    s.newVar();
+
+  wfirst = s.newVar();
+  for(int i = 1; i != n*d; ++i)
+    s.newVar();
 
   using element::idx;
 
+  vec<Lit> ps1, ps2, ps3;
   // define y_ij <=> R=j or Xi=j
   for(int i = imin; i <= imax; ++i)
     for(int j = rmin; j <= rmax; ++j) {
-      Var yij = y[idx(i, imin, j, rmin, n)];
-      vec<Lit> ps1, ps2, ps3;
+      ps1.clear(); ps2.clear(); ps3.clear();
+      Var yij = yfirst + idx(i, imin, j, rmin, n);
       // R=j y_ij
       pushifdef(ps1, Lit(R.eqi(s, j)));
       ps1.push( Lit(yij) );
@@ -1948,11 +1954,11 @@ void post_element(Solver &s, cspvar R, cspvar I,
 
   // -y_i1 ... -y_id -I=i
   for(int i = imin; i <= imax; ++i) {
-    vec<Lit> ps;
+    ps.clear();
     if( !I.indomain(s, i) ) continue;
     ps.push( ~Lit(I.eqi(s, i)));
     for(int j = rmin; j <= rmax; ++j) {
-      Var yij = y[idx(i, imin, j, rmin, n)];
+      Var yij = yfirst + idx(i, imin, j, rmin, n);
       ps.push( ~Lit(yij) );
     }
     s.addClause(ps);
@@ -1961,8 +1967,8 @@ void post_element(Solver &s, cspvar R, cspvar I,
   // define w_ij <=> -I=i or -Xi=j
   for(int i = imin; i <= imax; ++i)
     for(int j = rmin; j <= rmax; ++j) {
-      Var wij = w[idx(i, imin, j, rmin, n)];
-      vec<Lit> ps1, ps2, ps3;
+      Var wij = wfirst + idx(i, imin, j, rmin, n);
+      ps1.clear(); ps2.clear(); ps3.clear();
       // I=i, w_ij
       pushifdef( ps1, Lit(I.eqi(s,i)));
       ps1.push( Lit(wij) );
@@ -1985,10 +1991,10 @@ void post_element(Solver &s, cspvar R, cspvar I,
   // -R=j, -w_1j ..., -wnj
   for(int j = rmin; j <= rmax; ++j) {
     if( !R.indomain(s, j) ) continue;
-    vec<Lit> ps;
+    ps.clear();
     ps.push( ~Lit(R.eqi(s, j)) );
     for(int i = imin; i <= imax; ++i) {
-      Var wij = w[idx(i, imin, j, rmin, n)];
+      Var wij = wfirst + idx(i, imin, j, rmin, n);
       ps.push( ~Lit(wij) );
     }
     s.addClause(ps);
