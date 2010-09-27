@@ -1867,7 +1867,7 @@ namespace element {
 }
 
 void post_element(Solver &s, cspvar R, cspvar I,
-                  vector<cspvar> X,
+                  vector<cspvar> const& X,
                   int offset)
 {
   using std::min;
@@ -1881,7 +1881,7 @@ void post_element(Solver &s, cspvar R, cspvar I,
   int imin = I.min(s),
     imax = I.max(s);
 
-  int rmin = X[imin-offset].min(s), rmax = X[imax-offset].max(s);
+  int rmin = X[imin-offset].min(s), rmax = X[imin-offset].max(s);
   for(int i = imin+1, iend = imax+1; i < iend; ++i) {
     rmin = min(rmin, X[i-offset].min(s));
     rmax = max(rmax, X[i-offset].max(s));

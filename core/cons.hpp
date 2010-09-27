@@ -167,7 +167,7 @@ void post_max(Solver &s, cspvar x, cspvar y, cspvar z);
    offset is 0 by default for normal 0-based indexing, but the
    flatzinc frontend uses 1 for its own 1-based indexing */
 void post_element(Solver &s, cspvar R, cspvar I,
-                  std::vector<cspvar> X, int offset=0);
+                  std::vector<cspvar> const& X, int offset=0);
 
 // alldiff
 void post_alldiff(Solver &s, std::vector<cspvar> const& vars);

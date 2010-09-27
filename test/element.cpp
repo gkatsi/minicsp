@@ -147,6 +147,20 @@ namespace {
   }
   REGISTER_TEST(element07);
 
+  // a bug that was uncovered by a flatzinc model
+  void element08()
+  {
+    Solver s;
+    cspvar R = s.newCSPVar(1, 1);
+    cspvar I = s.newCSPVar(1, 2);
+    vector<cspvar> X = s.newCSPVarArray(2, 0, 1);
+    X[0].setmin(s, 1, NO_REASON);
+    X[1].setmax(s, 0, NO_REASON);
+    post_element(s, R, I, X, 1);
+    s.propagate();
+    assert( I.max(s) == 1 );
+  }
+  REGISTER_TEST(element08);
 }
 
 void element_test()
