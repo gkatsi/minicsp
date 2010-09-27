@@ -638,34 +638,17 @@ namespace FlatZinc {
       set<int> d = arg2intset(s,ce[1]);
       if (ce[0]->isBoolVar()) {
         cspvar x = getBoolVar(s, m, ce[0]);
-        cout << "restricting bool var " << x
-             << "(" << domain_as_set(s, x) << ")"
-             << " to { ";
-        for(set<int>::iterator i = d.begin(), iend = d.end();
-            i != iend; ++i)
-          cout << *i << ' ';
-        cout << "}\n";
         if( d.find(0) == d.end() ) {
-          cout << "\tpruning " << 0 << "\n";
           x.setmin(s, 1, NO_REASON);
         }
         if( d.find(1) == d.end() ) {
-          cout << "\tpruning " << 1 << "\n";
           x.setmax(s, 0, NO_REASON);
         }
       } else {
         cspvar x = getIntVar(s, m, ce[0]);
-        cout << "restricting int var " << x
-             << "(" << domain_as_set(s, x) << ")"
-             << " to { ";
-        for(set<int>::iterator i = d.begin(), iend = d.end();
-            i != iend; ++i)
-          cout << *i << ' ';
-        cout << "}\n";
         // FIXME: this can be more efficient by traversing the set
         for(int i = x.min(s), iend = x.max(s); i != iend; ++i) {
           if( d.find(i) == d.end() ) {
-            cout << "\tpruning " << i << "\n";
             x.remove(s, i, NO_REASON);
           }
         }
@@ -1041,6 +1024,10 @@ namespace FlatZinc {
         registry().add("int_lin_ge_reif", &p_int_lin_ge_reif);
         registry().add("int_lin_gt", &p_int_lin_gt);
         registry().add("int_lin_gt_reif", &p_int_lin_gt_reif);
+        registry().add("int_lin_eq", &p_int_lin_eq);
+        registry().add("int_lin_eq_reif", &p_int_lin_eq_reif);
+        registry().add("int_lin_ne", &p_int_lin_eq);
+        registry().add("int_lin_ne_reif", &p_int_lin_eq_reif);
         registry().add("int_plus", &p_int_plus);
         registry().add("int_minus", &p_int_minus);
         registry().add("int_abs", &p_int_abs);
