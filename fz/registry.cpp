@@ -624,15 +624,6 @@ namespace FlatZinc {
       post_eq(s, x0, x1, 0);
     }
 
-#if 0
-    void p_int_mod(Solver& s, const ConExpr& ce, AST::Node* ann) {
-      IntVar x0 = getIntVar(s, ce[0]);
-      IntVar x1 = getIntVar(s, ce[1]);
-      IntVar x2 = getIntVar(s, ce[2]);
-      mod(s,x0,x1,x2, ann2icl(ann));
-    }
-#endif
-
     void p_int_in(Solver& s, FlatZincModel& m,
                   const ConExpr& ce, AST::Node *) {
       set<int> d = arg2intset(s,ce[1]);
