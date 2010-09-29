@@ -27,6 +27,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 class Solver;
 
+// copied from boost/preprocessor/cat.hpp
+#define BOOST_PP_CAT(a, b) BOOST_PP_CAT_I(a, b)
+#define BOOST_PP_CAT_I(a, b) a ## b
+
+
 //=================================================================================================
 // Variables, literals, lifted booleans, clauses:
 
@@ -537,14 +542,15 @@ struct undefined_literal : public std::exception
 //==================================================
 // convenience macros/inlines
 
-#define DO_OR_THROW(action) do {                \
-    Clause *confl##__LINE__ = action;           \
-    if( confl##__LINE__ ) throw unsat();        \
+#define DO_OR_THROW(action) do {                        \
+    Clause *BOOST_PP_CAT(confl, __LINE__) = action;     \
+    if( BOOST_PP_CAT(confl, __LINE__ ) ) throw unsat(); \
   } while(0)
 
-#define DO_OR_RETURN(action) do {                \
-    Clause *confl##__LINE__ = action;            \
-    if( confl##__LINE__ ) return confl##__LINE__;\
+#define DO_OR_RETURN(action) do {                       \
+    Clause *BOOST_PP_CAT(confl, __LINE__ ) = action;    \
+    if( BOOST_PP_CAT(confl, __LINE__ ) )                \
+      return BOOST_PP_CAT(confl, __LINE__ );            \
   } while(0)
 
 template<typename T>
