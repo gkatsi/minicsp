@@ -594,7 +594,6 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
 
 void Solver::debugclause(Clause *from, cons *c)
 {
-#ifdef EXPENSIVE_INVARIANTS
   Solver s1;
   // add all variables
   int nv = nVars();
@@ -635,7 +634,6 @@ void Solver::debugclause(Clause *from, cons *c)
   }
   Clause *confl = s1.propagate();
   assert(confl);
-#endif
 }
 
 void Solver::check_debug_solution(Lit p, Clause *from)
