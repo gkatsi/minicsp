@@ -60,6 +60,40 @@ namespace {
     assert_num_solutions(s, 32);
   }
   REGISTER_TEST(setdiff03);
+
+  void seteq01()
+  {
+    Solver s;
+    setvar A = s.newSetVar(0, 3);
+    setvar B = s.newSetVar(1, 4);
+    post_seteq(s, A, B);
+    assert_num_solutions(s, 8);
+  }
+  REGISTER_TEST(seteq01);
+
+  void seteq02()
+  {
+    Solver s;
+    setvar A = s.newSetVar(0, 3);
+    setvar B = s.newSetVar(1, 4);
+    post_seteq(s, A, B);
+
+    A.card(s).setmax(s, 2, NO_REASON);
+
+    s.newDecisionLevel();
+    A.include(s, 1, NO_REASON);
+    assert(!s.propagate());
+    assert( B.includes(s, 1) );
+
+    s.newDecisionLevel();
+    A.exclude(s, 2, NO_REASON);
+    assert(!s.propagate());
+    assert( B.excludes(s, 2));
+    s.cancelUntil(0);
+
+    assert_num_solutions(s, 7);
+  }
+  REGISTER_TEST(seteq02);
 }
 
 
