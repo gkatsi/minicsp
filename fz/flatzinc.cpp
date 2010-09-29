@@ -180,17 +180,30 @@ namespace FlatZinc {
     } else if( vs->assigned) {
       assert(vs->upperBound());
       AST::SetLit* vsv = vs->upperBound.some();
-      setvar x = solver.newSetVar(vsv->min, vsv->max);
-      sv[setVarCount++] = x;
       if (vsv->interval) {
+        setvar x = solver.newSetVar(vsv->min, vsv->max);
+        sv[setVarCount++] = x;
         for(int i = vsv->min; i <= vsv->max; ++i)
           x.include(solver, i, NO_REASON);
       } else {
-        for(size_t i = 0; i != vsv->s.size(); ++i)
-          x.include(solver, i, NO_REASON);
-        for(int i = x.umin(solver), iend = x.umax(solver); i != iend; ++i)
-          if( !x.includes(solver, i) )
-            x.exclude(solver, i, NO_REASON);
+        if( vsv->s.empty() ) {
+          setvar x = solver.newSetVar( 0, 0 );
+          x.exclude(solver, 0, NO_REASON);
+          sv[setVarCount++] = x;
+        } else {
+          int umin = vsv->s[0], umax = vsv->s[0];
+          for(size_t i = 1; i != vsv->s.size(); ++i) {
+            umin = std::min(umin, vsv->s[i]);
+            umax = std::max(umax, vsv->s[i]);
+          }
+          setvar x = solver.newSetVar(umin, umax);
+          sv[setVarCount++] = x;
+          for(size_t i = 0; i != vsv->s.size(); ++i)
+            x.include(solver, vsv->s[i], NO_REASON);
+          for(int i = x.umin(solver), iend = x.umax(solver); i <= iend; ++i)
+            if( !x.includes(solver, i) )
+              x.exclude(solver, i, NO_REASON);
+        }
       }
     } else if( vs->upperBound() ) {
       AST::SetLit* vsv = vs->upperBound.some();

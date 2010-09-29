@@ -43,6 +43,7 @@
 #include "solver.hpp"
 #include "flatzinc.hpp"
 #include "cons.hpp"
+#include "setcons.hpp"
 #include <vector>
 #include <set>
 
@@ -229,6 +230,40 @@ namespace FlatZinc {
         if( m.constants.find(v) == m.constants.end() )
           m.constants[v] = s.newCSPVar(v, v);
         x0 = m.constants[v];
+      }
+      return x0;
+    }
+
+    setvar getSetVar(Solver& s,
+                     FlatZincModel& m,
+                     AST::Node* n) {
+      setvar x0;
+      if( n->isSetVar() ) {
+        x0 = m.sv[n->getSetVar()];
+      } else {
+        AST::SetLit *sl = n->getSet();
+        if( sl->interval ) {
+          x0 = s.newSetVar( sl->min, sl->max );
+          for(int i = sl->min; i <= sl->max; ++i)
+            x0.include(s, i, NO_REASON);
+        } else {
+          if( sl->s.empty() ) {
+            x0 = s.newSetVar( 0, 0 );
+            x0.exclude(s, 0, NO_REASON); //empty!
+          } else {
+            int umin = sl->s[0], umax = sl->s[0];
+            for(size_t i = 1; i != sl->s.size(); ++i) {
+              umin = std::min(umin, sl->s[i]);
+              umax = std::max(umax, sl->s[i]);
+            }
+            x0 = s.newSetVar( umin, umax );
+            for(size_t i = 0; i != sl->s.size(); ++i)
+              x0.include(s, sl->s[i], NO_REASON);
+            for(int i = x0.umin(s), iend = x0.umax(s); i <= iend; ++i)
+              if( !x0.includes(s, i) )
+                x0.exclude(s, i, NO_REASON);
+          }
+        }
       }
       return x0;
     }
@@ -646,6 +681,7 @@ namespace FlatZinc {
       }
     }
 
+    /* Bool constraints */
     Lit safeLit(Solver &s, cspvar v) {
       assert(v.min(s) >= 0 && v.max(s) <= 1);
       if( v.max(s) == 0 )
@@ -992,6 +1028,17 @@ namespace FlatZinc {
       p_bool_ne(s, m, ce, ann);
     }
 
+    /* ================================================== */
+    /* Set constraints */
+
+    void p_set_card(Solver& s, FlatZincModel& m,
+                    const ConExpr& ce, AST::Node* ann) {
+      setvar A = getSetVar(s, m, ce[0]);
+      cspvar card = getIntVar(s, m, ce[1]);
+
+      post_eq(s, A.card(s), card, 0);
+    }
+
     class IntPoster {
     public:
       IntPoster(void) {
@@ -1059,6 +1106,8 @@ namespace FlatZinc {
         registry().add("bool_not", &p_bool_not);
         registry().add("bool_clause", &p_bool_clause);
         registry().add("bool_clause_reif", &p_bool_clause_reif);
+
+        registry().add("set_card", &p_set_card);
       }
     };
     IntPoster __int_poster;
