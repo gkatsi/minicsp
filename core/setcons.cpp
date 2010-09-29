@@ -1,5 +1,6 @@
 #include "solver.hpp"
 #include "setcons.hpp"
+#include "cons.hpp"
 
 void post_setdiff(Solver &s, setvar a, setvar b, setvar c)
 {
@@ -43,4 +44,5 @@ void post_setdiff(Solver &s, setvar a, setvar b, setvar c)
       s.addClause(ps);
     }
   }
+  post_leq(s, c.card(s), a.card(s), 0);
 }
