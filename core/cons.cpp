@@ -1577,10 +1577,10 @@ Clause *cons_pbvar::wake(Solver &s, Lit)
     if( q >= 0 )
       lb += cv.first;
     else
-      _lbreason[lbi++] = Lit(cv.second, true);
+      _lbreason[lbi++] = Lit(cv.second);
     if( q > 0 ) {
       ub += cv.first;
-      _ubreason[lbi++] = Lit(cv.second, true);
+      _ubreason[ubi++] = Lit(cv.second, true);
     }
   }
 
@@ -1602,6 +1602,7 @@ Clause *cons_pbvar::wake(Solver &s, Lit)
   int rhslb = _rhs.min(s);
   int rhsub = _rhs.max(s);
 
+  // note we gather everything in _lbreason now
   if( nonimpliedlb )
     _lbreason.push( _rhs.r_min(s) );
   if( nonimpliedub )
@@ -1614,7 +1615,7 @@ Clause *cons_pbvar::wake(Solver &s, Lit)
     if( lb + cv.first > rhsub )
       DO_OR_RETURN(s.enqueueFill( Lit( cv.second, true ), _lbreason ));
     if( ub - cv.first < rhslb )
-      DO_OR_RETURN(s.enqueueFill( Lit( cv.second ), _ubreason ));
+      DO_OR_RETURN(s.enqueueFill( Lit( cv.second ), _lbreason ));
   }
   for(size_t i = 0; i != nn; ++i) {
     pair<int, Var> const& cv = _negvars[i];
@@ -1623,7 +1624,7 @@ Clause *cons_pbvar::wake(Solver &s, Lit)
     if( ub + cv.first < rhslb )
       DO_OR_RETURN(s.enqueueFill( Lit(cv.second, true ), _lbreason ));
     if( lb - cv.first > rhsub )
-      DO_OR_RETURN(s.enqueueFill( Lit(cv.second ), _ubreason ));
+      DO_OR_RETURN(s.enqueueFill( Lit(cv.second ), _lbreason ));
   }
 
   return 0L;
