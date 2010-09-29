@@ -1342,6 +1342,12 @@ void Solver::excludeLast()
     exclude.push( ~Lit(xf.eqi( pi.first )) );
   }
   addClause(exclude);
+  if( trace ) {
+    cout << "added exclude clause (";
+    for(int i = 0; i != exclude.size(); ++i)
+      cout << print(*this, exclude[i]) << ' ';
+    cout << ")\n";
+  }
 }
 
 //==================================================
