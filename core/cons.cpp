@@ -1517,11 +1517,12 @@ public:
         _posvars.push_back( vars[i] );
         ub += vars[i].first;
       }
-      else if( vars[i].second < 0 ) {
+      else if( vars[i].first < 0 ) {
         _negvars.push_back( vars[i] );
         lb += vars[i].first;
       }
-      else if( vars[i].second == 0 ) continue;
+      else
+        continue;
       _svars.push_back( vars[i] );
     }
     sort(_svars.begin(), _svars.end(), pb::compare_abs_weights());

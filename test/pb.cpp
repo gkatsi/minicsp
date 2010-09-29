@@ -261,7 +261,7 @@ namespace {
   REGISTER_TEST(test09);
 
   /* pbvar, unit weights, c = 0 */
-  void test10()
+  void pbvar01()
   {
     Solver s;
     vector<cspvar> x = s.newCSPVarArray(5, 0, 1);
@@ -286,9 +286,9 @@ namespace {
       assert(x[i].max(s) == 0);
     s.cancelUntil(0);
   }
-  REGISTER_TEST(test10);
+  REGISTER_TEST(pbvar01);
 
-  void test11()
+  void pbvar02()
   {
     Solver s;
     vector<cspvar> x = s.newCSPVarArray(5, 0, 1);
@@ -310,7 +310,32 @@ namespace {
     assert(rhs.max(s) == 2);
     s.cancelUntil(0);
   }
-  REGISTER_TEST(test11);
+  REGISTER_TEST(pbvar02);
+
+  void pbvar03()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(5, 0, 1);
+    vector<int> w(5);
+    for(int i = 0; i != 5; ++i) w[i] = 1;
+    w[4] = -1;
+    cspvar rhs = s.newCSPVar(-5, 10);
+    post_pb(s, x, w, 0, rhs);
+    assert( rhs.min(s) == -1 );
+    assert( rhs.max(s) == 4 );
+
+    s.newDecisionLevel();
+    rhs.setmin(s, 1, NO_REASON);
+    x[0].setmin(s, 1, NO_REASON);
+    x[1].setmax(s, 0, NO_REASON);
+    x[2].setmax(s, 0, NO_REASON);
+    x[3].setmax(s, 0, NO_REASON);
+    assert( !s.propagate() );
+    assert(x[4].max(s) == 0);
+    assert(rhs.max(s) == 1);
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(pbvar03);
 }
 
 void pb_test()
