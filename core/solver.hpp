@@ -21,6 +21,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define Solver_h
 
 #include <vector>
+#include <set>
 #include <cstdio>
 #include <cstring>
 
@@ -53,6 +54,8 @@ public:
     Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
     cspvar  newCSPVar (int min, int max);                       // Add a CSP (multi-valued) var with the given lower and upper bounds
     std::vector<cspvar> newCSPVarArray(int n, int min, int max);// Add a number of identical CSP vars
+    setvar  newSetVar (int min, int max);                       // Add a CSP (multi-valued) var with the given lower and upper bounds
+    std::vector<setvar> newSetVarArray(int n, int min, int max);// Add a number of identical CSP vars
     void    addClause (vec<Lit>& ps);                           // Add a clause to the solver. NOTE! 'ps' may be shrunk by this method!
     bool    addConstraint(cons *c);                             // Add a constraint. For transfer of ownership only, everything else in the constructor
 
@@ -81,6 +84,7 @@ public:
 
     // event information
     domevent event(Lit p);                                      // get the event associated with a literal, if any
+    setevent sevent(Lit p);                                     // get the set variable event associated with a literal
 
     // Solving:
     //
@@ -103,8 +107,10 @@ public:
     lbool   value      (Var x) const;       // The current value of a variable.
     lbool   value      (Lit p) const;       // The current value of a literal.
     lbool   modelValue (Lit p) const;       // The value of a literal in the last model. The last call to solve must have been satisfiable.
-  std::pair<int,int>  cspModelRange(cspvar x) const; // Range in last model
-  int     cspModelValue(cspvar x) const;     // Assigned value in last model
+    std::pair<int,int>  cspModelRange(cspvar x) const; // Range in last model
+    int     cspModelValue(cspvar x) const;  // Assigned value in last model
+    std::pair< std::set<int>, std::set<int> > const&
+            cspSetModel(setvar x) const;    // lb,ub in last model
 
     int     nAssigns   ()      const;       // The current number of assigned literals.
     int     nClauses   ()      const;       // The current number of original clauses.
@@ -120,6 +126,8 @@ public:
                                         // this vector represent the final conflict clause expressed in the assumptions.
     vec<std::pair<int, int> > cspmodel; // for a satisfiable problem, the lb and ub of every csp variable. easier to
                                         // access than through model, but strictly speaking redundant
+    vec<std::pair< std::set<int>, std::set<int> > >
+                cspsetmodel;            // for a satisfiable problem, the lb and ub of every set variable
 
     // Mode of operation:
     //
@@ -161,6 +169,10 @@ public:
     int cspvardsize(cspvar x);            // get the current domain size of x (which may be smaller than max - min + 1)
     Var cspvareqi(cspvar x, int d);       // get the propositional var representing x = d
     Var cspvarleqi(cspvar x, int d);      // get the propositional var representing x <= d
+    int setvarumin(setvar x) const;       // get the smallest element in the universe of x
+    int setvarumax(setvar x) const;       // get the smallest element in the universe of x
+    Var setvarini(setvar x, int d);       // get the propositional var representing d in x
+    cspvar setvarcard(setvar x);          // get the cspvar representing the cardinality of x
 
 protected:
 
@@ -214,6 +226,8 @@ protected:
     vec<cspvar_fixed>   cspvars;             // the fixed data for each cspvar
     vec<btptr>          cspvarbt;            // the backtrackable data for each var
     vec<domevent>       events;              // the csp event that a literal corresponds to
+    vec<setvar_data>    setvars;             // the fixed data for each setvar
+    vec<setevent>       setevents;           // the set csp event that a literal corresponds to
     size_t              backtrackable_size;  // How much we need to copy
     size_t              backtrackable_cap;   // How much backtrackable memory is allocated
     vec<void*>          backtrackable_space; // per-level copies of backtrackable data
@@ -486,6 +500,13 @@ inline int Solver::cspModelValue(cspvar x) const
   return cspmodel[id].first;
 }
 
+inline
+std::pair< std::set<int>, std::set<int> > const&
+Solver::cspSetModel(setvar x) const
+{
+  return cspsetmodel[x._id];
+}
+
 
 //==================================================
 // cspvar inlines
@@ -513,6 +534,26 @@ inline Var Solver::cspvareqi(cspvar x, int d)
 inline Var Solver::cspvarleqi(cspvar x, int d)
 {
   return cspvars[x._id].leqi(d);
+}
+
+inline Var Solver::setvarumin(setvar x) const
+{
+  return setvars[x._id].min;
+}
+
+inline Var Solver::setvarumax(setvar x) const
+{
+  return setvars[x._id].max;
+}
+
+inline Var Solver::setvarini(setvar x, int d)
+{
+  return setvars[x._id].ini(d);
+}
+
+inline cspvar Solver::setvarcard(setvar x)
+{
+  return setvars[x._id]._card;
 }
 
 inline bool cspvar::indomain(Solver &s, int d) const
@@ -783,6 +824,126 @@ inline Clause *cspvar::assignf(Solver &s, int d, vec<Lit> &ps)
 }
 
 inline bool operator==(cspvar x1, cspvar x2)
+{
+  return x1.id() == x2.id();
+}
+
+inline
+int setvar::umin(Solver &s) const {
+  return s.setvarumin(*this);
+}
+
+inline
+int setvar::umax(Solver &s) const {
+  return s.setvarumax(*this);
+}
+
+inline
+cspvar setvar::card(Solver &s) const {
+  return s.setvarcard(*this);
+}
+
+inline
+int setvar::ini(Solver& s, int d) const {
+  return s.setvarini(*this, d);
+}
+
+inline
+bool setvar::includes(Solver &s, int d) const {
+  Var xd = ini(s, d);
+  if( xd == var_Undef ) return false;
+  else return (s.value(xd) == l_True);
+}
+
+inline
+bool setvar::excludes(Solver &s, int d) const {
+  Var xd = ini(s, d);
+  if( xd == var_Undef ) return true;
+  else return (s.value(xd) == l_False);
+}
+
+inline Clause *setvar::exclude(Solver &s, int d, Clause *c)
+{
+  Var xd = ini(s, d);
+  if( xd == var_Undef ) return 0L;
+  if( s.value(xd) == l_False ) return 0L;
+  if( s.value(xd) == l_True ) return c;
+  s.uncheckedEnqueue( ~Lit(xd), c );
+  return 0L;
+}
+
+inline Clause *setvar::exclude(Solver &s, int d, vec<Lit>& ps)
+{
+  Var xd = ini(s, d);
+  if( xd == var_Undef ) return 0L;
+  if( s.value(xd) == l_False ) return 0L;
+  Clause *r = Clause_new(ps, false, ~Lit(xd) );
+  s.addInactiveClause(r);
+  if( s.value(xd) == l_True ) return r;
+  s.uncheckedEnqueue( ~Lit(xd), r );
+  return 0L;
+}
+
+inline Clause *setvar::excludef(Solver &s, int d, vec<Lit>& ps)
+{
+  Var xd = ini(s, d);
+  if( xd == var_Undef ) return 0L;
+  if( s.value(xd) == l_False ) return 0L;
+  ps.push( ~Lit(xd) );
+  Clause *r = Clause_new(ps, false, ~Lit(xd) );
+  ps.pop();
+  s.addInactiveClause(r);
+  if( s.value(xd) == l_True ) return r;
+  s.uncheckedEnqueue( ~Lit(xd), r );
+  return 0L;
+}
+
+inline Clause *setvar::include(Solver &s, int d, Clause *c)
+{
+  Var xd = ini(s, d);
+  if( xd == var_Undef )
+    throw_if_null(c);
+  if( s.value(xd) == l_True ) return 0L;
+  if( s.value(xd) == l_False ) return c;
+  s.uncheckedEnqueue( Lit(xd), c );
+  return 0L;
+}
+
+inline Clause *setvar::include(Solver &s, int d, vec<Lit>& ps)
+{
+  Var xd = ini(s, d);
+  if( xd == var_Undef ) {
+    Clause *r = Clause_new(ps);
+    s.addInactiveClause(r);
+    return r;
+  }
+  if( s.value(xd) == l_True ) return 0L;
+  Clause *r = Clause_new(ps, false, Lit(xd) );
+  s.addInactiveClause(r);
+  if( s.value(xd) == l_False ) return r;
+  s.uncheckedEnqueue( Lit(xd), r );
+  return 0L;
+}
+
+inline Clause *setvar::includef(Solver &s, int d, vec<Lit>& ps)
+{
+  Var xd = ini(s, d);
+  if( xd == var_Undef ) {
+    Clause *r = Clause_new(ps);
+    s.addInactiveClause(r);
+    return r;
+  }
+  if( s.value(xd) == l_True ) return 0L;
+  ps.push( Lit(xd) );
+  Clause *r = Clause_new(ps, false, Lit(xd) );
+  ps.pop();
+  s.addInactiveClause(r);
+  if( s.value(xd) == l_False ) return r;
+  s.uncheckedEnqueue( Lit(xd), r );
+  return 0L;
+}
+
+inline bool operator==(setvar x1, setvar x2)
 {
   return x1.id() == x2.id();
 }

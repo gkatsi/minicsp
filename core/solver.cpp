@@ -18,6 +18,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include "solver.hpp"
+#include "cons.hpp"
 #include "Sort.h"
 #include <cmath>
 #include <vector>
@@ -119,11 +120,13 @@ Var Solver::newVar(bool sign, bool dvar)
     domevent none;
     events.push(none);
     events.push(none);
+    setevent setnone;
+    setevents.push(setnone);
+    setevents.push(setnone);
 
     insertVarOrder(v);
     return v;
 }
-
 
 cspvar Solver::newCSPVar(int min, int max)
 {
@@ -226,6 +229,52 @@ std::vector<cspvar> Solver::newCSPVarArray(int n, int min, int max)
   std::vector<cspvar> rv;
   for(int i = 0; i != n; ++i)
     rv.push_back(newCSPVar(min, max));
+  return rv;
+}
+
+setvar Solver::newSetVar(int min, int max)
+{
+  assert(max - min >= 0 );
+
+  bool unary = false;
+  if( max == min ) unary = true;
+
+  setvar x(setvars.size());
+
+  setvars.push();
+  setvar_data & xd = setvars.last();
+
+  xd.min = min;
+  xd.max = max;
+  xd._card = newCSPVar(0, max-min+1);
+
+  // the propositional encoding of the domain
+  xd.firstbool = newVar();
+  for(int i = min+1; i != max+1; ++i)
+    newVar();
+
+  for(int i = xd.min; i <= xd.max; ++i) {
+    setevent in(x, setevent::IN, i),
+      ex(x, setevent::EX, i);
+    setevents[ toInt( Lit(xd.ini(i) ) ) ] = in;
+    setevents[ toInt( ~Lit(xd.ini(i) ) ) ] = ex;
+  }
+
+  /* FIXME: post constraint sum_i ini(i) = _card */
+  vector<Var> v(max-min+1);
+  vector<int> w(max-min+1, 1);
+  for(int i = min; i != max+1; ++i)
+    v[i-min] = xd.firstbool + i - min;
+  post_pb(*this, v, w, 0, xd._card);
+
+  return x;
+}
+
+std::vector<setvar> Solver::newSetVarArray(int n, int min, int max)
+{
+  std::vector<setvar> rv;
+  for(int i = 0; i != n; ++i)
+    rv.push_back(newSetVar(min, max));
   return rv;
 }
 
@@ -610,6 +659,7 @@ void Solver::debugclause(Clause *from, cons *c)
 
   s1.phase.growTo(nv, l_Undef);
   events.copyTo(s1.events);
+  setevents.copyTo(s1.setevents);
 
   cspvars.copyTo(s1.cspvars);
   for(int i = 0; i != cspvars.size(); ++i) {
@@ -959,8 +1009,8 @@ Clause* Solver::propagate()
           break;
 
         domevent const & pe = events[toInt(p)];
-        if( noevent(pe) ) continue;
         vec<cons*> *dewakes = 0L;
+        if( noevent(pe) ) goto SetPropagation;
         switch(pe.type) {
         case domevent::NEQ: dewakes=&(cspvars[pe.x._id].wake_on_dom); break;
         case domevent::EQ: dewakes=&(cspvars[pe.x._id].wake_on_fix); break;
@@ -976,9 +1026,37 @@ Clause* Solver::propagate()
             dewakes=&(cspvars[pe.x._id].wake_on_lb); break;
         case domevent::NONE: assert(0);
         }
-        if( !dewakes ) continue;
+        if( !dewakes ) goto SetPropagation;
         for( cons **ci = &((*dewakes)[0]),
                **ciend = ci+dewakes->size();
+             ci != ciend; ++ci) {
+          active_constraint = *ci;
+          confl = (*ci)->wake(*this, p);
+          active_constraint = 0L;
+          if( confl ) {
+            if( trace ) {
+              cout << "Constraint " << print(*this, **ci) << " failed, "
+                   << "clause @ " << confl << "\n";
+            }
+            qhead = trail.size();
+            break;
+          }
+        }
+
+        if(confl)
+          break;
+
+    SetPropagation:
+        setevent const & se = setevents[toInt(p)];
+        if( noevent(se) ) continue;
+        vec<cons*> *sewakes = 0L;
+        switch(se.type) {
+        case setevent::IN: sewakes=&(setvars[pe.x._id].wake_on_in); break;
+        case setevent::EX: sewakes=&(setvars[pe.x._id].wake_on_ex); break;
+        case setevent::NONE: assert(0);
+        }
+        for( cons **ci = &((*sewakes)[0]),
+               **ciend = ci+sewakes->size();
              ci != ciend; ++ci) {
           active_constraint = *ci;
           confl = (*ci)->wake(*this, p);
@@ -1316,6 +1394,19 @@ bool Solver::solve(const vec<Lit>& assumps)
           cspvar_bt& xb = deref<cspvar_bt>(cspvarbt[i]);
           cspmodel[i] = std::make_pair(xb.min, xb.max);
         }
+        cspsetmodel.growTo(setvars.size());
+        for(int i = 0; i != setvars.size(); ++i) {
+          set<int>& lb = cspsetmodel[i].first;
+          set<int>& ub = cspsetmodel[i].second;
+          lb.clear(); ub.clear();
+          for(int j = setvars[i].min; j <= setvars[i].max; ++j) {
+            lbool l = value( setvars[i].ini(j) );
+            if( l != l_False )
+              ub.insert(j);
+            if( l == l_True )
+              lb.insert(j);
+          }
+        }
 #ifndef NDEBUG
         verifyModel();
 #endif
@@ -1333,11 +1424,22 @@ void Solver::excludeLast()
 {
   vec<Lit> exclude;
   for(int i = 0; i != cspvars.size(); ++i) {
-    cspvar x(i);
     cspvar_fixed & xf = cspvars[i];
     pair<int, int> pi = cspmodel[i];
     assert( pi.first == pi.second );
     exclude.push( ~Lit(xf.eqi( pi.first )) );
+  }
+  for(int i = 0; i != setvars.size(); ++i) {
+    setvar_data & xd = setvars[i];
+    pair< set<int>, set<int> > const& pi = cspsetmodel[i];
+    set<int> const& lb = pi.first;
+    set<int> const& ub = pi.second;
+    for(int j = xd.min; j <= xd.max+1; ++j) {
+      if( lb.find(j) != lb.end() )
+        exclude.push( ~Lit(xd.ini( j )));
+      else if( ub.find(j) == ub.end() )
+        exclude.push( Lit(xd.ini(j)));
+    }
   }
   addClause(exclude);
   if( trace ) {

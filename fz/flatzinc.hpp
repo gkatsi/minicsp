@@ -49,6 +49,7 @@
 
 typedef std::vector<cspvar> IntVarArray;
 typedef std::vector<cspvar> BoolVarArray;
+typedef std::vector<setvar> SetVarArray;
 
 /**
  * \namespace Gecode::FlatZinc
@@ -72,7 +73,8 @@ namespace FlatZinc {
                    Solver& solver,
                    AST::Node* ai,
                    const IntVarArray& iv,
-                   const BoolVarArray& bv
+                   const BoolVarArray& bv,
+                   const SetVarArray& sv
                    ) const;
   public:
     Printer(void) : _output(NULL) {}
@@ -81,7 +83,8 @@ namespace FlatZinc {
     void print(std::ostream& out,
                Solver& solver,
                const IntVarArray& iv,
-               const BoolVarArray& bv
+               const BoolVarArray& bv,
+               const SetVarArray& sv
                ) const;
 
     ~Printer(void);
@@ -130,6 +133,10 @@ namespace FlatZinc {
     BoolVarArray bv;
     /// Indicates whether a Boolean variable is introduced by mzn2fzn
     std::vector<bool> bv_introduced;
+    /// The Set variables
+    SetVarArray sv;
+    /// Indicates whether a set variable is introduced by mzn2fzn
+    std::vector<bool> sv_introduced;
 
     /// vars fixed to true and false, in case they are encountered often
     cspvar vartrue, varfalse;

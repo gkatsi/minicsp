@@ -138,7 +138,7 @@ namespace FlatZinc {
   {}
 
   void
-  FlatZincModel::init(int intVars, int boolVars, int setvars) {
+  FlatZincModel::init(int intVars, int boolVars, int setVars) {
     intVarCount = 0;
     iv = IntVarArray(intVars);
     iv_introduced = std::vector<bool>(intVars);
@@ -146,6 +146,9 @@ namespace FlatZinc {
     boolVarCount = 0;
     bv = BoolVarArray(boolVars);
     bv_introduced = std::vector<bool>(boolVars);
+    setVarCount = 0;
+    sv = SetVarArray(setVars);
+    sv_introduced = std::vector<bool>(setVars);
   }
 
   void
@@ -172,7 +175,43 @@ namespace FlatZinc {
 
   void
   FlatZincModel::newSetVar(SetVarSpec* vs) {
-    throw FlatZinc::Error("minicsp", "set variables not supported");
+    if (vs->alias) {
+      sv[intVarCount++] = sv[vs->i];
+    } else if( vs->assigned) {
+      assert(vs->upperBound());
+      AST::SetLit* vsv = vs->upperBound.some();
+      setvar x = solver.newSetVar(vsv->min, vsv->max);
+      sv[setVarCount++] = x;
+      if (vsv->interval) {
+        for(int i = vsv->min; i <= vsv->max; ++i)
+          x.include(solver, i, NO_REASON);
+      } else {
+        for(size_t i = 0; i != vsv->s.size(); ++i)
+          x.include(solver, i, NO_REASON);
+        for(int i = x.umin(solver), iend = x.umax(solver); i != iend; ++i)
+          if( !x.includes(solver, i) )
+            x.exclude(solver, i, NO_REASON);
+      }
+    } else if( vs->upperBound() ) {
+      AST::SetLit* vsv = vs->upperBound.some();
+      setvar x = solver.newSetVar(vsv->min, vsv->max);
+      sv[setVarCount++] = x;
+      if( !vsv->interval ) {
+        int prev = vsv->min;
+        for(size_t i = 0; i != vsv->s.size(); ++i) {
+          if( vsv->s[i] > prev+1 ) {
+            for(int q = prev+1; q != vsv->s[i]; ++q)
+              x.exclude(solver, q, NO_REASON);
+          }
+          prev = vsv->s[i];
+        }
+      } // otherwise everything is unset and we are done here
+    } else {
+      // completely free
+      setvar x = solver.newSetVar(-1000, 1000);
+      sv[setVarCount++] = x;
+    }
+    sv_introduced[setVarCount-1] = vs->introduced;
   }
 
   void
@@ -333,7 +372,7 @@ namespace FlatZinc {
 
   void
   FlatZincModel::print(std::ostream& out, const Printer& p) const {
-    p.print(out, solver, iv, bv);
+    p.print(out, solver, iv, bv, sv);
   }
 
   void
@@ -344,9 +383,10 @@ namespace FlatZinc {
   void
   Printer::printElem(std::ostream& out,
                      Solver& solver,
-                       AST::Node* ai,
-                       const IntVarArray& iv,
-                       const BoolVarArray& bv
+                     AST::Node* ai,
+                     const IntVarArray& iv,
+                     const BoolVarArray& bv,
+                     const SetVarArray& sv
                        ) const {
     int k;
     if (ai->isInt(k)) {
@@ -366,6 +406,18 @@ namespace FlatZinc {
       } else {
         out << "false..true";
       }
+    } else if( ai->isSetVar()) {
+      setvar x = sv[ai->getSetVar()];
+      pair< set<int>, set<int> > const& v = solver.cspSetModel(x);
+      set<int> const& lb = v.first;
+      set<int> const& ub = v.second;
+      assert( lb == ub );
+      out << "{";
+      for( set<int>::const_iterator i = ub.begin(); i != ub.end(); ++i) {
+        if( i != ub.begin() ) out << ", ";
+        out << *i;
+      }
+      out << "}";
     } else if (ai->isBool()) {
       out << (ai->getBool() ? "true" : "false");
     } else if (ai->isSet()) {
@@ -400,7 +452,8 @@ namespace FlatZinc {
   Printer::print(std::ostream& out,
                  Solver& solver,
                  const IntVarArray& iv,
-                 const BoolVarArray& bv) const {
+                 const BoolVarArray& bv,
+                 const SetVarArray& sv) const {
     if (_output == NULL)
       return;
     for (unsigned int i=0; i< _output->a.size(); i++) {
@@ -410,13 +463,13 @@ namespace FlatZinc {
         int size = aia->a.size();
         out << "[";
         for (int j=0; j<size; j++) {
-          printElem(out,solver, aia->a[j],iv,bv);
+          printElem(out,solver, aia->a[j],iv,bv,sv);
           if (j<size-1)
             out << ", ";
         }
         out << "]";
       } else {
-        printElem(out,solver,ai,iv,bv);
+        printElem(out,solver,ai,iv,bv,sv);
       }
     }
   }

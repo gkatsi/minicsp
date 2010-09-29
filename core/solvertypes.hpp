@@ -301,6 +301,8 @@ class cspvar
   Lit e_eq(Solver &s, int d) const;
 };
 
+bool operator==(cspvar x1, cspvar x2);
+
 class cons
 {
   int id;
@@ -425,6 +427,100 @@ const char *opstring(domevent::event_type t) {
   case domevent::NONE: return "#$%#^%";
   }
   return 0L; // gcc
+}
+
+//==================================================
+// set vars
+
+class setvar
+{
+  friend class Solver;
+  int _id;
+public:
+  setvar() : _id(-1) {}
+  explicit setvar(int id) : _id(id) {}
+
+  int id() const { return _id; }
+  bool valid() const { return _id >= 0; }
+
+  // the min and max of its universe
+  int umin(Solver &s) const;
+  int umax(Solver &s) const;
+
+  cspvar card(Solver &s) const;
+
+  /* This is possibly misleading, but the names mean:
+     includes d <=> d in lb
+     excludes d <=> d notin ub
+  */
+  bool includes(Solver &s, int d) const;
+  bool excludes(Solver &s, int d) const;
+
+  /* Modify the domain */
+  Clause *exclude(Solver &s, int d, Clause *c);
+  Clause *exclude(Solver &s, int d, vec<Lit>& reason);
+  Clause *exclude(Solver &s, int d, cons *c);
+  Clause *excludef(Solver &s, int d, vec<Lit>& reason);
+
+  Clause *include(Solver &s, int d, Clause *c);
+  Clause *include(Solver &s, int d, vec<Lit>& reason);
+  Clause *include(Solver &s, int d, cons *c);
+  Clause *includef(Solver &s, int d, vec<Lit>& reason);
+
+  /* Generate explanations */
+  Var ini(Solver &s, int d) const;
+
+  Lit r_ini(Solver &s, int d) const;
+  Lit r_exi(Solver &s, int d) const;
+
+  Lit e_ini(Solver &s, int d) const;
+  Lit e_exi(Solver &s, int d) const;
+};
+
+bool operator==(setvar x1, setvar x2);
+
+class setvar_data
+{
+  friend class Solver;
+
+  int min;
+  int max;
+  Var firstbool;
+  cspvar _card;
+
+  vec<cons*> wake_on_in, wake_on_ex;
+  vec<cons*> schedule_on_in, schedule_on_ex;
+
+  bool inu(int i) const { return i >= min && i <= max; }
+  Var ini(int i) const { return inu(i)
+      ? firstbool + i - min
+      : var_Undef; }
+  cspvar card() const { return _card; }
+public:
+  setvar_data() {}
+};
+
+struct setevent
+{
+  setvar x;
+  enum event_type { IN, EX, NONE };
+  event_type type;
+  int d;
+
+  setevent() : x(0), type(NONE), d(0) {}
+  setevent(setvar px, event_type ptype, int pd) :
+    x(px), type(ptype), d(pd) {}
+};
+
+inline bool noevent(setevent d) { return d.type == setevent::NONE; }
+inline
+const char *opstring(setevent::event_type t) {
+  switch(t) {
+  case setevent::IN: return "in";
+  case setevent::EX: return "notin";
+  case setevent::NONE: return "%^%$#";
+  }
+  return 0L;
 }
 
 //==================================================

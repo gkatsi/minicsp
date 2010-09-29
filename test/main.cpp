@@ -4,6 +4,7 @@ void pb_test();
 void le_test();
 void lin_test();
 void element_test();
+void set_test();
 
 int main()
 {
@@ -13,5 +14,6 @@ int main()
   le_test();
   lin_test();
   element_test();
+  set_test();
   return 0;
 }
