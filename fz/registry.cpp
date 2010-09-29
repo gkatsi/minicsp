@@ -1039,6 +1039,15 @@ namespace FlatZinc {
       post_eq(s, A.card(s), card, 0);
     }
 
+    void p_set_diff(Solver& s, FlatZincModel& m,
+                    const ConExpr& ce, AST::Node* ann) {
+      setvar A = getSetVar(s, m, ce[0]);
+      setvar B = getSetVar(s, m, ce[1]);
+      setvar C = getSetVar(s, m, ce[2]);
+
+      post_setdiff(s, A, B, C);
+    }
+
     class IntPoster {
     public:
       IntPoster(void) {
@@ -1108,6 +1117,7 @@ namespace FlatZinc {
         registry().add("bool_clause_reif", &p_bool_clause_reif);
 
         registry().add("set_card", &p_set_card);
+        registry().add("set_diff", &p_set_diff);
       }
     };
     IntPoster __int_poster;
