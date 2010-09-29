@@ -9,16 +9,7 @@ namespace {
   {
     Solver s;
     setvar x = s.newSetVar(1, 3);
-    int numsol = 0;
-    bool next;
-    do {
-      next = s.solve();
-      if( next ) {
-        ++numsol;
-        s.excludeLast();
-      }
-    } while(next);
-    assert(numsol == 8);
+    assert_num_solutions(s, 8);
   }
   REGISTER_TEST(encoding01);
 
@@ -33,6 +24,42 @@ namespace {
     assert( !A.includes(s, 7) );
   }
   REGISTER_TEST(setdiff01);
+
+  // a couple of tests from flatzinc on which it initially barfed
+  void setdiff02()
+  {
+    Solver s;
+    setvar A = s.newSetVar(1, 3);
+    setvar B = s.newSetVar(1, 5);
+    setvar C = s.newSetVar(2, 2);
+    for(int i = 1; i <= 3; ++i)
+      A.include(s, i, NO_REASON);
+    B.include(s, 1, NO_REASON);
+    B.include(s, 3, NO_REASON);
+    B.include(s, 5, NO_REASON);
+    B.exclude(s, 2, NO_REASON);
+    B.exclude(s, 4, NO_REASON);
+    post_setdiff(s, A, B, C);
+  }
+  REGISTER_TEST(setdiff02);
+
+  void setdiff03()
+  {
+    Solver s;
+    setvar A = s.newSetVar(1, 3);
+    setvar B = s.newSetVar(0, 1);
+    setvar C = s.newSetVar(0, 4);
+    post_setdiff(s, A, B, C);
+
+    s.newDecisionLevel();
+    A.include(s, 3, NO_REASON);
+    assert( !s.propagate() );
+    assert( C.includes(s, 3) );
+    s.cancelUntil(0);
+
+    assert_num_solutions(s, 32);
+  }
+  REGISTER_TEST(setdiff03);
 }
 
 

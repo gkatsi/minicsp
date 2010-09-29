@@ -20,6 +20,20 @@ void assert_clause_contains(Clause *to_test, vec<Lit> const& expected)
   }
 }
 
+void assert_num_solutions(Solver &s, int ns)
+{
+  int numsol = 0;
+  bool next;
+  do {
+    next = s.solve();
+    if( next ) {
+      ++numsol;
+      s.excludeLast();
+    }
+  } while(next);
+  assert(numsol == ns);
+}
+
 const char *duplicate_test::what() const throw()
 {
   return tname.c_str();

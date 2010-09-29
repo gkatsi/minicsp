@@ -10,6 +10,9 @@
 void assert_clause_exact(Clause *to_test, vec<Lit> const& expected);
 void assert_clause_contains(Clause *to_test, vec<Lit> const& expected);
 
+// the number of solutions of the model posted to s is exactly ns
+void assert_num_solutions(Solver &s, int ns);
+
 #define MUST_BE_UNSAT(x) do {                           \
     bool BOOST_PP_CAT(thrown, __LINE__) = false;        \
     try { x; } catch( unsat ) {                         \

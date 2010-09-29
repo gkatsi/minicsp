@@ -12,15 +12,17 @@ void post_setdiff(Solver &s, setvar a, setvar b, setvar c)
   for(int i = a.umin(s); i <= a.umax(s); ++i) {
     if( i < b.umin(s) || i > b.umax(s) ) {
       // a.ini(i) <=> c.ini(i)
-      ps.clear();
-      pushifdef( ps, ~Lit( c.ini(s, i) ) );
-      ps.push( Lit( a.ini(s, i) ) );
-      s.addClause(ps);
+      if( i >= c.umin(s) && i <= c.umax(s) ) {
+        ps.clear();
+        ps.push( ~Lit( c.ini(s, i) ) );
+        ps.push( Lit( a.ini(s, i) ) );
+        s.addClause(ps);
 
-      ps.clear();
-      pushifdef( ps, Lit( c.ini(s, i) ) );
-      ps.push( ~Lit( a.ini(s, i) ) );
-      s.addClause(ps);
+        ps.clear();
+        pushifdef( ps, Lit( c.ini(s, i) ) );
+        ps.push( ~Lit( a.ini(s, i) ) );
+        s.addClause(ps);
+      }
     } else {
       // a.ini(i) /\ !b.ini(i) => c.ini(i)
       ps.clear();
