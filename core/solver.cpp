@@ -288,11 +288,13 @@ void Solver::addClause(vec<Lit>& ps)
         // Check if clause is satisfied and remove false/duplicate literals:
         sort(ps);
         Lit p; int i, j;
-        for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
+        for (i = j = 0, p = lit_Undef; i < ps.size(); i++) {
+            assert(var(ps[i]) != var_Undef );
             if (value(ps[i]) == l_True || ps[i] == ~p)
                 return;
             else if (value(ps[i]) != l_False && ps[i] != p)
                 ps[j++] = p = ps[i];
+        }
         ps.shrink(i - j);
     }
 
