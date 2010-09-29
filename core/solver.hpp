@@ -952,7 +952,7 @@ inline bool operator==(setvar x1, setvar x2)
 //
 inline void pushifdef(vec<Lit>& ps, Lit p)
 {
-  if( p != lit_Undef ) ps.push(p);
+  if( var(p) >= 0 ) ps.push(p);
 }
 
 struct push_temp_p {
