@@ -151,6 +151,17 @@ void post_pb_iff_re(Solver& s, std::vector<cspvar> const& vars,
                     std::vector<int> const& weights, int lb,
                     cspvar b);
 
+/* Pseudo Boolean constraint with a non-Boolean var on the RHS:
+
+   sum w[i]*v[i] + c = rhs
+
+   where v[i] are all Boolean
+ */
+void post_pb(Solver& s, std::vector<Var> const& vars,
+             std::vector<int> const& weights, int c, cspvar rhs);
+void post_pb(Solver& s, std::vector<cspvar> const& vars,
+             std::vector<int> const& weights, int c, cspvar rhs);
+
 /* x = y*z */
 void post_mult(Solver& s, cspvar x, cspvar y, cspvar z);
 

@@ -1496,6 +1496,226 @@ Clause *cons_pb::wake(Solver& s, Lit)
   return conf;
 }
 
+/* pseudoboolean with a var on the rhs: sum w[i]*v[i] = rhs */
+class cons_pbvar : public cons {
+  std::vector< std::pair<int, Var> > _posvars;
+  std::vector< std::pair<int, Var> > _negvars;
+  std::vector< std::pair<int, Var> > _svars; // sorted by absolute value
+  int _c;
+  cspvar _rhs;
+  vec<Lit> _ubreason, _lbreason;
+public:
+  cons_pbvar(Solver &s,
+             std::vector< std::pair<int, Var> > const &vars,
+             int c, cspvar rhs)
+    : _c(c), _rhs(rhs)
+  {
+    size_t n = vars.size();
+    int lb = _c, ub = _c;
+    for(size_t i = 0; i != n; ++i) {
+      if( vars[i].first > 0 ) {
+        _posvars.push_back( vars[i] );
+        ub += vars[i].first;
+      }
+      else if( vars[i].second < 0 ) {
+        _negvars.push_back( vars[i] );
+        lb += vars[i].first;
+      }
+      else if( vars[i].second == 0 ) continue;
+      _svars.push_back( vars[i] );
+    }
+    sort(_svars.begin(), _svars.end(), pb::compare_abs_weights());
+
+    _rhs.setmin(s, lb, NO_REASON);
+    _rhs.setmax(s, ub, NO_REASON);
+
+    _ubreason.growTo(n+1);
+    _lbreason.growTo(n+1);
+
+    // wake on every assignment
+    n = _svars.size();
+    for(size_t i = 0; i != n; ++i)
+      s.wake_on_lit(_svars[i].second, this);
+    s.wake_on_lb(_rhs, this);
+    s.wake_on_ub(_rhs, this);
+  }
+
+  Clause *wake(Solver& s, Lit p);
+  void clone(Solver& other);
+  ostream& print(ostream& os) const;
+  ostream& printstate(Solver& s, ostream& os) const;
+};
+
+Clause *cons_pbvar::wake(Solver &s, Lit)
+{
+  size_t np = _posvars.size(),
+    nn = _negvars.size(),
+    n = np+nn;
+
+  int lb = _c, ub = _c;
+
+  _ubreason.growTo(n+1);
+  _lbreason.growTo(n+1);
+
+  size_t ubi = 0, lbi = 0;
+  for(size_t i = 0; i != np; ++i) {
+    pair<int, Var> const& cv = _posvars[i];
+    int q = toInt(s.value(cv.second));
+    if( q >= 0 )
+      ub += cv.first;
+    else
+      _ubreason[ubi++] = Lit(cv.second);
+    if( q > 0 ) {
+      lb += cv.first;
+      _lbreason[lbi++] = Lit(cv.second, true);
+    }
+  }
+  for(size_t i = 0; i != nn; ++i) {
+    pair<int, Var> const& cv = _negvars[i];
+    int q = toInt(s.value(cv.second));
+    if( q >= 0 )
+      lb += cv.first;
+    else
+      _lbreason[lbi++] = Lit(cv.second, true);
+    if( q > 0 ) {
+      ub += cv.first;
+      _ubreason[lbi++] = Lit(cv.second, true);
+    }
+  }
+
+  bool nonimpliedlb = false,
+    nonimpliedub = false;
+  if( _rhs.min(s) > lb )
+    nonimpliedlb = true;
+  if( _rhs.max(s) < ub )
+    nonimpliedub = true;
+
+  _lbreason.shrink(n - lbi + 1);
+  DO_OR_RETURN(_rhs.setminf(s, lb, _lbreason));
+  _ubreason.shrink(n - ubi + 1);
+  DO_OR_RETURN(_rhs.setmaxf(s, ub, _ubreason));
+
+  lb = _rhs.min(s);
+  ub = _rhs.max(s);
+
+  for(int i = 0; i != _ubreason.size(); ++i)
+    _lbreason.push(_ubreason[i]);
+
+  if( nonimpliedlb )
+    _lbreason.push( _rhs.r_min(s) );
+  if( nonimpliedub )
+    _lbreason.push( _rhs.r_max(s) );
+
+  for(size_t i = 0; i != np; ++i) {
+    pair<int, Var> const& cv = _posvars[i];
+    int q = toInt(s.value(cv.second));
+    if( q ) continue;
+    if( lb + cv.first > ub )
+      DO_OR_RETURN(s.enqueueFill( Lit( cv.second, true ), _lbreason ));
+    if( ub - cv.first < lb )
+      DO_OR_RETURN(s.enqueueFill( Lit( cv.second, true ), _ubreason ));
+  }
+  for(size_t i = 0; i != nn; ++i) {
+    pair<int, Var> const& cv = _negvars[i];
+    int q = toInt(s.value(cv.second));
+    if( q ) continue;
+    if( ub + cv.first < lb )
+      DO_OR_RETURN(s.enqueueFill( Lit(cv.second, true ), _lbreason ));
+    if( lb - cv.first > ub )
+      DO_OR_RETURN(s.enqueueFill( Lit(cv.second, true ), _ubreason ));
+  }
+
+  return 0L;
+}
+
+void cons_pbvar::clone(Solver &other)
+{
+  cons *con = new cons_pbvar(other, _svars, _c, _rhs);
+  other.addConstraint(con);
+}
+
+ostream& cons_pbvar::print(ostream& os) const
+{
+  for(size_t i = 0; i != _svars.size(); ++i) {
+    if( _svars[i].first == 1 ) {
+      if( i != 0 )
+        os << " + ";
+      os << _svars[i].second;
+    } else if( _svars[i].first == -1 ) {
+      if( i != 0 )
+        os << " ";
+      os << "- " << _svars[i].second;
+    } else if( _svars[i].first > 0 ) {
+      if( i != 0 )
+        os << " +";
+      os << _svars[i].first << "*" << _svars[i].second;
+    }
+    else if( _svars[i].first < 0 ) {
+      if( i != 0 )
+        os << " ";
+      os << "- " << -_svars[i].first << "*" << _svars[i].second;
+    }
+  }
+  os << " = " << _rhs;
+
+  return os;
+}
+
+ostream& cons_pbvar::printstate(Solver& s, ostream& os) const
+{
+  print(os);
+  os << " (with ";
+  for(size_t i = 0; i != _svars.size(); ++i) {
+    if( i ) os << ", ";
+    Var x = _svars[i].second;
+    int xmin = 0, xmax = 1;
+    if( s.value(x) == l_True ) xmin = 1;
+    else if( s.value(x) == l_False ) xmax = 0;
+    os << x << " in [" << xmin << ", " << xmax << "]";
+  }
+  os << _rhs << " in " << domain_as_range(s, _rhs);
+  os << ")";
+  return os;
+}
+
+void post_pb(Solver &s, std::vector<Var> const& vars,
+             std::vector<int> const& weights, int c, cspvar rhs)
+{
+  vector< pair< int, Var> > vbool;
+  vbool.reserve(vars.size());
+  for(size_t i = 0; i != vars.size(); ++i) {
+    if( s.value(vars[i]) == l_True ) {
+      c += weights[i];
+      continue;
+    } else if( s.value(vars[i]) == l_False ) {
+      continue;
+    }
+    vbool.push_back( make_pair( weights[i], vars[i] ));
+  }
+
+  cons *con = new cons_pbvar(s, vbool, c, rhs);
+  s.addConstraint(con);
+}
+
+void post_pb(Solver& s, std::vector<cspvar> const& vars,
+             std::vector<int> const& weights, int c, cspvar rhs)
+{
+  vector< pair< int, Var> > vbool;
+  vbool.reserve(vars.size());
+  for(size_t i = 0; i != vars.size(); ++i) {
+    if( vars[i].min(s) == 1 ) {
+      c += weights[i];
+      continue;
+    } else if( vars[i].max(s) == 0 ) {
+      continue;
+    }
+    vbool.push_back( make_pair( weights[i], vars[i].eqi(s, 1)));
+  }
+
+  cons *con = new cons_pbvar(s, vbool, c, rhs);
+  s.addConstraint(con);
+}
+
 /* x = y*z */
 class cons_mult : public cons {
   cspvar _x, _y, _z;

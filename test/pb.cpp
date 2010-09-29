@@ -37,6 +37,7 @@ namespace {
     assert(c);
     assert_clause_exact(c, expected);
   }
+  REGISTER_TEST(test01);
 
   /* -2*a + b + c >= 0
      ast: a, -b
@@ -67,6 +68,7 @@ namespace {
     assert(c);
     assert_clause_exact(c, expected);
   }
+  REGISTER_TEST(test02);
 
   /* -2*a + b + c >= 0
      ast: a
@@ -90,6 +92,7 @@ namespace {
     Clause *c = s.propagate();
     assert(!c);
   }
+  REGISTER_TEST(test03);
 
   /* -100*a + 75*b + 75*c >= 0
      ast: a, b
@@ -114,6 +117,7 @@ namespace {
     Clause *c = s.propagate();
     assert(!c);
   }
+  REGISTER_TEST(test04);
 
   /* -100*a + 75*b + 75*c >= 0
      ast: b, c
@@ -138,6 +142,7 @@ namespace {
     Clause *c = s.propagate();
     assert(!c);
   }
+  REGISTER_TEST(test05);
 
   /* +100*a - 75*b - 75*c >= 0
      ast: b, c
@@ -168,6 +173,7 @@ namespace {
     assert(c);
     assert_clause_exact(c, expected);
   }
+  REGISTER_TEST(test06);
 
   /* +100*a - 75*b - 75*c + 10*d >= 0
      ast: -d, b, c
@@ -200,6 +206,7 @@ namespace {
     assert(c);
     assert_clause_exact(c, expected);
   }
+  REGISTER_TEST(test07);
 
   /* +10*a - 75*b - 75*c + 100*d >= 0
      ast: -a, b, c
@@ -232,6 +239,7 @@ namespace {
     assert(c);
     assert_clause_exact(c, expected);
   }
+  REGISTER_TEST(test08);
 
   /* 5*x1+5*x2 >= 0 ==> b = 1
      exp: b=1
@@ -250,41 +258,40 @@ namespace {
     post_pb_right_imp_re(s, x, w, 0, b);
 #endif
   }
+  REGISTER_TEST(test09);
+
+  /* pbvar, unit weights, c = 0 */
+  void test10()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(5, 0, 1);
+    vector<int> w(5);
+    for(int i = 0; i != 5; ++i) w[i] = 1;
+    cspvar rhs = s.newCSPVar(-5, 10);
+    post_pb(s, x, w, 0, rhs);
+    assert( rhs.min(s) == 0 );
+    assert( rhs.max(s) == 5 );
+
+    s.newDecisionLevel();
+    x[0].setmin(s, 1, NO_REASON);
+    x[1].setmax(s, 0, NO_REASON);
+    s.propagate();
+    assert(rhs.min(s) == 1);
+    assert(rhs.max(s) == 4);
+
+    s.newDecisionLevel();
+    rhs.setmax(s, 1, NO_REASON);
+    s.propagate();
+    for(int i = 2; i != 5; ++i)
+      assert(x[i].max(s) == 0);
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(test10);
 }
 
 void pb_test()
 {
   std::cerr << "pb tests\n";
 
-  std::cerr << "test01..." << std::flush;
-  test01();
-  std::cerr << "OK\n";
-
-  std::cerr << "test02..." << std::flush;
-  test02();
-  std::cerr << "OK\n";
-
-  std::cerr << "test03..." << std::flush;
-  test03();
-  std::cerr << "OK\n";
-
-  std::cerr << "test04..." << std::flush;
-  test04();
-  std::cerr << "OK\n";
-
-  std::cerr << "test05..." << std::flush;
-  test05();
-  std::cerr << "OK\n";
-
-  std::cerr << "test06..." << std::flush;
-  test06();
-  std::cerr << "OK\n";
-
-  std::cerr << "test07..." << std::flush;
-  test07();
-  std::cerr << "OK\n";
-
-  std::cerr << "test08..." << std::flush;
-  test08();
-  std::cerr << "OK\n";
+  the_test_container().run();
 }
