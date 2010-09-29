@@ -281,12 +281,36 @@ namespace {
 
     s.newDecisionLevel();
     rhs.setmax(s, 1, NO_REASON);
-    s.propagate();
+    assert( !s.propagate() );
     for(int i = 2; i != 5; ++i)
       assert(x[i].max(s) == 0);
     s.cancelUntil(0);
   }
   REGISTER_TEST(test10);
+
+  void test11()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(5, 0, 1);
+    vector<int> w(5);
+    for(int i = 0; i != 5; ++i) w[i] = 1;
+    cspvar rhs = s.newCSPVar(-5, 10);
+    post_pb(s, x, w, 0, rhs);
+    assert( rhs.min(s) == 0 );
+    assert( rhs.max(s) == 5 );
+
+    s.newDecisionLevel();
+    rhs.setmin(s, 2, NO_REASON);
+    x[0].setmin(s, 1, NO_REASON);
+    x[1].setmax(s, 0, NO_REASON);
+    x[2].setmax(s, 0, NO_REASON);
+    x[3].setmax(s, 0, NO_REASON);
+    assert( !s.propagate() );
+    assert(x[4].min(s) == 1);
+    assert(rhs.max(s) == 2);
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(test11);
 }
 
 void pb_test()

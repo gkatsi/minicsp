@@ -1595,11 +1595,11 @@ Clause *cons_pbvar::wake(Solver &s, Lit)
   _ubreason.shrink(n - ubi + 1);
   DO_OR_RETURN(_rhs.setmaxf(s, ub, _ubreason));
 
-  lb = _rhs.min(s);
-  ub = _rhs.max(s);
-
   for(int i = 0; i != _ubreason.size(); ++i)
     _lbreason.push(_ubreason[i]);
+
+  int rhslb = _rhs.min(s);
+  int rhsub = _rhs.max(s);
 
   if( nonimpliedlb )
     _lbreason.push( _rhs.r_min(s) );
@@ -1610,19 +1610,19 @@ Clause *cons_pbvar::wake(Solver &s, Lit)
     pair<int, Var> const& cv = _posvars[i];
     int q = toInt(s.value(cv.second));
     if( q ) continue;
-    if( lb + cv.first > ub )
+    if( lb + cv.first > rhsub )
       DO_OR_RETURN(s.enqueueFill( Lit( cv.second, true ), _lbreason ));
-    if( ub - cv.first < lb )
-      DO_OR_RETURN(s.enqueueFill( Lit( cv.second, true ), _ubreason ));
+    if( ub - cv.first < rhslb )
+      DO_OR_RETURN(s.enqueueFill( Lit( cv.second ), _ubreason ));
   }
   for(size_t i = 0; i != nn; ++i) {
     pair<int, Var> const& cv = _negvars[i];
     int q = toInt(s.value(cv.second));
     if( q ) continue;
-    if( ub + cv.first < lb )
+    if( ub + cv.first < rhslb )
       DO_OR_RETURN(s.enqueueFill( Lit(cv.second, true ), _lbreason ));
-    if( lb - cv.first > ub )
-      DO_OR_RETURN(s.enqueueFill( Lit(cv.second, true ), _ubreason ));
+    if( lb - cv.first > rhsub )
+      DO_OR_RETURN(s.enqueueFill( Lit(cv.second ), _ubreason ));
   }
 
   return 0L;
@@ -1640,20 +1640,20 @@ ostream& cons_pbvar::print(ostream& os) const
     if( _svars[i].first == 1 ) {
       if( i != 0 )
         os << " + ";
-      os << _svars[i].second;
+      os << _svars[i].second+1;
     } else if( _svars[i].first == -1 ) {
       if( i != 0 )
         os << " ";
-      os << "- " << _svars[i].second;
+      os << "- " << _svars[i].second+1;
     } else if( _svars[i].first > 0 ) {
       if( i != 0 )
         os << " +";
-      os << _svars[i].first << "*" << _svars[i].second;
+      os << _svars[i].first << "*" << _svars[i].second+1;
     }
     else if( _svars[i].first < 0 ) {
       if( i != 0 )
         os << " ";
-      os << "- " << -_svars[i].first << "*" << _svars[i].second;
+      os << "- " << -_svars[i].first << "*" << _svars[i].second+1;
     }
   }
   os << " = " << _rhs;
@@ -1671,9 +1671,9 @@ ostream& cons_pbvar::printstate(Solver& s, ostream& os) const
     int xmin = 0, xmax = 1;
     if( s.value(x) == l_True ) xmin = 1;
     else if( s.value(x) == l_False ) xmax = 0;
-    os << x << " in [" << xmin << ", " << xmax << "]";
+    os << x+1 << " in [" << xmin << ", " << xmax << "]";
   }
-  os << _rhs << " in " << domain_as_range(s, _rhs);
+  os << ", " << _rhs << " in " << domain_as_range(s, _rhs);
   os << ")";
   return os;
 }
