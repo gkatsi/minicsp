@@ -1434,7 +1434,7 @@ void Solver::excludeLast()
     pair< set<int>, set<int> > const& pi = cspsetmodel[i];
     set<int> const& lb = pi.first;
     set<int> const& ub = pi.second;
-    for(int j = xd.min; j <= xd.max+1; ++j) {
+    for(int j = xd.min; j <= xd.max; ++j) {
       if( lb.find(j) != lb.end() )
         exclude.push( ~Lit(xd.ini( j )));
       else if( ub.find(j) == ub.end() )
