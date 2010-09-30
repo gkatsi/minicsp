@@ -64,7 +64,7 @@ namespace eq {
         if( W > 0 ) {
           return _x.setmaxf(s, e.d+_c, _reason);
         } else {
-          return _x.setmaxf(s, -e.d+_c, _reason);
+          return _x.setminf(s, -e.d+_c, _reason);
         }
       }
       break;

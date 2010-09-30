@@ -261,9 +261,18 @@ namespace {
     assert(!x.indomain(s, 8));
     s.cancelUntil(0);
 
+    s.newDecisionLevel();
     x.assign(s, 10, NO_REASON);
     s.propagate();
     assert(y.min(s) == -10 && y.max(s) == -10);
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    y.setmax(s, -9, NO_REASON);
+    assert(!s.propagate());
+    assert(x.min(s) == 9);
+    assert(x.max(s) == 10);
+    s.cancelUntil(0);
   }
   REGISTER_TEST(test12);
 
