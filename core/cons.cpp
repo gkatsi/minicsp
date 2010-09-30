@@ -170,7 +170,41 @@ public:
     _reason.clear();
     return eq::eq_propagate<W>(s, _x, _y, _c, p, _reason);
   }
+  virtual void clone(Solver& other);
+  virtual ostream& print(ostream& os) const;
+  virtual ostream& printstate(Solver& s, ostream& os) const;
 };
+
+template<int W>
+void cons_eq<W>::clone(Solver &other)
+{
+  cons *con = new cons_eq<W>(other, _x, _y, _c);
+  other.addConstraint(con);
+}
+
+template<int W>
+ostream& cons_eq<W>::print(ostream& os) const
+{
+  os << _x << " = ";
+  if( W == -1 ) os << "-";
+  os << _y;
+  if( _c > 0 )
+    os << " + " << _c;
+  else if( _c < 0 )
+    os << " - " << -_c;
+  return os;
+}
+
+template<int W>
+ostream& cons_eq<W>::printstate(Solver& s, ostream& os) const
+{
+  print(os);
+  os << " (with ";
+  os << _x << " in " << domain_as_set(s, _x) << ", "
+     << _y << " in " << domain_as_set(s, _y)
+     << ")";
+  return os;
+}
 
 /* x == y + c */
 void post_eq(Solver& s, cspvar x, cspvar y, int c)
