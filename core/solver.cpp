@@ -44,6 +44,7 @@ Solver::Solver() :
   , polarity_mode    (polarity_false)
   , verbosity        (0)
   , phase_saving     (true)
+  , allow_clause_dbg (true)
     // Statistics: (formerly in 'SolverStats')
     //
   , starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0)
@@ -645,7 +646,10 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
 
 void Solver::debugclause(Clause *from, cons *c)
 {
+  if( !allow_clause_dbg ) return;
+
   Solver s1;
+  s1.allow_clause_dbg = false; // to avoid infinite recursion
   // add all variables
   int nv = nVars();
   s1.watches.growTo(2*nv);

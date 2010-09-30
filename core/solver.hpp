@@ -145,6 +145,7 @@ public:
     int       polarity_mode;      // Controls which polarity the decision heuristic chooses. See enum below for allowed modes. (default polarity_false)
     int       verbosity;          // Verbosity level. 0=silent, 1=some progress report                                         (default 0)
     bool      phase_saving;
+    bool      allow_clause_dbg;   // set to 0 when the solver is cloned to avoid infinite recursion
 
     enum { polarity_true = 0, polarity_false = 1, polarity_user = 2, polarity_rnd = 3 };
 
