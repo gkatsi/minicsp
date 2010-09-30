@@ -1926,7 +1926,7 @@ void cons_mult::clone(Solver& other)
 
 ostream& cons_mult::print(ostream& os) const
 {
-  os << "_x" << " = " << _y << "*" << _z;
+  os << _x << " = " << _y << "*" << _z;
   return os;
 }
 
