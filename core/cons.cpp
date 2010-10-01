@@ -1814,90 +1814,94 @@ Clause* cons_mult::wake(Solver &s, Lit)
     _reason.clear();
     pushifdef(_reason, _z.r_min(s));
     pushifdef(_reason, _y.r_min(s));
-    _x.setminf( s, _y.min(s)*_z.min(s), _reason );
+    DO_OR_RETURN(_x.setminf( s, _y.min(s)*_z.min(s), _reason ));
 
     _reason.clear();
     pushifdef(_reason, _z.r_max(s));
     pushifdef(_reason, _y.r_max(s));
-    _x.setmaxf( s, _y.max(s)*_z.max(s), _reason );
+    DO_OR_RETURN(_x.setmaxf( s, _y.max(s)*_z.max(s), _reason ));
 
     _reason.clear();
     pushifdef(_reason, _x.r_min(s));
     pushifdef(_reason, _z.r_max(s));
-    _y.setminf( s, divup(_x.min(s), _z.max(s)), _reason );
+    DO_OR_RETURN(_y.setminf( s, divup(_x.min(s), _z.max(s)), _reason ));
 
     _reason.clear();
     pushifdef(_reason, _x.r_max(s));
     pushifdef(_reason, _z.r_min(s));
-    _y.setmaxf( s, divdn(_x.max(s), _z.min(s)), _reason );
+    DO_OR_RETURN(_y.setmaxf( s, divdn(_x.max(s), _z.min(s)), _reason ));
 
     _reason.clear();
     pushifdef(_reason, _x.r_min(s));
     pushifdef(_reason, _y.r_max(s));
-    _z.setminf( s, divup(_x.min(s), _y.max(s)), _reason );
+    DO_OR_RETURN(_z.setminf( s, divup(_x.min(s), _y.max(s)), _reason ));
 
     _reason.clear();
     pushifdef(_reason, _x.r_max(s));
     pushifdef(_reason, _y.r_min(s));
-    _z.setmaxf( s, divdn(_x.max(s), _y.min(s)), _reason );
+    DO_OR_RETURN(_z.setmaxf( s, divdn(_x.max(s), _y.min(s)), _reason ));
   } if( _y.max(s) < 0 && _z.max(s) < 0 ) {
     _reason.clear();
     pushifdef(_reason, _z.r_max(s));
     pushifdef(_reason, _y.r_max(s));
-    _x.setminf( s, _y.max(s)*_z.max(s), _reason );
+    DO_OR_RETURN(_x.setminf( s, _y.max(s)*_z.max(s), _reason ));
 
     _reason.clear();
     pushifdef(_reason, _z.r_min(s));
     pushifdef(_reason, _y.r_min(s));
-    _x.setmaxf( s, _y.min(s)*_z.min(s), _reason );
+    DO_OR_RETURN(_x.setmaxf( s, _y.min(s)*_z.min(s), _reason ));
 
     _reason.clear();
     pushifdef(_reason, _x.r_max(s));
     pushifdef(_reason, _z.r_max(s));
-    _y.setminf( s, divup(_x.max(s), _z.max(s)), _reason );
+    DO_OR_RETURN(_y.setminf( s, divup(_x.max(s), _z.max(s)), _reason ));
 
     _reason.clear();
     pushifdef(_reason, _x.r_min(s));
     pushifdef(_reason, _z.r_min(s));
-    _y.setmaxf( s, divdn(_x.min(s), _z.min(s)), _reason );
+    DO_OR_RETURN(_y.setmaxf( s, divdn(_x.min(s), _z.min(s)), _reason ));
 
     _reason.clear();
     pushifdef(_reason, _x.r_max(s));
     pushifdef(_reason, _y.r_max(s));
-    _z.setminf( s, divup(_x.max(s), _y.max(s)), _reason );
+    DO_OR_RETURN(_z.setminf( s, divup(_x.max(s), _y.max(s)), _reason ));
 
     _reason.clear();
     pushifdef(_reason, _x.r_min(s));
     pushifdef(_reason, _y.r_min(s));
-    _z.setmaxf( s, divdn(_x.min(s), _y.min(s)), _reason );
+    DO_OR_RETURN(_z.setmaxf( s, divdn(_x.min(s), _y.min(s)), _reason ));
   } else {
     _reason.clear();
     pushifdef(_reason, _y.r_min(s));
     pushifdef(_reason, _y.r_max(s));
     pushifdef(_reason, _z.r_min(s));
     pushifdef(_reason, _z.r_max(s));
-    _x.setminf( s, min( min( _y.min(s)*_z.min(s),
-                             _y.min(s)*_z.max(s)),
-                        min( _y.max(s)*_z.min(s),
-                             _y.max(s)*_z.max(s))), _reason);
-    _x.setmaxf( s, max( max( _y.min(s)*_z.min(s),
-                             _y.min(s)*_z.max(s)),
-                        max( _y.max(s)*_z.min(s),
-                             _y.max(s)*_z.max(s))), _reason);
+    DO_OR_RETURN(_x.setminf( s, min( min( _y.min(s)*_z.min(s),
+                                          _y.min(s)*_z.max(s)),
+                                     min( _y.max(s)*_z.min(s),
+                                          _y.max(s)*_z.max(s))),
+                             _reason));
+    DO_OR_RETURN(_x.setmaxf( s, max( max( _y.min(s)*_z.min(s),
+                                          _y.min(s)*_z.max(s)),
+                                     max( _y.max(s)*_z.min(s),
+                                          _y.max(s)*_z.max(s))),
+                             _reason));
     if( _y.min(s) > 0 ) {
       _reason.clear();
       pushifdef(_reason, _y.r_min(s));
       pushifdef(_reason, _y.r_max(s));
       pushifdef(_reason, _x.r_min(s));
       pushifdef(_reason, _x.r_max(s));
-      _z.setminf( s, min( min( _x.min(s) / _y.min(s),
-                               _x.min(s) / _y.max(s)),
-                          min( _x.max(s) / _y.min(s),
-                               _x.max(s) / _y.max(s))), _reason);
-      _z.setmaxf( s, max( max( _x.min(s) / _y.min(s),
-                               _x.min(s) / _y.max(s)),
-                          max( _x.max(s) / _y.min(s),
-                               _x.max(s) / _y.max(s))), _reason);
+      DO_OR_RETURN(_z.setminf( s, min( min( _x.min(s) / _y.min(s),
+                                            _x.min(s) / _y.max(s)),
+                                       min( _x.max(s) / _y.min(s),
+                                            _x.max(s) / _y.max(s))),
+                               _reason));
+      DO_OR_RETURN(_z.setmaxf( s, max( max( _x.min(s) / _y.min(s),
+                                            _x.min(s) / _y.max(s)),
+                                       max( _x.max(s) / _y.min(s),
+                                            _x.max(s) / _y.max(s))),
+                               _reason));
     }
     if( _z.min(s) > 0 ) {
       _reason.clear();
@@ -1905,14 +1909,16 @@ Clause* cons_mult::wake(Solver &s, Lit)
       pushifdef(_reason, _z.r_max(s));
       pushifdef(_reason, _x.r_min(s));
       pushifdef(_reason, _x.r_max(s));
-      _y.setminf( s, min( min( _x.min(s) / _z.min(s),
-                               _x.min(s) / _z.max(s)),
-                          min( _x.max(s) / _z.min(s),
-                               _x.max(s) / _z.max(s))), _reason);
-      _y.setmaxf( s, max( max( _x.min(s) / _z.min(s),
-                               _x.min(s) / _z.max(s)),
-                          max( _x.max(s) / _z.min(s),
-                               _x.max(s) / _z.max(s))), _reason);
+      DO_OR_RETURN(_y.setminf( s, min( min( _x.min(s) / _z.min(s),
+                                            _x.min(s) / _z.max(s)),
+                                       min( _x.max(s) / _z.min(s),
+                                            _x.max(s) / _z.max(s))),
+                               _reason));
+      DO_OR_RETURN(_y.setmaxf( s, max( max( _x.min(s) / _z.min(s),
+                                            _x.min(s) / _z.max(s)),
+                                       max( _x.max(s) / _z.min(s),
+                                            _x.max(s) / _z.max(s))),
+                               _reason));
     }
   }
   return 0L;
