@@ -823,6 +823,24 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(min01);
+
+  // max unsat
+  void min02()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 10);
+    cspvar y = s.newCSPVar(1, 10);
+    cspvar z = s.newCSPVar(1, 10);
+    post_min(s, x, y, z);
+
+    s.newDecisionLevel();
+    x.setmin(s, 6, NO_REASON);
+    y.setmax(s, 5, NO_REASON);
+    assert( s.propagate() );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(min02);
+
 }
 
 

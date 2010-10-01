@@ -1993,18 +1993,18 @@ Clause *cons_min::wake(Solver &s, Lit p)
   {
     PUSH_TEMP(_reason, _y.r_min(s));
     PUSH_TEMP(_reason, _z.r_min(s));
-    _x.setminf(s, min(_y.min(s), _z.min(s)), _reason);
+    DO_OR_RETURN(_x.setminf(s, min(_y.min(s), _z.min(s)), _reason));
   }
   {
     PUSH_TEMP(_reason, _y.r_max(s));
     PUSH_TEMP(_reason, _z.r_max(s));
-    _x.setmaxf(s, min(_y.max(s), _z.max(s)), _reason);
+    DO_OR_RETURN(_x.setmaxf(s, min(_y.max(s), _z.max(s)), _reason));
   }
 
   _reason.clear();
   pushifdef(_reason,_x.r_min(s));
-  _y.setminf(s, _x.min(s), _reason);
-  _z.setminf(s, _x.min(s), _reason);
+  DO_OR_RETURN(_y.setminf(s, _x.min(s), _reason));
+  DO_OR_RETURN(_z.setminf(s, _x.min(s), _reason));
 
   return 0L;
 }
