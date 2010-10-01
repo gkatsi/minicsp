@@ -314,12 +314,12 @@ namespace eq_re {
     using std::min;
     using std::max;
     if( _x.min(s) > _y.max(s) + _c ) {
-      _reason.push(_x.r_min(s));
-      _reason.push(_y.r_max(s));
+      pushifdef(_reason, _x.r_min(s));
+      pushifdef(_reason, _y.r_max(s));
       return true;
     } else if( _x.max(s) < _y.min(s) + _c ) {
-      _reason.push(_x.r_max(s));
-      _reason.push(_y.r_min(s));
+      pushifdef(_reason, _x.r_max(s));
+      pushifdef(_reason, _y.r_min(s));
       return true;
     } else {
       for(int i = max(_x.min(s), _y.min(s) + _c),
@@ -385,14 +385,14 @@ Clause *cons_eq_re::wake(Solver &s, Lit p)
   }
 
   if( eq_re::disjoint_domains(s, _x, _y, _c, _reason) ) {
-    s.enqueueFill(~_b, _reason);
+    DO_OR_RETURN(s.enqueueFill(~_b, _reason));
   } else if( _x.min(s) == _y.min(s)+_c &&
              _x.min(s) == _x.max(s) &&
              _x.min(s) == _y.max(s)+_c ) {
     _reason.clear(); // disjoint_domains() may have put garbage here
     _reason.push(_x.r_eq(s));
     _reason.push(_y.r_eq(s));
-    s.enqueueFill(_b, _reason);
+    DO_OR_RETURN(s.enqueueFill(_b, _reason));
   }
 
   return 0L;
