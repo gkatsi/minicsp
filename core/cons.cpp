@@ -2040,7 +2040,6 @@ void post_min(Solver &s, cspvar x, cspvar y, cspvar z)
 // x = max(y,z)
 class cons_max : public cons {
   cspvar _x, _y, _z;
-  int _c;
   vec<Lit> _reason;
 public:
   cons_max(Solver &s,
@@ -2072,18 +2071,18 @@ Clause *cons_max::wake(Solver &s, Lit p)
   {
     PUSH_TEMP(_reason, _y.r_min(s));
     PUSH_TEMP(_reason, _z.r_min(s));
-    _x.setminf(s, max(_y.min(s), _z.min(s)), _reason);
+    DO_OR_RETURN(_x.setminf(s, max(_y.min(s), _z.min(s)), _reason));
   }
   {
     PUSH_TEMP(_reason, _y.r_max(s));
     PUSH_TEMP(_reason, _z.r_max(s));
-    _x.setmaxf(s, max(_y.max(s), _z.max(s)), _reason);
+    DO_OR_RETURN(_x.setmaxf(s, max(_y.max(s), _z.max(s)), _reason));
   }
 
   _reason.clear();
   pushifdef(_reason,_x.r_max(s));
-  _y.setmaxf(s, _x.max(s), _reason);
-  _z.setmaxf(s, _x.max(s), _reason);
+  DO_OR_RETURN(_y.setmaxf(s, _x.max(s), _reason));
+  DO_OR_RETURN(_z.setmaxf(s, _x.max(s), _reason));
 
   return 0L;
 }

@@ -778,6 +778,23 @@ namespace {
   }
   REGISTER_TEST(max01);
 
+  // max unsat
+  void max02()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 10);
+    cspvar y = s.newCSPVar(1, 10);
+    cspvar z = s.newCSPVar(1, 10);
+    post_max(s, x, y, z);
+
+    s.newDecisionLevel();
+    x.setmax(s, 5, NO_REASON);
+    y.setmin(s, 6, NO_REASON);
+    assert( s.propagate() );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(max02);
+
   void min01()
   {
     Solver s;
