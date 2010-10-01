@@ -680,7 +680,11 @@ void Solver::debugclause(Clause *from, cons *c)
     xbt.min = cspvars[i].omin;
     xbt.max = cspvars[i].omax;
     xbt.dsize = xbt.max - xbt.min + 1;
-    x.setmax(s1, xbt.max, (Clause*)0L);
+    if( xbt.min == xbt.max ) {
+      s1.uncheckedEnqueue_np(Lit(cspvars[i].firstbool+1), NO_REASON);
+      s1.uncheckedEnqueue_np(Lit(cspvars[i].firstbool), NO_REASON);
+    } else
+      x.setmax(s1, xbt.max, (Clause*)0L);
   }
   s1.propagate();
 
