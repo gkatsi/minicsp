@@ -593,13 +593,13 @@ Clause *cons_leq_re::wake(Solver &s, Lit p)
   }
 
   if( _x.min(s) > _y.max(s) + _c ) {
-    _reason.push(_x.r_min(s));
-    _reason.push(_y.r_max(s));
-    s.enqueueFill(~_b, _reason);
+    pushifdef(_reason, _x.r_min(s));
+    pushifdef(_reason, _y.r_max(s));
+    DO_OR_RETURN(s.enqueueFill(~_b, _reason));
   } else if( _x.max(s) <= _y.min(s) + _c ) {
-    _reason.push(_x.r_max(s));
-    _reason.push(_y.r_min(s));
-    s.enqueueFill(_b, _reason);
+    pushifdef(_reason, _x.r_max(s));
+    pushifdef(_reason, _y.r_min(s));
+    DO_OR_RETURN(s.enqueueFill(_b, _reason));
   }
 
   return 0L;
