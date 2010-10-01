@@ -345,7 +345,13 @@ namespace FlatZinc {
         switch (_method) {
         case MIN:
         case MAX:
-          constrain();
+          try {
+            constrain();
+          } catch( unsat ) {
+            // we have already derived a lower bound equal to this
+            // solution
+            next = false;
+          }
           break;
         case SAT:
           next = findall;
