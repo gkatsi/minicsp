@@ -83,8 +83,8 @@ public:
     T&      deref(btptr p);                                     // dereference backtrackable mem. for temporary use only
 
     // event information
-    domevent event(Lit p);                                      // get the event associated with a literal, if any
-    setevent sevent(Lit p);                                     // get the set variable event associated with a literal
+    domevent event(Lit p) const;                                // get the event associated with a literal, if any
+    setevent sevent(Lit p) const;                               // get the set variable event associated with a literal
 
     // Solving:
     //
@@ -324,10 +324,17 @@ T& Solver::deref(btptr p)
 }
 
 inline
-domevent Solver::event(Lit p)
+domevent Solver::event(Lit p) const
 {
   if( p != lit_Undef ) return events[toInt(p)];
   else return domevent();
+}
+
+inline
+setevent Solver::sevent(Lit p) const
+{
+  if( p != lit_Undef ) return setevents[toInt(p)];
+  else return setevent();
 }
 
 inline void Solver::insertVarOrder(Var x) {
