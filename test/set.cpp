@@ -94,6 +94,69 @@ namespace {
     assert_num_solutions(s, 7);
   }
   REGISTER_TEST(seteq02);
+
+  void setneq01()
+  {
+    Solver s;
+    setvar A = s.newSetVar(0,0);
+    setvar B = s.newSetVar(0,0);
+    post_setneq(s, A, B);
+
+    s.newDecisionLevel();
+    A.exclude(s, 0, NO_REASON);
+    B.exclude(s, 0, NO_REASON);
+    assert( s.propagate() );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    A.include(s, 0, NO_REASON);
+    B.include(s, 0, NO_REASON);
+    assert( s.propagate() );
+    s.cancelUntil(0);
+
+    assert_num_solutions(s, 2);
+  }
+  REGISTER_TEST(setneq01);
+
+  void setneq02()
+  {
+    Solver s;
+    setvar A = s.newSetVar(3,4);
+    setvar B = s.newSetVar(2,3);
+    post_setneq(s, A, B);
+
+    s.newDecisionLevel();
+    A.include(s, 3, NO_REASON);
+    A.exclude(s, 4, NO_REASON);
+    B.exclude(s, 2, NO_REASON);
+    assert( !s.propagate() );
+    assert( B.excludes(s, 3) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    A.include(s, 3, NO_REASON);
+    assert( !s.propagate() );
+    assert( !B.excludes(s, 3) );
+
+    s.newDecisionLevel();
+    B.exclude(s, 2, NO_REASON);
+    A.exclude(s, 4, NO_REASON);
+    assert( !s.propagate() );
+    assert( B.excludes(s, 3) );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(setneq02);
+
+  void setneq03()
+  {
+    Solver s;
+    setvar A = s.newSetVar(3,5);
+    setvar B = s.newSetVar(2,4);
+    post_setneq(s, A, B);
+
+    assert_num_solutions(s, 60);
+  }
+  REGISTER_TEST(setneq03);
 }
 
 

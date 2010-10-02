@@ -1056,6 +1056,14 @@ namespace FlatZinc {
       post_seteq(s, A, B);
     }
 
+    void p_set_ne(Solver& s, FlatZincModel& m,
+                    const ConExpr& ce, AST::Node* ann) {
+      setvar A = getSetVar(s, m, ce[0]);
+      setvar B = getSetVar(s, m, ce[1]);
+
+      post_setneq(s, A, B);
+    }
+
     class IntPoster {
     public:
       IntPoster(void) {
@@ -1127,6 +1135,7 @@ namespace FlatZinc {
         registry().add("set_card", &p_set_card);
         registry().add("set_diff", &p_set_diff);
         registry().add("set_eq", &p_set_eq);
+        registry().add("set_ne", &p_set_ne);
       }
     };
     IntPoster __int_poster;
