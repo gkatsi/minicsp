@@ -171,3 +171,118 @@ void post_setneq(Solver &s, setvar a, setvar b)
   s.addClause(ps2);
 }
 
+/* Implemented the same way as setneq, only with the appropriate p =>
+ * ... and ~p => ... added to the clauses.
+ *
+ * FIXME: make post_setneq forward to this if it is not too wasteful?
+ */
+
+void post_seteq_re(Solver &s, setvar a, setvar b, Lit p)
+{
+  vec<Lit> ps1, ps2;
+
+  Var onlya = var_Undef, onlyb = var_Undef;
+
+  setneq::post_unique_used(s, a, b, ps1, ps2, onlya);
+
+  ps1.clear();
+  ps2.clear();
+
+  setneq::post_unique_used(s, b, a, ps1, ps2, onlyb);
+
+  ps1.clear();
+  ps2.clear();
+
+  if( onlya != var_Undef ) {
+    ps2.push( Lit(onlya) );
+    ps1.growTo(2);
+    ps1[0] = ~Lit(onlya);
+    ps1[1] = ~p;
+    s.addClause(ps1);
+  }
+  if( onlyb != var_Undef ) {
+    ps2.push( Lit(onlyb) );
+    ps1.growTo(2);
+    ps1[0] = ~Lit(onlyb);
+    ps1[1] = ~p;
+    s.addClause(ps1);
+  }
+
+  for(int i = std::max(a.umin(s), b.umin(s)),
+        iend = std::min(a.umax(s), b.umax(s))+1;
+      i != iend; ++i) {
+    Var y = s.newVar();
+    ps2.push( Lit(y) );
+
+    ps1.clear();
+    ps1.growTo(2);
+    ps1[0] = ~Lit(y);
+    ps1[1] = ~p;
+    s.addClause(ps1);
+
+    // y_i => (ai => ~bi)
+    ps1.growTo(3);
+    ps1[0] = ~Lit(y);
+    ps1[1] = ~Lit( a.ini(s, i) );
+    ps1[2] = ~Lit( b.ini(s, i) );
+    s.addClause(ps1);
+
+    // y_i => (~ai => bi)
+    ps1.growTo(3);
+    ps1[0] = ~Lit(y);
+    ps1[1] = Lit( a.ini(s, i) );
+    ps1[2] = Lit( b.ini(s, i) );
+    s.addClause(ps1);
+
+    // ~ai /\ bi => y_i
+    ps1.growTo(3);
+    ps1[0] = Lit(y);
+    ps1[1] = Lit( a.ini(s, i) );
+    ps1[2] = ~Lit( b.ini(s, i) );
+    s.addClause(ps1);
+
+    // ~bi /\ ai => y_i
+    ps1.growTo(3);
+    ps1[0] = Lit(y);
+    ps1[1] = ~Lit( a.ini(s, i) );
+    ps1[2] = Lit( b.ini(s, i) );
+    s.addClause(ps1);
+  }
+  ps2.push( p );
+  s.addClause(ps2);
+}
+
+void post_seteq_re(Solver &s, setvar a, setvar b, cspvar r)
+{
+  assert(r.min(s) >= 0 && r.max(s) <= 1);
+  if( r.min(s) == 1 ) {
+    post_seteq(s, a, b);
+    return;
+  }
+  if( r.max(s) == 0 ) {
+    post_setneq(s, a, b);
+    return;
+  }
+  post_seteq_re(s, a, b, Lit(r.eqi(s, 1)));
+}
+
+
+void post_setneq_re(Solver &s, setvar a, setvar b, Lit p)
+{
+  post_seteq_re(s, a, b, ~p);
+}
+
+void post_setneq_re(Solver &s, setvar a, setvar b, cspvar r)
+{
+  assert(r.min(s) >= 0 && r.max(s) <= 1);
+  if( r.min(s) == 1 ) {
+    post_setneq(s, a, b);
+    return;
+  }
+  if( r.max(s) == 0 ) {
+    post_seteq(s, a, b);
+    return;
+  }
+  post_seteq_re(s, a, b, Lit(r.eqi(s, 0)));
+}
+

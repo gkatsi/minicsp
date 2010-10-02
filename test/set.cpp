@@ -157,6 +157,58 @@ namespace {
     assert_num_solutions(s, 60);
   }
   REGISTER_TEST(setneq03);
+
+  void seteq_re01()
+  {
+    Solver s;
+    setvar A = s.newSetVar(1, 2);
+    setvar B = s.newSetVar(2, 3);
+    Var r = s.newVar();
+    post_seteq_re(s, A, B, Lit(r));
+
+    s.newDecisionLevel();
+    A.include(s, 1, NO_REASON);
+    assert( !s.propagate() );
+    assert( s.value(r) == l_False );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    B.include(s, 3, NO_REASON);
+    assert( !s.propagate() );
+    assert( s.value(r) == l_False );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    A.exclude(s, 1, NO_REASON);
+    A.include(s, 2, NO_REASON);
+    B.exclude(s, 3, NO_REASON);
+    assert( !s.propagate() );
+
+    s.newDecisionLevel();
+    s.uncheckedEnqueue( Lit(r) );
+    assert( !s.propagate() );
+    assert( B.includes(s, 2) );
+    s.cancelUntil(1);
+
+    s.newDecisionLevel();
+    s.uncheckedEnqueue( ~Lit(r) );
+    assert( !s.propagate() );
+    assert( B.excludes(s, 2) );
+    s.cancelUntil(1);
+
+    s.newDecisionLevel();
+    B.include(s, 2, NO_REASON);
+    assert( !s.propagate() );
+    assert( s.value(r) == l_True );
+    s.cancelUntil(1);
+
+    s.newDecisionLevel();
+    B.exclude(s, 2, NO_REASON);
+    assert( !s.propagate() );
+    assert( s.value(r) == l_False );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(seteq_re01);
 }
 
 

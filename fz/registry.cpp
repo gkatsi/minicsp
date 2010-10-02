@@ -1064,6 +1064,24 @@ namespace FlatZinc {
       post_setneq(s, A, B);
     }
 
+    void p_set_eq_re(Solver& s, FlatZincModel& m,
+                     const ConExpr& ce, AST::Node* ann) {
+      setvar A = getSetVar(s, m, ce[0]);
+      setvar B = getSetVar(s, m, ce[1]);
+      cspvar b = getBoolVar(s, m, ce[2]);
+
+      post_seteq_re(s, A, B, b);
+    }
+
+    void p_set_ne_re(Solver& s, FlatZincModel& m,
+                     const ConExpr& ce, AST::Node* ann) {
+      setvar A = getSetVar(s, m, ce[0]);
+      setvar B = getSetVar(s, m, ce[1]);
+      cspvar b = getBoolVar(s, m, ce[2]);
+
+      post_setneq_re(s, A, B, b);
+    }
+
     class IntPoster {
     public:
       IntPoster(void) {
@@ -1136,6 +1154,8 @@ namespace FlatZinc {
         registry().add("set_diff", &p_set_diff);
         registry().add("set_eq", &p_set_eq);
         registry().add("set_ne", &p_set_ne);
+        registry().add("set_eq_reif", &p_set_eq_re);
+        registry().add("set_ne_reif", &p_set_ne_re);
       }
     };
     IntPoster __int_poster;
