@@ -209,6 +209,90 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(seteq_re01);
+
+  void setin01()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 5);
+    setvar a = s.newSetVar(2, 4);
+    post_setin(s, x, a);
+    assert( x.min(s) == 2 );
+    assert( x.max(s) == 4 );
+
+    s.newDecisionLevel();
+    a.exclude(s, 3, NO_REASON);
+    assert( !s.propagate() );
+    assert( !x.indomain(s, 3) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    x.remove(s, 4, NO_REASON);
+    a.exclude(s, 2, NO_REASON);
+    a.exclude(s, 3, NO_REASON);
+    assert( s.propagate() );
+    s.cancelUntil(0);
+
+    // 4 solutions for each value of x
+    assert_num_solutions(s, 12);
+  }
+  REGISTER_TEST(setin01);
+
+  void setin_re01()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 5);
+    setvar a = s.newSetVar(2, 4);
+    Var b = s.newVar();
+
+    post_setin_re(s, x, a, Lit(b));
+
+    // set b false
+    s.newDecisionLevel();
+    s.enqueue( ~Lit(b) );
+    x.assign(s, 4, NO_REASON);
+    assert( !s.propagate() );
+    assert( a.excludes(s, 4) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    s.enqueue( ~Lit(b) );
+    a.include(s, 3, NO_REASON);
+    assert( !s.propagate() );
+    assert( !x.indomain(s, 3) );
+    s.cancelUntil(0);
+
+    // set b true
+    s.newDecisionLevel();
+    s.enqueue( Lit(b) );
+    a.exclude(s, 3, NO_REASON);
+    assert( !s.propagate() );
+    assert( !x.indomain(s, 3) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    s.enqueue( Lit(b) );
+    x.remove(s, 4, NO_REASON);
+    a.exclude(s, 2, NO_REASON);
+    a.exclude(s, 3, NO_REASON);
+    assert( s.propagate() );
+    s.cancelUntil(0);
+
+    // propagate to b
+    s.newDecisionLevel();
+    x.assign(s, 4, NO_REASON);
+    a.exclude(s, 4, NO_REASON);
+    assert(!s.propagate() );
+    assert( s.value(b) == l_False );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    x.assign(s, 3, NO_REASON);
+    a.include(s, 3, NO_REASON);
+    assert(!s.propagate() );
+    assert( s.value(b) == l_True );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(setin_re01);
 }
 
 

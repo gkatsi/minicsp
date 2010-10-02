@@ -286,3 +286,71 @@ void post_setneq_re(Solver &s, setvar a, setvar b, cspvar r)
   post_seteq_re(s, a, b, Lit(r.eqi(s, 0)));
 }
 
+void post_setin(Solver &s, cspvar x, setvar a)
+{
+  x.setmin(s, a.umin(s), NO_REASON);
+  x.setmax(s, a.umax(s), NO_REASON);
+
+  vec<Lit> ps;
+  for(int i = x.min(s), iend = x.max(s)+1; i != iend; ++i) {
+    ps.growTo(2);
+    ps[0] = ~Lit( x.eqi(s, i) );
+    ps[1] = Lit( a.ini(s, i) );
+    s.addClause(ps);
+  }
+}
+
+void post_setin_re(Solver &s, cspvar x, setvar a, Lit p)
+{
+  vec<Lit> ps;
+  if( x.min(s) < a.umin(s) ) {
+    ps.growTo(2);
+    if( x.leqi(s, a.umin(s)-1) != var_Undef ) {
+      ps[0] = ~Lit( x.leqi(s, a.umin(s)-1) );
+      ps[1] = ~p;
+      s.addClause(ps);
+    } else {
+      // x.max(s) < a.umin(s)
+      s.enqueue(~p);
+      return;
+    }
+  }
+
+  if( x.max(s) > a.umax(s) ) {
+    ps.growTo(2);
+    if( x.leqi(s, a.umax(s)) != var_Undef ) {
+      ps[0] = Lit( x.leqi(s, a.umax(s)) );
+      ps[1] = ~p;
+      s.addClause(ps);
+    } else {
+      // x.min(s) > a.umax(s)
+      s.enqueue(~p);
+      return;
+    }
+  }
+
+  for(int i = std::max( x.min(s), a.umin(s) ),
+        iend = std::min( x.max(s), a.umax(s) )+1;
+      i != iend; ++i) {
+    ps.growTo(3);
+    ps[0] = ~p;
+    ps[1] = ~Lit( x.eqi(s, i) );
+    ps[2] = Lit( a.ini(s, i) );
+    s.addClause(ps);
+
+    ps.growTo(3);
+    ps[0] = p;
+    ps[1] = ~Lit( x.eqi(s, i) );
+    ps[2] = ~Lit( a.ini(s, i) );
+    s.addClause(ps);
+  }
+}
+
+void post_setin_re(Solver &s, cspvar x, setvar a, cspvar b)
+{
+  assert( b.min(s) >= 0 && b.max(s) <= 1);
+  if( b.max(s) == 0 )
+    post_setin_re(s, x, a, ~Lit( b.eqi(s, 0) ));
+  else
+    post_setin_re(s, x, a, Lit( b.eqi(s, 1) ));
+}

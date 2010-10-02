@@ -25,5 +25,11 @@ void post_setneq(Solver &s, setvar a, setvar b);
 void post_setneq_re(Solver &s, setvar a, setvar b, cspvar r);
 void post_setneq_re(Solver &s, setvar a, setvar b, Lit r);
 
+/* X in A */
+void post_setin(Solver &s, cspvar x, setvar a);
+
+/* X in A <=> b */
+void post_setin_re(Solver &s, cspvar x, setvar a, Lit b);
+void post_setin_re(Solver &s, cspvar x, setvar a, cspvar b);
 
 #endif
