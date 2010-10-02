@@ -261,7 +261,7 @@ setvar Solver::newSetVar(int min, int max)
     setevents[ toInt( ~Lit(xd.ini(i) ) ) ] = ex;
   }
 
-  /* FIXME: post constraint sum_i ini(i) = _card */
+  /* post constraint sum_i ini(i) = _card */
   vector<Var> v(max-min+1);
   vector<int> w(max-min+1, 1);
   for(int i = min; i != max+1; ++i)
