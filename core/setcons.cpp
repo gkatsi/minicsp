@@ -354,3 +354,69 @@ void post_setin_re(Solver &s, cspvar x, setvar a, cspvar b)
   else
     post_setin_re(s, x, a, Lit( b.eqi(s, 1) ));
 }
+
+void post_setintersect(Solver &s, setvar a, setvar b, setvar c)
+{
+  for(int i = c.umin(s); i < std::max(a.umin(s), b.umin(s)); ++i)
+    c.exclude(s, i, NO_REASON);
+  for(int i = std::min(a.umax(s), b.umax(s))+1; i <= c.umax(s); ++i)
+    c.exclude(s, i, NO_REASON);
+
+  vec<Lit> ps;
+  for(int i = c.umin(s); i <= c.umax(s); ++i) {
+    if( i < a.umin(s) || i < b.umin(s) ||
+        i > a.umax(s) || i > b.umax(s) )
+      continue;
+
+    ps.clear();
+
+    ps.growTo(2);
+    ps[0] = Lit(a.ini(s, i));
+    ps[1] = ~Lit(c.ini(s, i));
+    s.addClause(ps);
+
+    ps.growTo(2);
+    ps[0] = Lit(b.ini(s, i));
+    ps[1] = ~Lit(c.ini(s, i));
+    s.addClause(ps);
+
+    ps.growTo(3);
+    ps[0] = ~Lit(a.ini(s, i));
+    ps[1] = ~Lit(b.ini(s, i));
+    ps[2] = Lit(c.ini(s, i));
+    s.addClause(ps);
+  }
+}
+
+void post_setunion(Solver &s, setvar a, setvar b, setvar c)
+{
+  for(int i = c.umin(s); i < std::min(a.umin(s), b.umin(s)); ++i)
+    c.exclude(s, i, NO_REASON);
+  for(int i = std::max(a.umax(s), b.umax(s))+1; i <= c.umax(s); ++i)
+    c.exclude(s, i, NO_REASON);
+
+  vec<Lit> ps;
+  for(int i = c.umin(s); i <= c.umax(s); ++i) {
+    ps.clear();
+
+    if( i >= a.umin(s) && i <= a.umax(s) ) {
+      ps.growTo(2);
+      ps[0] = ~Lit(a.ini(s, i));
+      ps[1] = Lit(c.ini(s, i));
+      s.addClause(ps);
+    }
+
+    if( i >= b.umin(s) && i <= b.umax(s) ) {
+      ps.growTo(2);
+      ps[0] = ~Lit(b.ini(s, i));
+      ps[1] = Lit(c.ini(s, i));
+      s.addClause(ps);
+    }
+
+    ps.clear();
+    pushifdef(ps, Lit(a.ini(s, i)));
+    pushifdef(ps,  Lit(b.ini(s, i)));
+    ps.push(~Lit(c.ini(s, i)));
+    s.addClause(ps);
+  }
+}

@@ -293,6 +293,72 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(setin_re01);
+
+  void set_intersect01()
+  {
+    Solver s;
+    setvar a = s.newSetVar(1, 5);
+    setvar b = s.newSetVar(3, 7);
+    setvar c = s.newSetVar(1, 7);
+    post_setintersect(s, a, b, c);
+
+    assert(c.excludes(s, 1));
+    assert(c.excludes(s, 2));
+    assert(c.excludes(s, 6));
+    assert(c.excludes(s, 7));
+
+    s.newDecisionLevel();
+    a.exclude(s, 4, NO_REASON);
+    assert( !s.propagate() );
+    assert( c.excludes(s, 4) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    c.include(s, 4, NO_REASON);
+    assert( !s.propagate() );
+    assert( a.includes(s, 4) );
+    assert( b.includes(s, 4) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    c.exclude(s, 4, NO_REASON);
+    a.include(s, 4, NO_REASON);
+    assert( !s.propagate() );
+    assert( b.excludes(s, 4) );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(set_intersect01);
+
+  void set_union01()
+  {
+    Solver s;
+    setvar a = s.newSetVar(1, 5);
+    setvar b = s.newSetVar(3, 7);
+    setvar c = s.newSetVar(1, 7);
+    post_setunion(s, a, b, c);
+
+    s.newDecisionLevel();
+    a.exclude(s, 4, NO_REASON);
+    b.exclude(s, 4, NO_REASON);
+    assert( !s.propagate() );
+    assert( c.excludes(s, 4) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    c.include(s, 4, NO_REASON);
+    b.exclude(s, 4, NO_REASON);
+    assert( !s.propagate() );
+    assert( a.includes(s, 4) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    c.exclude(s, 4, NO_REASON);
+    assert( !s.propagate() );
+    assert( a.excludes(s, 4) );
+    assert( b.excludes(s, 4) );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(set_union01);
 }
 
 

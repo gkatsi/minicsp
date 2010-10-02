@@ -1099,6 +1099,24 @@ namespace FlatZinc {
       post_setin_re(s, x, a, b);
     }
 
+    void p_set_isect(Solver &s, FlatZincModel& m,
+                     const ConExpr& ce, AST::Node* ann) {
+      setvar a = getSetVar(s, m, ce[0]);
+      setvar b = getSetVar(s, m, ce[1]);
+      setvar c = getSetVar(s, m, ce[2]);
+
+      post_setintersect(s, a, b, c);
+    }
+
+    void p_set_union(Solver &s, FlatZincModel& m,
+                     const ConExpr& ce, AST::Node* ann) {
+      setvar a = getSetVar(s, m, ce[0]);
+      setvar b = getSetVar(s, m, ce[1]);
+      setvar c = getSetVar(s, m, ce[2]);
+
+      post_setunion(s, a, b, c);
+    }
+
     class IntPoster {
     public:
       IntPoster(void) {
@@ -1168,7 +1186,6 @@ namespace FlatZinc {
         registry().add("bool_clause_reif", &p_bool_clause_reif);
 
         registry().add("set_card", &p_set_card);
-        registry().add("set_diff", &p_set_diff);
         registry().add("set_eq", &p_set_eq);
         registry().add("set_ne", &p_set_ne);
         registry().add("set_eq_reif", &p_set_eq_re);
@@ -1176,6 +1193,10 @@ namespace FlatZinc {
 
         registry().add("set_in", &p_set_in);
         registry().add("set_in_reif", &p_set_in_re);
+
+        registry().add("set_diff", &p_set_diff);
+        registry().add("set_intersect", &p_set_isect);
+        registry().add("set_union", &p_set_union);
       }
     };
     IntPoster __int_poster;

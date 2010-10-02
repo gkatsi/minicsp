@@ -32,4 +32,10 @@ void post_setin(Solver &s, cspvar x, setvar a);
 void post_setin_re(Solver &s, cspvar x, setvar a, Lit b);
 void post_setin_re(Solver &s, cspvar x, setvar a, cspvar b);
 
+/* A \cap B = C */
+void post_setintersect(Solver &s, setvar a, setvar b, setvar c);
+
+/* A \cup B = C */
+void post_setunion(Solver &s, setvar a, setvar b, setvar c);
+
 #endif
