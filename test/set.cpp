@@ -158,6 +158,20 @@ namespace {
   }
   REGISTER_TEST(setneq03);
 
+  void setneq04()
+  {
+    Solver s;
+    setvar a = s.newSetVar(1, 2);
+    setvar b = s.newSetVar(4, 6);
+    post_setneq(s, a, b);
+
+    setvar c = s.newSetVar(9, 10);
+    post_setneq(s, b, c);
+
+    // just the fact that we are able to post these is enough
+  }
+  REGISTER_TEST(setneq04);
+
   void seteq_re01()
   {
     Solver s;

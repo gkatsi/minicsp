@@ -89,14 +89,14 @@ namespace setneq {
       ps2.push( ~Lit(onlya) );
     }
 
-    for(int i = a.umin(s); i < b.umin(s); ++i) {
+    for(int i = a.umin(s); i < std::min(a.umax(s)+1, b.umin(s)); ++i) {
       ps1.growTo(2);
       ps1[0] = Lit(onlya);
       ps1[1] =  ~Lit( a.ini(s, i) );
       s.addClause(ps1);
       ps2.push( Lit( a.ini(s, i) ) );
     }
-    for(int i = b.umax(s)+1; i <= a.umax(s); ++i) {
+    for(int i = std::max(a.umin(s), b.umax(s)+1); i <= a.umax(s); ++i) {
       ps1.growTo(2);
       ps1[0] = Lit(onlya);
       ps1[1] =  ~Lit( a.ini(s, i) );
@@ -140,7 +140,7 @@ void post_setneq(Solver &s, setvar a, setvar b)
 
   for(int i = std::max(a.umin(s), b.umin(s)),
         iend = std::min(a.umax(s), b.umax(s))+1;
-      i != iend; ++i) {
+      i < iend; ++i) {
     Var y = s.newVar();
     ps2.push( Lit(y) );
 
