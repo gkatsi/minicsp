@@ -1117,6 +1117,24 @@ namespace FlatZinc {
       post_setunion(s, a, b, c);
     }
 
+    /* Note that we subset in flatzinc is subseteq for us (and same
+       for superset). Flatzinc does not have strict subset. */
+    void p_set_subset(Solver &s, FlatZincModel& m,
+                      const ConExpr& ce, AST::Node* ann) {
+      setvar a = getSetVar(s, m, ce[0]);
+      setvar b = getSetVar(s, m, ce[1]);
+
+      post_setsubseteq(s, a, b);
+    }
+
+    void p_set_superset(Solver &s, FlatZincModel& m,
+                        const ConExpr& ce, AST::Node* ann) {
+      setvar a = getSetVar(s, m, ce[0]);
+      setvar b = getSetVar(s, m, ce[1]);
+
+      post_setsuperseteq(s, a, b);
+    }
+
     class IntPoster {
     public:
       IntPoster(void) {
@@ -1197,6 +1215,9 @@ namespace FlatZinc {
         registry().add("set_diff", &p_set_diff);
         registry().add("set_intersect", &p_set_isect);
         registry().add("set_union", &p_set_union);
+
+        registry().add("set_subset", &p_set_subset);
+        registry().add("set_superset", &p_set_superset);
       }
     };
     IntPoster __int_poster;

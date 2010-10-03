@@ -359,6 +359,36 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(set_union01);
+
+  void set_subset01()
+  {
+    Solver s;
+    setvar a = s.newSetVar(5, 12);
+    setvar b = s.newSetVar(7, 11);
+    post_setsubset(s, a, b);
+    assert( a.excludes(s, 5) );
+    assert( a.excludes(s, 6) );
+    assert( a.excludes(s, 12) );
+
+    s.newDecisionLevel();
+    b.exclude(s, 8, NO_REASON);
+    assert(!s.propagate());
+    assert( a.excludes(s, 8) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    a.include(s, 8, NO_REASON);
+    assert(!s.propagate());
+    assert( b.includes(s, 8) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    a.include(s, 9, NO_REASON);
+    b.exclude(s, 9, NO_REASON);
+    assert(s.propagate());
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(set_subset01);
 }
 
 

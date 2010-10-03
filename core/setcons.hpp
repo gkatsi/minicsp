@@ -38,4 +38,18 @@ void post_setintersect(Solver &s, setvar a, setvar b, setvar c);
 /* A \cup B = C */
 void post_setunion(Solver &s, setvar a, setvar b, setvar c);
 
+/* Note for subset/superset: flatzinc semantics for subset are those
+   of subseteq, and strict subset is not defined. */
+/* A \subseteq B */
+void post_setsubseteq(Solver &s, setvar a, setvar b);
+
+/* A \subset B */
+void post_setsubset(Solver &s, setvar a, setvar b);
+
+/* A \superseteq B */
+void post_setsuperseteq(Solver &s, setvar a, setvar b);
+
+/* A \superset B */
+void post_setsuperset(Solver &s, setvar a, setvar b);
+
 #endif

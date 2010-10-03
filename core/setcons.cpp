@@ -420,3 +420,37 @@ void post_setunion(Solver &s, setvar a, setvar b, setvar c)
     s.addClause(ps);
   }
 }
+
+void post_setsubseteq(Solver &s, setvar a, setvar b)
+{
+  for(int i = a.umin(s); i < b.umin(s); ++i)
+    a.exclude(s, i, NO_REASON);
+  for(int i = b.umax(s)+1; i <= a.umax(s); ++i)
+    a.exclude(s, i, NO_REASON);
+
+  vec<Lit> ps;
+  for(int i = std::max(a.umin(s), b.umin(s)),
+        iend = std::min(a.umax(s), b.umax(s))+1;
+      i != iend; ++i) {
+    ps.growTo(2);
+    ps[0] = ~Lit( a.ini(s, i) );
+    ps[1] = Lit( b.ini(s, i) );
+    s.addClause(ps);
+  }
+}
+
+void post_setsubset(Solver &s, setvar a, setvar b)
+{
+  post_setsubseteq(s, a, b);
+  post_setneq(s, a, b);
+}
+
+void post_setsuperseteq(Solver &s, setvar a, setvar b)
+{
+  post_setsubseteq(s, b, a);
+}
+
+void post_setsuperset(Solver &s, setvar a, setvar b)
+{
+  post_setsubset(s, b, a);
+}
