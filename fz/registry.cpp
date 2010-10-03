@@ -1048,6 +1048,15 @@ namespace FlatZinc {
       post_setdiff(s, A, B, C);
     }
 
+    void p_set_symdiff(Solver& s, FlatZincModel& m,
+                       const ConExpr& ce, AST::Node* ann) {
+      setvar A = getSetVar(s, m, ce[0]);
+      setvar B = getSetVar(s, m, ce[1]);
+      setvar C = getSetVar(s, m, ce[2]);
+
+      post_setsymdiff(s, A, B, C);
+    }
+
     void p_set_eq(Solver& s, FlatZincModel& m,
                     const ConExpr& ce, AST::Node* ann) {
       setvar A = getSetVar(s, m, ce[0]);
@@ -1231,6 +1240,7 @@ namespace FlatZinc {
         registry().add("set_in_reif", &p_set_in_re);
 
         registry().add("set_diff", &p_set_diff);
+        registry().add("set_symdiff", &p_set_symdiff);
         registry().add("set_intersect", &p_set_isect);
         registry().add("set_union", &p_set_union);
 

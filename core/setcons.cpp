@@ -53,6 +53,89 @@ void post_setdiff(Solver &s, setvar a, setvar b, setvar c)
   post_leq(s, c.card(s), a.card(s), 0);
 }
 
+void post_setsymdiff(Solver& s, setvar a, setvar b, setvar c)
+{
+  vec<Lit> ps;
+  for(int i = c.umin(s); i <= c.umax(s); ++i) {
+    if( ( i < a.umin(s) || i > a.umax(s) ) &&
+        ( i < b.umin(s) || i > b.umax(s) ) )
+      c.exclude(s, i, NO_REASON);
+  }
+  for(int i = a.umin(s); i <= a.umax(s); ++i) {
+    if( i < b.umin(s) || i > b.umax(s) ) {
+      // a.ini(i) <=> c.ini(i)
+      if( i >= c.umin(s) && i <= c.umax(s) ) {
+        ps.clear();
+        ps.push( ~Lit( c.ini(s, i) ) );
+        ps.push( Lit( a.ini(s, i) ) );
+        s.addClause(ps);
+
+        ps.clear();
+        ps.push( Lit( c.ini(s, i) ) );
+        ps.push( ~Lit( a.ini(s, i) ) );
+        s.addClause(ps);
+      } else {
+        ps.clear();
+        ps.push( ~Lit( a.ini(s, i) ) );
+        s.addClause(ps);
+      }
+    } else {
+      // a.ini(i) /\ !b.ini(i) => c.ini(i)
+      ps.clear();
+      pushifdef( ps, Lit( c.ini(s, i) ) );
+      ps.push( Lit( b.ini(s, i) ) );
+      ps.push( ~Lit( a.ini(s, i) ) );
+      s.addClause(ps);
+
+      // !a.ini(i) /\ b.ini(i) => c.ini(i)
+      ps.clear();
+      pushifdef( ps, Lit( c.ini(s, i) ) );
+      ps.push( ~Lit( b.ini(s, i) ) );
+      ps.push( Lit( a.ini(s, i) ) );
+      s.addClause(ps);
+
+      if( i < c.umin(s) || i > c.umax(s) )
+        continue;
+
+      // c.ini(i) => a.ini(i) \/ b.ini(i))
+      // c.ini(i) => (a.ini(i) => !b.ini(i))
+      ps.clear();
+      ps.push( ~Lit( c.ini(s, i) ) );
+      ps.push( Lit( a.ini(s, i) ) );
+      ps.push( Lit( b.ini(s, i) ) );
+      s.addClause(ps);
+
+      ps.clear();
+      ps.push( ~Lit( c.ini(s, i) ) );
+      ps.push( ~Lit( a.ini(s, i) ) );
+      ps.push( ~Lit( b.ini(s, i) ) );
+      s.addClause(ps);
+    }
+  }
+
+  for(int i = b.umin(s); i <= b.umax(s); ++i) {
+    if( i < a.umin(s) || i > a.umax(s) ) {
+      // b.ini(i) <=> c.ini(i)
+      if( i >= c.umin(s) && i <= c.umax(s) ) {
+        ps.clear();
+        ps.push( ~Lit( c.ini(s, i) ) );
+        ps.push( Lit( b.ini(s, i) ) );
+        s.addClause(ps);
+
+        ps.clear();
+        pushifdef( ps, Lit( c.ini(s, i) ) );
+        ps.push( ~Lit( b.ini(s, i) ) );
+        s.addClause(ps);
+      } else {
+        ps.clear();
+        ps.push( ~Lit( b.ini(s, i) ) );
+        s.addClause(ps);
+      }
+    } // else has been handled in the loop iterating over the universe
+      // of a
+  }
+}
+
 void post_seteq(Solver &s, setvar a, setvar b)
 {
   post_eq(s, a.card(s), b.card(s), 0);

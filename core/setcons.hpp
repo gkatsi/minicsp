@@ -11,6 +11,9 @@
 /* A \ B = C */
 void post_setdiff(Solver &s, setvar a, setvar b, setvar c);
 
+/* A \ B \cup B \ A = C */
+void post_setsymdiff(Solver& s, setvar a, setvar b, setvar c);
+
 /* A = B */
 void post_seteq(Solver &s, setvar a, setvar b);
 

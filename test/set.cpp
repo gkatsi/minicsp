@@ -117,6 +117,148 @@ namespace {
   }
   REGISTER_TEST(setdiff06);
 
+  void setsymdiff01()
+  {
+    Solver s;
+    setvar A = s.newSetVar(1, 1);
+    setvar B = s.newSetVar(2, 3);
+    setvar C = s.newSetVar(1, 3);
+
+    post_setsymdiff(s, A, B, C);
+
+    A.include(s, 1, NO_REASON);
+    B.include(s, 2, NO_REASON);
+    C.include(s, 3, NO_REASON);
+
+    assert_num_solutions(s, 1);
+  }
+  REGISTER_TEST(setsymdiff01);
+
+  void setsymdiff02()
+  {
+    Solver s;
+    setvar A = s.newSetVar(1, 3);
+    setvar B = s.newSetVar(2, 4);
+    setvar C = s.newSetVar(1, 4);
+    post_setsymdiff(s, A, B, C);
+
+    s.newDecisionLevel();
+    A.exclude(s, 1, NO_REASON);
+    assert(!s.propagate());
+    assert( C.excludes(s, 1) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    B.exclude(s, 4, NO_REASON);
+    assert(!s.propagate());
+    assert( C.excludes(s, 4) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    A.include(s, 2, NO_REASON);
+    B.exclude(s, 2, NO_REASON);
+    A.exclude(s, 3, NO_REASON);
+    B.include(s, 3, NO_REASON);
+    assert(!s.propagate());
+    assert( C.includes(s, 2) );
+    assert( C.includes(s, 3) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    A.include(s, 2, NO_REASON);
+    B.include(s, 2, NO_REASON);
+    A.exclude(s, 3, NO_REASON);
+    B.exclude(s, 3, NO_REASON);
+    assert(!s.propagate());
+    assert( C.excludes(s, 2) );
+    assert( C.excludes(s, 3) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    A.include(s, 2, NO_REASON);
+    B.include(s, 3, NO_REASON);
+    assert(!s.propagate());
+    assert( !C.includes(s, 2) );
+    assert( !C.includes(s, 3) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    A.include(s, 2, NO_REASON);
+    B.include(s, 3, NO_REASON);
+    C.include(s, 2, NO_REASON);
+    C.include(s, 3, NO_REASON);
+    assert(!s.propagate());
+    assert(A.excludes(s, 3));
+    assert(B.excludes(s, 2));
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    A.exclude(s, 2, NO_REASON);
+    B.exclude(s, 3, NO_REASON);
+    C.include(s, 2, NO_REASON);
+    C.include(s, 3, NO_REASON);
+    assert(!s.propagate());
+    assert(A.includes(s, 3));
+    assert(B.includes(s, 2));
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    C.include(s, 1, NO_REASON);
+    C.include(s, 4, NO_REASON);
+    assert(!s.propagate());
+    assert(A.includes(s, 1));
+    assert(B.includes(s, 4));
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(setsymdiff02);
+
+  // non-overlapping universes C and A/B
+  void setsymdiff03()
+  {
+    Solver s;
+    setvar A = s.newSetVar(1, 3);
+    setvar B = s.newSetVar(2, 4);
+    setvar C = s.newSetVar(7, 10);
+    post_setsymdiff(s, A, B, C);
+
+    assert( A.excludes(s, 1) );
+    assert( B.excludes(s, 4) );
+
+    s.newDecisionLevel();
+    A.include(s, 2, NO_REASON);
+    assert(!s.propagate());
+    assert( B.includes(s, 2) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    B.include(s, 2, NO_REASON);
+    assert(!s.propagate());
+    assert( A.includes(s, 2) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    A.exclude(s, 2, NO_REASON);
+    assert(!s.propagate());
+    assert( B.excludes(s, 2) );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(setsymdiff03);
+
+  void setsymdiff04()
+  {
+    Solver s;
+    setvar A = s.newSetVar(1, 3);
+    setvar B = s.newSetVar(4, 6);
+    setvar C = s.newSetVar(7, 10);
+    post_setsymdiff(s, A, B, C);
+
+    for(int i = 1; i <= 6; ++i) {
+      assert( A.excludes(s, i) );
+      assert( B.excludes(s, i) );
+    }
+  }
+  REGISTER_TEST(setsymdiff04);
+
   void seteq01()
   {
     Solver s;
