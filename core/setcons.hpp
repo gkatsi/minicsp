@@ -52,4 +52,13 @@ void post_setsuperseteq(Solver &s, setvar a, setvar b);
 /* A \superset B */
 void post_setsuperset(Solver &s, setvar a, setvar b);
 
+/* A \subset B <=> p */
+void post_setsubseteq_re(Solver &s, setvar a, setvar b, Lit p);
+void post_setsubseteq_re(Solver &s, setvar a, setvar b, cspvar p);
+
+/* A \superseteq B <=> p */
+void post_setsuperseteq_re(Solver &s, setvar a, setvar b, Lit p);
+void post_setsuperseteq_re(Solver &s, setvar a, setvar b, cspvar p);
+
+
 #endif

@@ -1135,6 +1135,24 @@ namespace FlatZinc {
       post_setsuperseteq(s, a, b);
     }
 
+    void p_set_subset_re(Solver &s, FlatZincModel& m,
+                      const ConExpr& ce, AST::Node* ann) {
+      setvar a = getSetVar(s, m, ce[0]);
+      setvar b = getSetVar(s, m, ce[1]);
+      cspvar p = getBoolVar(s, m, ce[2]);
+
+      post_setsubseteq_re(s, a, b, p);
+    }
+
+    void p_set_superset_re(Solver &s, FlatZincModel& m,
+                      const ConExpr& ce, AST::Node* ann) {
+      setvar a = getSetVar(s, m, ce[0]);
+      setvar b = getSetVar(s, m, ce[1]);
+      cspvar p = getBoolVar(s, m, ce[2]);
+
+      post_setsuperseteq_re(s, a, b, p);
+    }
+
     class IntPoster {
     public:
       IntPoster(void) {
@@ -1218,6 +1236,8 @@ namespace FlatZinc {
 
         registry().add("set_subset", &p_set_subset);
         registry().add("set_superset", &p_set_superset);
+        registry().add("set_subset_reif", &p_set_subset_re);
+        registry().add("set_superset_reif", &p_set_superset_re);
       }
     };
     IntPoster __int_poster;

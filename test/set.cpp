@@ -428,6 +428,129 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(set_subset01);
+
+  void set_subseteq_re01()
+  {
+    Solver s;
+    setvar a = s.newSetVar(5, 12);
+    setvar b = s.newSetVar(7, 11);
+    cspvar r = s.newCSPVar(0, 1);
+    post_setsubseteq_re(s, a, b, r);
+
+    s.newDecisionLevel();
+    a.include(s, 6, NO_REASON);
+    assert(!s.propagate());
+    assert( r.max(s) == 0 );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    a.include(s, 7, NO_REASON);
+    b.exclude(s, 7, NO_REASON);
+    assert(!s.propagate());
+    assert( r.max(s) == 0 );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    a.include(s, 7, NO_REASON);
+    r.setmin(s, 1, NO_REASON);
+    assert(!s.propagate());
+    assert( b.includes(s, 7) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    for(int i = 5; i <= 12; ++i)
+      if( i != 7 )
+        a.exclude(s, i, NO_REASON);
+    for(int i = 7; i <= 11; ++i)
+      if( i != 7 )
+        b.exclude(s, i, NO_REASON);
+    a.include(s, 7, NO_REASON);
+    r.setmax(s, 0, NO_REASON);
+    assert(!s.propagate());
+    assert( b.excludes(s, 7) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    for(int i = 5; i <= 12; ++i)
+      if( i != 7 )
+        a.exclude(s, i, NO_REASON);
+    for(int i = 7; i <= 11; ++i)
+      if( i != 7 )
+        b.exclude(s, i, NO_REASON);
+    b.include(s, 7, NO_REASON);
+    r.setmax(s, 0, NO_REASON);
+    assert(s.propagate());
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    for(int i = 5; i <= 12; ++i)
+      if( i != 7 )
+        a.exclude(s, i, NO_REASON);
+    for(int i = 7; i <= 11; ++i)
+      if( i != 7 )
+        b.exclude(s, i, NO_REASON);
+    b.exclude(s, 7, NO_REASON);
+    r.setmax(s, 0, NO_REASON);
+    assert(!s.propagate());
+    assert( a.includes(s, 7) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    for(int i = 5; i <= 12; ++i)
+      if( i != 7 )
+        a.exclude(s, i, NO_REASON);
+    b.include(s, 7, NO_REASON);
+    assert(!s.propagate());
+    assert( r.min(s) == 1 );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(set_subseteq_re01);
+
+  void set_subseteq_re02()
+  {
+    Solver s;
+    setvar a = s.newSetVar(1, 2);
+    setvar b = s.newSetVar(4, 6);
+    cspvar r = s.newCSPVar(0, 1);
+    post_setsubseteq_re(s, a, b, r);
+
+    s.newDecisionLevel();
+    r.setmin(s, 1, NO_REASON);
+    assert( !s.propagate() );
+    assert( a.excludes(s, 1) );
+    assert( a.excludes(s, 2) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    a.include(s, 1, NO_REASON);
+    assert( !s.propagate() );
+    assert( r.max(s) == 0 );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(set_subseteq_re02);
+
+  void set_subseteq_re03()
+  {
+    Solver s;
+    setvar a = s.newSetVar(9, 10);
+    setvar b = s.newSetVar(4, 6);
+    cspvar r = s.newCSPVar(0, 1);
+    post_setsubseteq_re(s, a, b, r);
+
+    s.newDecisionLevel();
+    r.setmin(s, 1, NO_REASON);
+    assert( !s.propagate() );
+    assert( a.excludes(s, 9) );
+    assert( a.excludes(s, 10) );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    a.include(s, 9, NO_REASON);
+    assert( !s.propagate() );
+    assert( r.max(s) == 0 );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(set_subseteq_re03);
 }
 
 

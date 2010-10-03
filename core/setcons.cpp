@@ -458,3 +458,77 @@ void post_setsuperset(Solver &s, setvar a, setvar b)
 {
   post_setsubset(s, b, a);
 }
+
+void post_setsubseteq_re(Solver &s, setvar a, setvar b, Lit p)
+{
+  vec<Lit> ps;
+  for(int i = a.umin(s); i < std::min(b.umin(s), a.umax(s)+1); ++i) {
+    ps.growTo(2);
+    ps[0] = ~Lit( a.ini(s, i) );
+    ps[1] = ~p;
+    s.addClause(ps);
+  }
+  for(int i = std::max(b.umax(s)+1, a.umin(s)); i <= a.umax(s); ++i) {
+    ps.growTo(2);
+    ps[0] = ~Lit( a.ini(s, i) );
+    ps[1] = ~p;
+    s.addClause(ps);
+  }
+
+  for(int i = std::max(a.umin(s), b.umin(s)),
+        iend = std::min(a.umax(s), b.umax(s))+1;
+      i < iend; ++i) {
+    ps.clear();
+    ps.push( ~Lit( a.ini(s, i) ) );
+    pushifdef(ps, Lit( b.ini(s, i) ));
+    ps.push(~p);
+    s.addClause(ps);
+  }
+
+  ps.clear();
+  vec<Lit> ps2;
+  Var onlya = var_Undef;
+  setneq::post_unique_used(s, a, b, ps, ps2, onlya);
+  ps.clear();
+  ps2.clear();
+  if( onlya != var_Undef )
+    ps2.push( Lit(onlya) );
+  for(int i = std::max(a.umin(s), b.umin(s)),
+        iend = std::min(a.umax(s), b.umax(s))+1;
+      i < iend; ++i) {
+    Var y = s.newVar();
+    ps.clear();
+    ps.push( Lit( a.ini(s, i) ) );
+    ps.push( Lit(y) );
+    s.addClause(ps);
+
+    ps.clear();
+    ps.push( ~Lit( b.ini(s, i) ) );
+    ps.push( Lit(y) );
+    s.addClause(ps);
+
+    ps2.push( ~Lit(y) );
+  }
+  ps2.push(p);
+  s.addClause(ps2);
+}
+
+void post_setsubseteq_re(Solver &s, setvar a, setvar b, cspvar r)
+{
+  assert( r.min(s) >= 0 && r.max(s) <= 1);
+  if( r.max(s) == 0 )
+    post_setsubseteq_re(s, a, b, ~Lit( r.eqi(s, 0) ));
+  else
+    post_setsubseteq_re(s, a, b, Lit( r.eqi(s, 1) ));
+}
+
+void post_setsuperseteq_re(Solver &s, setvar a, setvar b, Lit p)
+{
+  post_setsubseteq_re(s, b, a, p);
+}
+
+
+void post_setsuperseteq_re(Solver &s, setvar a, setvar b, cspvar r)
+{
+  post_setsubseteq_re(s, b, a, r);
+}
