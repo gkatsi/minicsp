@@ -224,6 +224,31 @@ namespace {
   }
   REGISTER_TEST(seteq_re01);
 
+  void seteq_re02()
+  {
+    Solver s;
+    setvar a = s.newSetVar(1, 2);
+    setvar b = s.newSetVar(5, 8);
+    cspvar r = s.newCSPVar(0, 1);
+    post_seteq_re(s, a, b, r);
+
+    // the following cases have been tested already in 01, the
+    // important thing is that we post the constraint in the first
+    // place
+    s.newDecisionLevel();
+    a.include(s, 1, NO_REASON);
+    assert( !s.propagate() );
+    assert( r.max(s) == 0 );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    b.include(s, 5, NO_REASON);
+    assert( !s.propagate() );
+    assert( r.max(s) == 0 );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(seteq_re02);
+
   void setin01()
   {
     Solver s;

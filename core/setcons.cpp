@@ -214,7 +214,7 @@ void post_seteq_re(Solver &s, setvar a, setvar b, Lit p)
 
   for(int i = std::max(a.umin(s), b.umin(s)),
         iend = std::min(a.umax(s), b.umax(s))+1;
-      i != iend; ++i) {
+      i < iend; ++i) {
     Var y = s.newVar();
     ps2.push( Lit(y) );
 
