@@ -356,7 +356,12 @@ namespace FlatZinc {
         case SAT:
           next = findall;
           if( findall ) {
-            solver.excludeLast();
+            try {
+              solver.excludeLast();
+            } catch( unsat ) {
+              // no more solutions :( Poor us
+              next = false;
+            }
           }
           break;
         }
