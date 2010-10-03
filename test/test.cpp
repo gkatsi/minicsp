@@ -28,7 +28,11 @@ void assert_num_solutions(Solver &s, int ns)
     next = s.solve();
     if( next ) {
       ++numsol;
-      s.excludeLast();
+      try {
+        s.excludeLast();
+      } catch(unsat) {
+        next = false;
+      }
     }
   } while(next);
   assert(numsol == ns);
