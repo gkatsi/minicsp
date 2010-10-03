@@ -61,6 +61,62 @@ namespace {
   }
   REGISTER_TEST(setdiff03);
 
+  // non-overlapping universes: A and B
+  void setdiff04()
+  {
+    Solver s;
+    setvar A = s.newSetVar(1, 3);
+    setvar B = s.newSetVar(6, 9);
+    setvar C = s.newSetVar(1, 9);
+    post_setdiff(s, A, B, C);
+
+    s.newDecisionLevel();
+    A.include(s, 1, NO_REASON);
+    assert( !s.propagate() );
+    assert( C.includes(s, 1) );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(setdiff04);
+
+  // non-overlapping universes: everything
+  void setdiff05()
+  {
+    Solver s;
+    setvar A = s.newSetVar(1, 3);
+    setvar B = s.newSetVar(6, 9);
+    setvar C = s.newSetVar(11, 15);
+    post_setdiff(s, A, B, C);
+
+    for(int i = 1; i <= 15; ++i) {
+      assert( A.excludes(s, i) );
+      assert( C.excludes(s, i) );
+    }
+  }
+  REGISTER_TEST(setdiff05);
+
+  // non-overlapping universes: C with A/B, reduces to A \subseteq B
+  void setdiff06()
+  {
+    Solver s;
+    setvar A = s.newSetVar(1, 3);
+    setvar B = s.newSetVar(2, 5);
+    setvar C = s.newSetVar(11, 15);
+    post_setdiff(s, A, B, C);
+
+    assert( A.excludes(s, 1) );
+
+    for(int i = 11; i <= 15; ++i) {
+      assert( C.excludes(s, i) );
+    }
+
+    s.newDecisionLevel();
+    A.include(s, 3, NO_REASON);
+    assert( !s.propagate() );
+    assert( B.includes(s, 3) );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(setdiff06);
+
   void seteq01()
   {
     Solver s;

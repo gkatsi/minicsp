@@ -22,6 +22,10 @@ void post_setdiff(Solver &s, setvar a, setvar b, setvar c)
         pushifdef( ps, Lit( c.ini(s, i) ) );
         ps.push( ~Lit( a.ini(s, i) ) );
         s.addClause(ps);
+      } else {
+        ps.clear();
+        ps.push( ~Lit( a.ini(s, i) ) );
+        s.addClause(ps);
       }
     } else {
       // a.ini(i) /\ !b.ini(i) => c.ini(i)
