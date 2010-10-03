@@ -90,11 +90,15 @@ namespace setneq {
     }
 
     for(int i = a.umin(s); i < b.umin(s); ++i) {
+      ps1.growTo(2);
+      ps1[0] = Lit(onlya);
       ps1[1] =  ~Lit( a.ini(s, i) );
       s.addClause(ps1);
       ps2.push( Lit( a.ini(s, i) ) );
     }
     for(int i = b.umax(s)+1; i <= a.umax(s); ++i) {
+      ps1.growTo(2);
+      ps1[0] = Lit(onlya);
       ps1[1] =  ~Lit( a.ini(s, i) );
       s.addClause(ps1);
       ps2.push( Lit( a.ini(s, i) ) );
