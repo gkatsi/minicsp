@@ -1018,6 +1018,10 @@ Clause* Solver::propagate()
           confl = (*ci)->wake(*this, p);
           active_constraint = 0L;
           if( confl ) {
+            if( trace ) {
+              cout << "Constraint " << print(*this, **ci) << " failed, "
+                   << "clause " << print(*this, confl) << "\n";
+            }
             qhead = trail.size();
             break;
           }
