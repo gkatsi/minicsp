@@ -1386,6 +1386,9 @@ public:
           std::vector<int> const& weights, int lb);
 
   virtual Clause *wake(Solver& s, Lit p);
+  void clone(Solver& other);
+  ostream& print(ostream& os) const;
+  ostream& printstate(Solver& s, ostream& os) const;
 };
 
 void post_pb(Solver& s, vector<Var> const& vars,
@@ -1528,6 +1531,60 @@ Clause *cons_pb::wake(Solver& s, Lit)
   Clause *conf = Clause_new(ps, true);
   s.addInactiveClause(conf);
   return conf;
+}
+
+void cons_pb::clone(Solver& other)
+{
+  vector<Var> v;
+  vector<int> w;
+  for(size_t i = 0; i != _svars.size(); ++i) {
+    v.push_back(_svars[i].second);
+    w.push_back(_svars[i].first);
+  }
+  cons *con = new cons_pb(other, v, w, _lb);
+  other.addConstraint(con);
+}
+
+ostream& cons_pb::print(ostream& os) const
+{
+  for(size_t i = 0; i != _svars.size(); ++i) {
+    if( _svars[i].first == 1 ) {
+      if( i != 0 )
+        os << " + ";
+      os << _svars[i].second+1;
+    } else if( _svars[i].first == -1 ) {
+      if( i != 0 )
+        os << " ";
+      os << "- " << _svars[i].second+1;
+    } else if( _svars[i].first > 0 ) {
+      if( i != 0 )
+        os << " +";
+      os << _svars[i].first << "*" << _svars[i].second+1;
+    }
+    else if( _svars[i].first < 0 ) {
+      if( i != 0 )
+        os << " ";
+      os << "- " << -_svars[i].first << "*" << _svars[i].second+1;
+    }
+  }
+  os << " >= " << _lb;
+  return os;
+}
+
+ostream& cons_pb::printstate(Solver& s, ostream& os) const
+{
+  print(os);
+  os << " (with ";
+  for(size_t i = 0; i != _svars.size(); ++i) {
+    if( i ) os << ", ";
+    Var x = _svars[i].second;
+    int xmin = 0, xmax = 1;
+    if( s.value(x) == l_True ) xmin = 1;
+    else if( s.value(x) == l_False ) xmax = 0;
+    os << x+1 << " in [" << xmin << ", " << xmax << "]";
+  }
+  os << ")";
+  return os;
 }
 
 /* pseudoboolean with a var on the rhs: sum w[i]*v[i] = rhs */
