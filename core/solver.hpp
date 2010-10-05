@@ -81,6 +81,8 @@ public:
     void*   get(btptr p);                                       // get direct pointer to  backtrackable mem. for temporary use only
     template<typename T>
     T&      deref(btptr p);                                     // dereference backtrackable mem. for temporary use only
+    template<typename T>
+    T*      deref_array(btptr p);                               // dereference an array in backtrackable mem. for temporary use only
 
     // event information
     domevent event(Lit p) const;                                // get the event associated with a literal, if any
@@ -321,6 +323,13 @@ inline
 T& Solver::deref(btptr p)
 {
   return *(T*)get(p);
+}
+
+template <typename T>
+inline
+T* Solver::deref_array(btptr p)
+{
+  return (T*)get(p);
 }
 
 inline
