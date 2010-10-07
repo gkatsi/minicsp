@@ -88,6 +88,16 @@ public:
     domevent event(Lit p) const;                                // get the event associated with a literal, if any
     setevent sevent(Lit p) const;                               // get the set variable event associated with a literal
 
+    // variable naming
+    // these should all be self-explanatory
+    void setVarName(Var v, std::string const& name);
+    void setCSPVarName(cspvar v, std::string const& name);
+    void setSetVarName(setvar v, std::string const& name);
+
+    std::string const& getVarName(Var v);
+    std::string const& getCSPVarName(cspvar v);
+    std::string const& getSetVarName(setvar v);
+
     // Solving:
     //
     bool    simplify     ();                        // Removes already satisfied clauses.
@@ -237,6 +247,11 @@ protected:
     void*               current_space;       // All backtrackable data are pointers into this
 
     cons*               active_constraint;   // the constraint currently propagating.
+
+    // names. for tracing output etc
+    std::vector<std::string>  varnames;
+    std::vector<std::string>  cspvarnames;
+    std::vector<std::string>  setvarnames;
 
     // Temporaries (to reduce allocation overhead). Each variable is prefixed by the method in which it is
     // used, exept 'seen' wich is used in several places.
@@ -451,15 +466,48 @@ inline void Solver::printClause(const C& c)
 }
 
 inline
+std::ostream& operator<<(std::ostream& os, var_printer vp)
+{
+  std::string const& vn = vp._s.getVarName(vp._v);
+  if( vn.empty() )
+    os << vp._v+1;
+  else
+    os << vn;
+  return os;
+}
+
+inline
+std::ostream& operator<<(std::ostream& os, cspvar_printer vp)
+{
+  std::string const& vn = vp._s.getCSPVarName(vp._v);
+  if( vn.empty() )
+    os << "x" << vp._v.id();
+  else
+    os << vn;
+  return os;
+}
+
+inline
+std::ostream& operator<<(std::ostream& os, setvar_printer vp)
+{
+  std::string const& vn = vp._s.getSetVarName(vp._v);
+  if( vn.empty() )
+    os << "s" << vp._v.id();
+  else
+    os << vn;
+  return os;
+}
+
+inline
 std::ostream& operator<<(std::ostream& os, lit_printer lp)
 {
   Solver &s(lp._s);
   Lit l = lp._p;
   domevent pe = s.event(l);
   if( noevent(pe) )
-    os << (sign(l) ? "-" : "") << var(l)+1;
+    os << (sign(l) ? "-" : "") << var_printer(s, var(l));
   else
-    os << pe;
+    os << domevent_printer(s, pe);
   os << ":"
      << (s.value(l) == l_True ? '1' : (s.value(l) == l_False ? '0' : 'X'));
   if( s.value(l) != l_Undef )

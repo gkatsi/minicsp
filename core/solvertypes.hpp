@@ -327,7 +327,7 @@ class cons
   virtual void clone(Solver &othersolver);
 
   /* human readable representation of the constraint for debugging */
-  virtual std::ostream& print(std::ostream& os) const;
+  virtual std::ostream& print(Solver& s, std::ostream& os) const;
   /* as above, but also any state (var domains, etc) */
   virtual std::ostream& printstate(Solver& s, std::ostream& os) const;
 };
@@ -526,11 +526,6 @@ const char *opstring(setevent::event_type t) {
 //==================================================
 // output
 
-std::ostream& operator<<(std::ostream& os, cons const&);
-std::ostream& operator<<(std::ostream& os, domevent);
-std::ostream& operator<<(std::ostream& os, Lit);
-std::ostream& operator<<(std::ostream& os, cspvar);
-
 struct cons_printer {
   Solver& _s;
   cons const & _c;
@@ -540,8 +535,44 @@ struct cons_printer {
 inline
 std::ostream& operator<<(std::ostream& os, cons_printer cp)
 {
+  return cp._c.print(cp._s, os);
+}
+
+struct cons_state_printer {
+  Solver& _s;
+  cons const & _c;
+  cons_state_printer(Solver& s, cons const& c) : _s(s), _c(c) {}
+};
+
+inline
+std::ostream& operator<<(std::ostream& os, cons_state_printer cp)
+{
   return cp._c.printstate(cp._s, os);
 }
+
+struct var_printer {
+  Solver& _s;
+  Var _v;
+  var_printer(Solver& s, Var v) : _s(s), _v(v) {}
+};
+
+std::ostream& operator<<(std::ostream& os, var_printer vp);
+
+struct cspvar_printer {
+  Solver& _s;
+  cspvar _v;
+  cspvar_printer(Solver& s, cspvar v) : _s(s), _v(v) {}
+};
+
+std::ostream& operator<<(std::ostream& os, cspvar_printer vp);
+
+struct setvar_printer {
+  Solver& _s;
+  setvar _v;
+  setvar_printer(Solver& s, setvar v) : _s(s), _v(v) {}
+};
+
+std::ostream& operator<<(std::ostream& os, setvar_printer vp);
 
 struct lit_printer {
   Solver& _s;
@@ -550,6 +581,22 @@ struct lit_printer {
 };
 
 std::ostream& operator<<(std::ostream& os, lit_printer lp);
+
+struct domevent_printer {
+  Solver& _s;
+  domevent _p;
+  domevent_printer(Solver& s, domevent p) : _s(s), _p(p) {}
+};
+
+std::ostream& operator<<(std::ostream& os, domevent_printer lp);
+
+struct setevent_printer {
+  Solver& _s;
+  setevent _p;
+  setevent_printer(Solver& s, setevent p) : _s(s), _p(p) {}
+};
+
+std::ostream& operator<<(std::ostream& os, setevent_printer lp);
 
 template<typename T>
 struct clause_printer {
@@ -587,18 +634,6 @@ struct domain_as_set {
 
 std::ostream& operator<<(std::ostream& os, domain_as_range x);
 std::ostream& operator<<(std::ostream& os, domain_as_set x);
-
-inline
-cons_printer print(Solver& s, cons const& c)
-{
-  return cons_printer(s, c);
-}
-
-inline
-lit_printer print(Solver& s, Lit p)
-{
-  return lit_printer(s, p);
-}
 
 template<typename T>
 inline

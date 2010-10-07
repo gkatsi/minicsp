@@ -171,7 +171,7 @@ public:
     return eq::eq_propagate<W>(s, _x, _y, _c, p, _reason);
   }
   virtual void clone(Solver& other);
-  virtual ostream& print(ostream& os) const;
+  virtual ostream& print(Solver &s, ostream& os) const;
   virtual ostream& printstate(Solver& s, ostream& os) const;
 };
 
@@ -183,11 +183,11 @@ void cons_eq<W>::clone(Solver &other)
 }
 
 template<int W>
-ostream& cons_eq<W>::print(ostream& os) const
+ostream& cons_eq<W>::print(Solver &s, ostream& os) const
 {
-  os << _x << " = ";
+  os << cspvar_printer(s, _x) << " = ";
   if( W == -1 ) os << "-";
-  os << _y;
+  os << cspvar_printer(s, _y);
   if( _c > 0 )
     os << " + " << _c;
   else if( _c < 0 )
@@ -198,10 +198,10 @@ ostream& cons_eq<W>::print(ostream& os) const
 template<int W>
 ostream& cons_eq<W>::printstate(Solver& s, ostream& os) const
 {
-  print(os);
+  print(s, os);
   os << " (with ";
-  os << _x << " in " << domain_as_set(s, _x) << ", "
-     << _y << " in " << domain_as_set(s, _y)
+  os << cspvar_printer(s, _x) << " in " << domain_as_set(s, _x) << ", "
+     << cspvar_printer(s, _y) << " in " << domain_as_set(s, _y)
      << ")";
   return os;
 }
@@ -272,7 +272,7 @@ public:
 
   virtual Clause *wake(Solver& s, Lit p);
   virtual void clone(Solver& other);
-  virtual ostream& print(ostream& os) const;
+  virtual ostream& print(Solver &s, ostream& os) const;
 };
 
 Clause *cons_neq::wake(Solver& s, Lit event)
@@ -287,9 +287,9 @@ void cons_neq::clone(Solver &other)
   other.addConstraint(con);
 }
 
-ostream& cons_neq::print(ostream& os) const
+ostream& cons_neq::print(Solver &s, ostream& os) const
 {
-  os << _x << " != " << _y;
+  os << cspvar_printer(s, _x) << " != " << cspvar_printer(s, _y);
   if( _c > 0 )
     os << " + " << _c;
   else if( _c < 0 )
@@ -362,7 +362,7 @@ public:
 
   Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
-  ostream& print(ostream& os) const;
+  ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
@@ -404,23 +404,23 @@ void cons_eq_re::clone(Solver & other)
   other.addConstraint(con);
 }
 
-ostream& cons_eq_re::print(ostream& os) const
+ostream& cons_eq_re::print(Solver &s, ostream& os) const
 {
-  os << "(" << _x << " = " << _y;
+  os << "(" << cspvar_printer(s, _x) << " = " << cspvar_printer(s, _y);
   if( _c > 0 )
     os << " + " << _c;
   else if( _c < 0 )
     os << " - " << -_c;
-  os << ") <=> " << _b;
+  os << ") <=> " << lit_printer(s, _b);
   return os;
 }
 
 ostream& cons_eq_re::printstate(Solver & s, ostream& os) const
 {
-  print(os);
-  os << " (with " << _x << " in " << domain_as_set(s, _x)
-     << ", " << _y << " in " << domain_as_set(s, _y)
-     << ", " << _b << " in " << ::print(s, _b)
+  print(s, os);
+  os << " (with " << cspvar_printer(s, _x) << " in " << domain_as_set(s, _x)
+     << ", " << cspvar_printer(s, _y) << " in " << domain_as_set(s, _y)
+     << ", " << lit_printer(s, _b)
      << ")";
   return os;
 }
@@ -515,7 +515,7 @@ public:
 
   virtual Clause *wake(Solver& s, Lit p);
   virtual void clone(Solver& othersolver);
-  virtual ostream& print(ostream& os) const;
+  virtual ostream& print(Solver &s, ostream& os) const;
 };
 
 Clause *cons_le::wake(Solver& s, Lit)
@@ -530,9 +530,9 @@ void cons_le::clone(Solver &other)
   other.addConstraint(con);
 }
 
-ostream& cons_le::print(ostream& os) const
+ostream& cons_le::print(Solver &s, ostream& os) const
 {
-  os << _x << " <= " << _y;
+  os << cspvar_printer(s, _x) << " <= " << cspvar_printer(s, _y);
   if( _c > 0 )
     os << " + " << _c;
   else if( _c < 0 )
@@ -575,7 +575,7 @@ public:
 
   Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
-  ostream& print(ostream& os) const;
+  ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
@@ -611,23 +611,23 @@ void cons_leq_re::clone(Solver & other)
   other.addConstraint(con);
 }
 
-ostream& cons_leq_re::print(ostream& os) const
+ostream& cons_leq_re::print(Solver &s, ostream& os) const
 {
-  os << "(" << _x << " <= " << _y;
+  os << "(" << cspvar_printer(s, _x) << " <= " << cspvar_printer(s, _y);
   if( _c > 0 )
     os << " + " << _c;
   else if( _c < 0 )
     os << " - " << -_c;
-  os << ") <=> " << _b;
+  os << ") <=> " << lit_printer(s, _b);
   return os;
 }
 
 ostream& cons_leq_re::printstate(Solver & s, ostream& os) const
 {
-  print(os);
-  os << " (with " << _x << " in " << domain_as_set(s, _x)
-     << ", " << _y << " in " << domain_as_set(s, _y)
-     << ", " << _b << " in " << ::print(s, _b)
+  print(s, os);
+  os << " (with " << cspvar_printer(s, _x) << " in " << domain_as_set(s, _x)
+     << ", " << cspvar_printer(s, _y) << " in " << domain_as_set(s, _y)
+     << ", " << lit_printer(s, _b)
      << ")";
   return os;
 }
@@ -712,7 +712,7 @@ public:
 
   Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
-  ostream& print(ostream& os) const;
+  ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
@@ -753,9 +753,10 @@ void cons_abs::clone(Solver &other)
   other.addConstraint(con);
 }
 
-ostream& cons_abs::print(ostream& os) const
+ostream& cons_abs::print(Solver &s, ostream& os) const
 {
-  os << "abs(" << _x << ") = " << _y;
+  os << "abs(" << cspvar_printer(s, _x) << ") = "
+     << cspvar_printer(s, _y);
   if( _c > 0 )
     os << " + " << _c;
   else if( _c < 0 )
@@ -765,10 +766,10 @@ ostream& cons_abs::print(ostream& os) const
 
 ostream& cons_abs::printstate(Solver& s, ostream& os) const
 {
-  print(os);
+  print(s, os);
   os << " (with ";
-  os << _x << " in [" << _x.min(s) << ", " << _x.max(s) << "], ";
-  os << _y << " in [" << _y.min(s) << ", " << _y.max(s) << "])";
+  os << cspvar_printer(s, _x) << " in " << domain_as_range(s, _x) << ", "
+     << cspvar_printer(s, _y) << " in " << domain_as_range(s, _y) << ")";
   return os;
 }
 
@@ -817,7 +818,7 @@ public:
 
   Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
-  ostream& print(ostream& os) const;
+  ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
@@ -937,26 +938,27 @@ void cons_lin_le<N>::clone(Solver &other)
 }
 
 template<size_t N>
-ostream& cons_lin_le<N>::print(ostream& os) const
+ostream& cons_lin_le<N>::print(Solver &s, ostream& os) const
 {
   for(size_t i = 0; i != _vars.size(); ++i) {
     if( _vars[i].first == 1 ) {
       if( i != 0 )
         os << " + ";
-      os << _vars[i].second;
+      os << cspvar_printer(s, _vars[i].second);
     } else if( _vars[i].first == -1 ) {
       if( i != 0 )
         os << " ";
-      os << "- " << _vars[i].second;
+      os << "- " << cspvar_printer(s, _vars[i].second);
     } else if( _vars[i].first > 0 ) {
       if( i != 0 )
         os << " +";
-      os << _vars[i].first << "*" << _vars[i].second;
+      os << _vars[i].first << "*" << cspvar_printer(s, _vars[i].second);
     }
     else if( _vars[i].first < 0 ) {
       if( i != 0 )
         os << " ";
-      os << "- " << -_vars[i].first << "*" << _vars[i].second;
+      os << "- " << -_vars[i].first
+         << "*" << cspvar_printer(s, _vars[i].second);
     }
   }
   if( _c > 0 )
@@ -971,12 +973,12 @@ ostream& cons_lin_le<N>::print(ostream& os) const
 template<size_t N>
 ostream& cons_lin_le<N>::printstate(Solver& s, ostream& os) const
 {
-  print(os);
+  print(s, os);
   os << " (with ";
   for(size_t i = 0; i != _vars.size(); ++i) {
     if( i ) os << ", ";
     cspvar x = _vars[i].second;
-    os << x << " in [" << x.min(s) << ", " << x.max(s) << "]";
+    os << cspvar_printer(s, x) << " in " << domain_as_range(s, x);
   }
   os << ")";
   return os;
@@ -1387,7 +1389,7 @@ public:
 
   virtual Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
-  ostream& print(ostream& os) const;
+  ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
@@ -1545,26 +1547,27 @@ void cons_pb::clone(Solver& other)
   other.addConstraint(con);
 }
 
-ostream& cons_pb::print(ostream& os) const
+ostream& cons_pb::print(Solver &s, ostream& os) const
 {
   for(size_t i = 0; i != _svars.size(); ++i) {
     if( _svars[i].first == 1 ) {
       if( i != 0 )
         os << " + ";
-      os << _svars[i].second+1;
+      os << var_printer(s, _svars[i].second);
     } else if( _svars[i].first == -1 ) {
       if( i != 0 )
         os << " ";
-      os << "- " << _svars[i].second+1;
+      os << "- " << var_printer(s, _svars[i].second);
     } else if( _svars[i].first > 0 ) {
       if( i != 0 )
         os << " +";
-      os << _svars[i].first << "*" << _svars[i].second+1;
+      os << _svars[i].first << "*" << var_printer(s, _svars[i].second);
     }
     else if( _svars[i].first < 0 ) {
       if( i != 0 )
         os << " ";
-      os << "- " << -_svars[i].first << "*" << _svars[i].second+1;
+      os << "- " << -_svars[i].first << "*"
+         << var_printer(s, _svars[i].second);
     }
   }
   os << " >= " << _lb;
@@ -1573,7 +1576,7 @@ ostream& cons_pb::print(ostream& os) const
 
 ostream& cons_pb::printstate(Solver& s, ostream& os) const
 {
-  print(os);
+  print(s, os);
   os << " (with ";
   for(size_t i = 0; i != _svars.size(); ++i) {
     if( i ) os << ", ";
@@ -1581,7 +1584,7 @@ ostream& cons_pb::printstate(Solver& s, ostream& os) const
     int xmin = 0, xmax = 1;
     if( s.value(x) == l_True ) xmin = 1;
     else if( s.value(x) == l_False ) xmax = 0;
-    os << x+1 << " in [" << xmin << ", " << xmax << "]";
+    os << var_printer(s, x) << " in [" << xmin << ", " << xmax << "]";
   }
   os << ")";
   return os;
@@ -1634,7 +1637,7 @@ public:
 
   Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
-  ostream& print(ostream& os) const;
+  ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
@@ -1727,36 +1730,37 @@ void cons_pbvar::clone(Solver &other)
   other.addConstraint(con);
 }
 
-ostream& cons_pbvar::print(ostream& os) const
+ostream& cons_pbvar::print(Solver &s, ostream& os) const
 {
   for(size_t i = 0; i != _svars.size(); ++i) {
     if( _svars[i].first == 1 ) {
       if( i != 0 )
         os << " + ";
-      os << _svars[i].second+1;
+      os << var_printer(s, _svars[i].second);
     } else if( _svars[i].first == -1 ) {
       if( i != 0 )
         os << " ";
-      os << "- " << _svars[i].second+1;
+      os << "- " << var_printer(s, _svars[i].second);
     } else if( _svars[i].first > 0 ) {
       if( i != 0 )
         os << " +";
-      os << _svars[i].first << "*" << _svars[i].second+1;
+      os << _svars[i].first << "*" << var_printer(s, _svars[i].second);
     }
     else if( _svars[i].first < 0 ) {
       if( i != 0 )
         os << " ";
-      os << "- " << -_svars[i].first << "*" << _svars[i].second+1;
+      os << "- " << -_svars[i].first
+         << "*" << var_printer(s, _svars[i].second);
     }
   }
-  os << " = " << _rhs;
+  os << " = " << cspvar_printer(s, _rhs);
 
   return os;
 }
 
 ostream& cons_pbvar::printstate(Solver& s, ostream& os) const
 {
-  print(os);
+  print(s, os);
   os << " (with ";
   for(size_t i = 0; i != _svars.size(); ++i) {
     if( i ) os << ", ";
@@ -1764,9 +1768,10 @@ ostream& cons_pbvar::printstate(Solver& s, ostream& os) const
     int xmin = 0, xmax = 1;
     if( s.value(x) == l_True ) xmin = 1;
     else if( s.value(x) == l_False ) xmax = 0;
-    os << x+1 << " in [" << xmin << ", " << xmax << "]";
+    os << var_printer(s, x) << " in [" << xmin << ", " << xmax << "]";
   }
-  os << ", " << _rhs << " in " << domain_as_range(s, _rhs);
+  os << ", " << cspvar_printer(s, _rhs)
+     << " in " << domain_as_range(s, _rhs);
   os << ")";
   return os;
 }
@@ -1859,7 +1864,7 @@ public:
 
   Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
-  ostream& print(ostream& os) const;
+  ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
@@ -1987,18 +1992,22 @@ void cons_mult::clone(Solver& other)
   other.addConstraint(con);
 }
 
-ostream& cons_mult::print(ostream& os) const
+ostream& cons_mult::print(Solver &s, ostream& os) const
 {
-  os << _x << " = " << _y << "*" << _z;
+  os << cspvar_printer(s, _x) << " = "
+     << cspvar_printer(s, _y) << "*" << cspvar_printer(s, _z);
   return os;
 }
 
 ostream& cons_mult::printstate(Solver &s, ostream& os) const
 {
-  print(os);
-  os << " (with " <<  _x << " in " << domain_as_range(s, _x)
-     << ", " <<   _y << " in " << domain_as_range(s, _y)
-     << ", " <<   _z << " in " << domain_as_range(s, _z);
+  print(s, os);
+  os << " (with " <<  cspvar_printer(s, _x)
+     << " in " << domain_as_range(s, _x)
+     << ", " <<   cspvar_printer(s, _y)
+     << " in " << domain_as_range(s, _y)
+     << ", " <<  cspvar_printer(s, _z)
+     << " in " << domain_as_range(s, _z);
   return os;
 }
 
@@ -2036,7 +2045,7 @@ public:
 
   Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
-  ostream& print(ostream& os) const;
+  ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
@@ -2072,18 +2081,20 @@ void cons_min::clone(Solver & other)
   other.addConstraint(con);
 }
 
-ostream& cons_min::print(ostream& os) const
+ostream& cons_min::print(Solver &s, ostream& os) const
 {
-  os << _x << " = min(" << _y << ", " << _z << ")";
+  os << cspvar_printer(s, _x) << " = min("
+     << cspvar_printer(s, _y) << ", "
+     << cspvar_printer(s, _z) << ")";
   return os;
 }
 
 ostream& cons_min::printstate(Solver & s, ostream& os) const
 {
-  print(os);
-  os << " (with " << _x << " in " << domain_as_set(s, _x)
-     << ", " << _y << " in " << domain_as_set(s, _y)
-     << ", " << _z << " in " << domain_as_set(s, _z)
+  print(s, os);
+  os << " (with " << cspvar_printer(s, _x) << " in " << domain_as_set(s, _x)
+     << ", " << cspvar_printer(s, _y) << " in " << domain_as_set(s, _y)
+     << ", " << cspvar_printer(s, _z) << " in " << domain_as_set(s, _z)
      << ")";
   return os;
 }
@@ -2114,7 +2125,7 @@ public:
 
   Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
-  ostream& print(ostream& os) const;
+  ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
@@ -2150,18 +2161,20 @@ void cons_max::clone(Solver & other)
   other.addConstraint(con);
 }
 
-ostream& cons_max::print(ostream& os) const
+ostream& cons_max::print(Solver &s, ostream& os) const
 {
-  os << _x << " = max(" << _y << ", " << _z << ")";
+  os << cspvar_printer(s, _x) << " = max("
+     << cspvar_printer(s, _y) << ", "
+     << cspvar_printer(s, _z) << ")";
   return os;
 }
 
 ostream& cons_max::printstate(Solver & s, ostream& os) const
 {
-  print(os);
-  os << " (with " << _x << " in " << domain_as_set(s, _x)
-     << ", " << _y << " in " << domain_as_set(s, _y)
-     << ", " << _z << " in " << domain_as_set(s, _z)
+  print(s, os);
+  os << " (with " << cspvar_printer(s, _x) << " in " << domain_as_set(s, _x)
+     << ", " << cspvar_printer(s, _y) << " in " << domain_as_set(s, _y)
+     << ", " << cspvar_printer(s, _z) << " in " << domain_as_set(s, _z)
      << ")";
   return os;
 }
