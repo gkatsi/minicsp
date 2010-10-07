@@ -1302,6 +1302,9 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                      << domain_as_set(*this, x);
               }
               cout << "\n";
+              cout << "Conflict clause " << conflicts
+                   << ": " << print(*this, reason[var(learnt_clause[0])])
+                   << "\n";
             }
 
             varDecayActivity();
