@@ -26,18 +26,24 @@ void post_less(Solver& s, cspvar v1, cspvar v2, int c);
 
 /* v1 == v2 + c <=> b */
 void post_eq_re(Solver &s, cspvar v1, cspvar v2, int c, cspvar b);
+void post_eq_re(Solver &s, cspvar v1, cspvar v2, int c, Lit b);
 
 /* v1 != v2 + c <=> b */
 void post_neq_re(Solver &s, cspvar v1, cspvar v2, int c, cspvar b);
+void post_neq_re(Solver &s, cspvar v1, cspvar v2, int c, Lit b);
 
 /* v1 <= v2 + c <=> b */
 void post_leq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_leq_re(Solver &s, cspvar x, cspvar y, int c, Lit b);
 /* v1 < v2 + c <=> b */
 void post_less_re(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_less_re(Solver &s, cspvar x, cspvar y, int c, Lit b);
 /* v1 >= v2 + c <=> b */
 void post_geq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_geq_re(Solver &s, cspvar x, cspvar y, int c, Lit b);
 /* v1 > v2 + c <=> b */
 void post_gt_re(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_gt_re(Solver &s, cspvar x, cspvar y, int c, Lit b);
 
 /* |x| = y + c */
 void post_abs(Solver& s, cspvar v1, cspvar v2, int c);

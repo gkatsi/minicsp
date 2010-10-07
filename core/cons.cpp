@@ -430,7 +430,7 @@ void post_eqneq_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
   vec<Lit> reason;
   if( eq_re::disjoint_domains(s, x, y, c, reason) ) {
     s.uncheckedEnqueue(~b); // will not cause unsat, because b is
-                            // unset by if test above
+                            // unset by if test in callers
     return;
   } else if( x.min(s) == y.min(s)+c &&
              x.min(s) == x.max(s) &&
@@ -457,6 +457,18 @@ void post_eq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
   post_eqneq_re(s, x, y, c, Lit(b.eqi(s, 1)));
 }
 
+void post_eq_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+  if( s.value(b) == l_True ) {
+    post_eq(s, x, y, c);
+    return;
+  } else if( s.value(b) == l_False ) {
+    post_neq(s, x, y, c);
+    return;
+  }
+  post_eqneq_re(s, x, y, c, b);
+}
+
 void post_neq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
 {
   assert( b.min(s) >= 0 && b.max(s) <= 1 );
@@ -469,6 +481,18 @@ void post_neq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
   }
 
   post_eqneq_re(s, x, y, c, ~Lit(b.eqi(s, 1)));
+}
+
+void post_neq_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+  if( s.value(b) == l_True ) {
+    post_neq(s, x, y, c);
+    return;
+  } else if( s.value(b) == l_False ) {
+    post_eq(s, x, y, c);
+    return;
+  }
+  post_eqneq_re(s, x, y, c, ~b);
 }
 
 /* x <= y + c */
@@ -632,30 +656,45 @@ ostream& cons_leq_re::printstate(Solver & s, ostream& os) const
   return os;
 }
 
-void post_leq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+void post_leq_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
 {
-  assert( b.min(s) >= 0 && b.max(s) <= 1 );
-  if( b.min(s) == 1 ) {
+  if( s.value(b) == l_True ) {
     post_leq(s, x, y, c);
     return;
-  } else if( b.max(s) == 0 ) {
+  } else if( s.value(b) == l_False ) {
     post_less(s, y, x, -c);
     return;
   }
 
   if( x.max(s) <= y.min(s) + c ) {
-    b.setmin(s, 1, NO_REASON);
+    s.uncheckedEnqueue(b);
     return;
   } else if( x.min(s) > y.max(s) + c ) {
-    b.setmax(s, 0, NO_REASON);
+    s.uncheckedEnqueue(~b);
     return;
   }
 
-  cons *con = new cons_leq_re(s, x, y, c, Lit(b.eqi(s, 1)));
+  cons *con = new cons_leq_re(s, x, y, c, b);
   s.addConstraint(con);
 }
 
+void post_leq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  assert( b.min(s) >= 0 && b.max(s) <= 1 );
+  if( b.max(s) == 0 ) {
+    post_leq_re(s, x, y, c, ~Lit(b.eqi(s, 0)));
+    return;
+  }
+
+  post_leq_re(s, x, y, c, Lit(b.eqi(s, 1)));
+}
+
 void post_less_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  post_leq_re(s, x, y, c-1, b);
+}
+
+void post_less_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
 {
   post_leq_re(s, x, y, c-1, b);
 }
@@ -665,7 +704,17 @@ void post_geq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
   post_leq_re(s, y, x, -c, b);
 }
 
+void post_geq_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+  post_leq_re(s, y, x, -c, b);
+}
+
 void post_gt_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  post_leq_re(s, y, x, -c-1, b);
+}
+
+void post_gt_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
 {
   post_leq_re(s, y, x, -c-1, b);
 }
