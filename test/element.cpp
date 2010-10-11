@@ -161,6 +161,22 @@ namespace {
     assert( I.max(s) == 1 );
   }
   REGISTER_TEST(element08);
+
+  // another bug from flatzinc: post correct clauses when one of the
+  // values inside the bounds is not in X[]
+  void element09()
+  {
+    Solver s;
+    cspvar R = s.newCSPVar(1, 4);
+    cspvar I = s.newCSPVar(1, 3);
+    vector<cspvar> X;
+    X.push_back(s.newCSPVar(1, 2));
+    X.push_back(s.newCSPVar(1, 3));
+    X.push_back(s.newCSPVar(1, 3));
+    post_element(s, R, I, X, 1);
+    assert( !s.propagate() );
+  }
+  REGISTER_TEST(element09);
 }
 
 void element_test()

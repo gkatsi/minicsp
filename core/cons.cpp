@@ -2360,7 +2360,7 @@ void post_element(Solver &s, cspvar R, cspvar I,
       s.addClause(ps2);
 
       // -w_ij, -I=i, -Xi=j
-      if( I.indomain(s, i) && X[i-offset].indomain(s, i) ) {
+      if( I.indomain(s, i) && X[i-offset].indomain(s, j) ) {
         ps3.push( ~Lit( wij) );
         ps3.push( ~Lit(I.eqi(s, i)));
         ps3.push( ~Lit(X[i-offset].eqi(s, j)));
