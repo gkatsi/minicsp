@@ -189,3 +189,38 @@ void post_element(Solver &s, cspvar R, cspvar I,
 // alldiff
 void post_alldiff(Solver &s, std::vector<cspvar> const& vars);
 
+/* Regular
+ *
+ * the sequence x[0]...x[n] is a string accepted by the automaton (nfa
+ * or dfa, does not matter) with transition function d, initial state
+ * q0 and accepting states F. The alphabet S is implicitly defined by
+ * the transition function.
+ *
+ * Since we can do NFA, we accept non-deterministic transition
+ * functions but there is no way to specify e-transitions, so the nfa
+ * has to be converted to e-free.
+ *
+ * Following the minizinc specification, state 0 is implicitly a
+ * rejecting sink.
+ */
+namespace regular {
+  struct transition {
+    size_t q0;
+    int s;
+    size_t q1;
+    transition(size_t pq0, int ps, size_t pq1) : q0(pq0), s(ps), q1(pq1) {}
+  };
+
+  struct automaton {
+    std::vector<transition> d;
+    int q0;
+    std::set<int> F;
+
+    automaton(std::vector<transition> const& pd, int pq0,
+              std::set<int> pF) : d(pd), q0(pq0), F(pF) {}
+  };
+}
+
+void post_regular(Solver& s, std::vector<cspvar> const& x,
+                  regular::automaton const& aut,
+                  bool gac = true);

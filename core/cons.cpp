@@ -1,6 +1,8 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <map>
+#include <list>
 #include <algorithm>
 #include <cassert>
 #include "cons.hpp"
@@ -10,6 +12,7 @@ using std::ostream;
 using std::pair;
 using std::make_pair;
 using std::vector;
+using std::set;
 
 /* x == y + c     and        x == -y + c
 
@@ -2398,4 +2401,266 @@ void post_alldiff(Solver &s, std::vector<cspvar> const &x)
   for(size_t i = 0; i != x.size(); ++i)
     for(size_t j = i+1; j != x.size(); ++j)
       post_neq(s, x[i], x[j], 0);
+}
+
+/* Regular */
+namespace regular {
+  struct layered_fa {
+    vector<transition> d;     // all transitions, ordered by layer
+    vector<int> layer_trans;  // an index into the beginning of each
+                              // layer in d
+    vector<int> layer_states; // the first state of each layer
+    vector<int> state_trans;  // index of first transition of each state
+    vector<int> state_layer;  // the layer of each state
+    int q0;
+    set<int> F;
+
+    int nlayers() const { return layer_states.size()-1; }
+  };
+
+  struct rejecting {
+    typedef bool value_type;
+    bool operator()(transition const& t) {
+      return t.q1 == 0;
+    }
+  };
+
+  struct compare_transition {
+    typedef bool value_type;
+    bool operator()(transition t1, transition t2) {
+      // (t1.q0,t1.s,t1.q1) <=lex (t2.q0,t2.s, t2.q1)
+      return t1.q0 < t2.q0 ||
+        (t1.q0 == t2.q0 && (t1.s < t2.s ||
+                            (t1.s == t2.s && t1.q1 <= t2.q1)));
+    }
+  };
+
+  void unfold(automaton const& aut,
+              Solver& solver,
+              vector<cspvar> X,
+              layered_fa& l)
+  {
+    // note for a string of length $n$ we need $n+1$ layers
+    size_t n = X.size();
+    using std::max;
+    size_t ns = 0;
+    for(size_t i = 0; i != aut.d.size(); ++i) {
+      transition const& t = aut.d[i];
+      ns = max(ns, max(t.q0, t.q1));
+    }
+
+    vector<transition> d = aut.d;
+    sort(d.begin(), d.end(), compare_transition());
+
+    // transitions and pointers into the transition table
+    for(size_t i = 0; i != n; ++i) {
+      // special handling for state 0. we assume it is at layer 0
+      if( i == 0 )
+        l.layer_states.push_back(0);
+      else
+        l.layer_states.push_back(ns*i+1);
+      l.layer_trans.push_back(l.d.size());
+      for(size_t j = 0; j != aut.d.size(); ++j) {
+        transition const& t = aut.d[j];
+        if( t.q0 == 0 || t.q1 == 0 ) continue;
+        if( !X[i].indomain(solver, t.s) ) continue;
+        if( j == 0 || t.q0 != aut.d[j-1].q0 ) {
+          while( l.state_trans.size() < (unsigned)t.q0 ) {
+            l.state_trans.push_back(l.d.size() );
+            l.state_layer.push_back( i );
+          }
+          l.state_trans.push_back( l.d.size() );
+          l.state_layer.push_back( i );
+        }
+        l.d.push_back( transition(t.q0+i*ns, t.s, t.q1+(i+1)*ns) );
+      }
+    }
+    // the last layer has all the states but no transitions
+    l.layer_states.push_back(ns*n+1);
+    l.layer_states.push_back(ns*(n+1)+1);
+    l.layer_trans.push_back(l.d.size());
+    l.layer_trans.push_back(l.d.size());
+
+    while( l.state_trans.size() <= (n+1)*ns+1 ) {
+      l.state_trans.push_back(l.d.size());
+      l.state_layer.push_back(l.nlayers()-1);
+    }
+
+    // starting/accepting states
+    l.q0 = aut.q0;
+    for( set<int>::const_iterator i = aut.F.begin(), iend = aut.F.end();
+         i != iend; ++i) {
+      l.F.insert( *i + n*ns );
+    }
+  }
+
+  void minimize_internal(layered_fa& l)
+  {
+    using std::max;
+    size_t ns = 0;
+    for(size_t i = 0; i != l.d.size(); ++i) {
+      transition& t = l.d[i];
+      ns = max(ns, max(t.q0, t.q1));
+    }
+
+    size_t accepting; // all accepting states are merged into one
+    vector<int> remap(ns+1);
+    // map from set of (s, q1) to all the q0s that have this. In the
+    // end we merge all q0s in the same bucket. inefficient, this
+    // should be a trie
+    typedef std::map< set< pair<int, size_t> >, vector< size_t > > mergemap;
+    mergemap tomerge;
+    for(int n = l.nlayers()-1; n >= 0; --n) {
+      tomerge.clear();
+      for(int s = l.layer_states[n]; s != l.layer_states[n+1]; ++s) {
+        remap[s] = s;
+        set< pair<int, size_t> > out;
+        for(int i = l.state_trans[s]; i != l.state_trans[s+1]; ++i) {
+          // note we both gather the outgoing (s,q1) of each q0 AND
+          // update the transitions to reflect the states we have
+          // fixed already in layer n+1
+          transition& t = l.d[i];
+          t.q1 = remap[t.q1];
+          if( t.q1 != 0 )
+            out.insert( make_pair( t.s, t.q1 ) );
+        }
+        if( out.empty() ) { // final layer state or no path to accepting
+          if( l.F.find(s) == l.F.end() ) { // final layer rejecting or
+                                           // non-final layer and no
+                                           // path to accepting
+            remap[s] = 0;
+            continue;
+          } // else final layer accepting state
+        }
+        tomerge[out].push_back(s);
+      }
+      for(mergemap::const_iterator i=tomerge.begin(), iend=tomerge.end();
+          i != iend; ++i) {
+        vector<size_t> const & mergestates = i->second;
+        for(vector<size_t>::const_iterator j = mergestates.begin(),
+              jend = mergestates.end();
+            j != jend; ++j) {
+          if( i->first.empty() ) // last layer, therefore accepting
+            accepting = mergestates[0];
+          remap[*j] = mergestates[0];
+        }
+      }
+    }
+    assert( accepting > 0 );
+    l.F.clear();
+    l.F.insert( accepting );
+  }
+
+  void minimize_unfolded(layered_fa& l)
+  {
+    // FIXME: for now this only minimizes DFAs, but if the automaton
+    // is non-deterministic, we should do heuristic minimization as in
+    // [KNW CPAIOR09]
+    minimize_internal(l);
+  }
+
+  void gather_reachable(layered_fa& aut, set<size_t>& r)
+  {
+    using std::max;
+    size_t ns = 0;
+    for(size_t i = 0; i != aut.d.size(); ++i) {
+      transition& t = aut.d[i];
+      ns = max(ns, max(t.q0, t.q1));
+    }
+    vector<int> remap(ns, 0);
+
+    std::list<size_t> Q;
+    Q.push_back(aut.q0);
+    r.insert(aut.q0);
+    while( !Q.empty() ) {
+      size_t s = Q.front();
+      Q.pop_front();
+
+      for(int t = aut.state_trans[s]; t != aut.state_trans[s+1]; ++t) {
+        transition const& tr = aut.d[t];
+        if( tr.q1 == 0 ) continue;
+        if( r.find(tr.q1) == r.end() ) {
+          r.insert(tr.q1);
+          Q.push_back(tr.q1);
+        }
+      }
+    }
+  }
+
+  void ensure_var(Solver& s, Var& var)
+  {
+    if( var == var_Undef )
+      var = s.newVar();
+  }
+};
+
+void post_regular(Solver &s, vector< cspvar > const& vars,
+                  regular::automaton const& aut,
+                  bool gac)
+{
+  using namespace regular;
+  layered_fa l;
+  unfold(aut, s, vars, l);
+  minimize_unfolded(l);
+
+  assert(l.F.size() == 1);
+
+  set<size_t> r;
+  gather_reachable(l, r);
+
+  if( r.find(*l.F.begin()) == r.end() )
+    throw unsat();
+
+  vector<Var> sv(l.state_trans.size(), var_Undef);
+  vector<Var> tv(l.d.size(), var_Undef);
+
+  vec<Lit> ps, ps2;
+
+  ensure_var(s, sv[l.q0]);
+  ps.push( Lit(sv[l.q0]) );
+  s.addClause(ps);
+
+  ps.clear();
+  ensure_var(s, sv[*l.F.begin()]);
+  ps.push( Lit(sv[*l.F.begin()]) );
+  s.addClause(ps);
+
+  for( set<size_t>::iterator si = r.begin(), siend = r.end();
+       si != siend; ++si) {
+    size_t st = *si;
+    size_t layer = l.state_layer[st];
+    ensure_var(s, sv[st]);
+
+    if( (unsigned)l.state_layer[st] == vars.size() ) continue;
+
+    ps2.clear();
+    ps2.push( ~Lit( sv[st] ) );
+    for(int i = l.state_trans[st]; i != l.state_trans[st+1]; ++i) {
+      transition tr = l.d[i];
+      if( tr.q1 == 0 ) continue;
+      assert( tr.q0 == st );
+      ensure_var(s, tv[i]);
+      ensure_var(s, sv[tr.q1]);
+
+      ps.clear();
+      ps.push( ~Lit( tv[i] ) );
+      ps.push( Lit( sv[tr.q0] ) );
+      s.addClause(ps);
+
+      ps.clear();
+      ps.push( ~Lit( tv[i] ) );
+      ps.push( Lit( sv[tr.q1] ) );
+      s.addClause(ps);
+
+      ps.clear();
+      ps.push( ~Lit( tv[i] ) );
+      ps.push( Lit( vars[layer].eqi(s, tr.s) ) );
+      s.addClause(ps);
+
+      ps2.push( Lit( tv[i] ) );
+    }
+    s.addClause(ps2);
+  }
+
+  if( !gac ) return;
 }
