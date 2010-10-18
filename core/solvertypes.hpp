@@ -31,6 +31,9 @@ class Solver;
 #define BOOST_PP_CAT(a, b) BOOST_PP_CAT_I(a, b)
 #define BOOST_PP_CAT_I(a, b) a ## b
 
+// the number of queues. 4 because it can be encoded in the unused low
+// order bits of a pointer in a system with word-alignment
+#define MAX_PRIORITY 4
 
 //=================================================================================================
 // Variables, literals, lifted booleans, clauses:
@@ -303,10 +306,26 @@ class cspvar
 
 bool operator==(cspvar x1, cspvar x2);
 
+class cons;
+
+// a stub for a constraint which goes in the priority queue.
+struct consqueue
+{
+  consqueue *next, *prev;
+  cons *c;
+  int priority;
+
+  consqueue() : next(0L), prev(0L), c(0L), priority(0) {}
+  consqueue(cons *pc) : next(0L), prev(0L), c(pc) {}
+};
+
 class cons
 {
-  int id;
+  friend class Solver;
+  int cqidx;
+  int priority;
  public:
+  cons() : cqidx(-1), priority(0) {}
   virtual ~cons() {}
 
   /* propagate, setting a clause or itself as reason for each
@@ -349,7 +368,7 @@ class cspvar_fixed
     wake_on_lb,
     wake_on_ub,
     wake_on_fix;
-  vec<cons*>
+  vec<int>
     schedule_on_dom,
     schedule_on_lb,
     schedule_on_ub,
@@ -396,12 +415,6 @@ class cspvar_bt
   int min;
   int max;
   int dsize;
-};
-
-struct consqueue
-{
-  vec<unsigned char> inq;
-  vec<cons*> q;
 };
 
 struct domevent
@@ -489,7 +502,7 @@ class setvar_data
   cspvar _card;
 
   vec<cons*> wake_on_in, wake_on_ex;
-  vec<cons*> schedule_on_in, schedule_on_ex;
+  vec<int> schedule_on_in, schedule_on_ex;
 
   bool inu(int i) const { return i >= min && i <= max; }
   Var ini(int i) const { return inu(i)

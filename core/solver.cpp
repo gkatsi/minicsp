@@ -67,7 +67,11 @@ Solver::Solver() :
     , current_space(0L)
 
     , active_constraint(0L)
-{}
+{
+  priority_stubs.growTo(MAX_PRIORITY+1);
+  reset_queue();
+  prop_queue = &priority_stubs[0];
+}
 
 
 Solver::~Solver()
@@ -384,6 +388,39 @@ void Solver::wake_on_ub(cspvar x, cons *c)
 void Solver::wake_on_fix(cspvar x, cons *c)
 {
   cspvars[x._id].wake_on_fix.push(c);
+}
+
+void Solver::ensure_can_schedule(cons *c)
+{
+  assert( c->priority >= 0 && c->priority <= MAX_PRIORITY );
+  if( c->cqidx < 0 ) {
+    c->cqidx = consqs.size();
+    consqs.push( consqueue(c) );
+  }
+}
+
+void Solver::schedule_on_dom(cspvar x, cons *c)
+{
+  ensure_can_schedule(c);
+  cspvars[x._id].schedule_on_dom.push(c->cqidx);
+}
+
+void Solver::schedule_on_lb(cspvar x, cons *c)
+{
+  ensure_can_schedule(c);
+  cspvars[x._id].schedule_on_lb.push(c->cqidx);
+}
+
+void Solver::schedule_on_ub(cspvar x, cons *c)
+{
+  ensure_can_schedule(c);
+  cspvars[x._id].schedule_on_ub.push(c->cqidx);
+}
+
+void Solver::schedule_on_fix(cspvar x, cons *c)
+{
+  ensure_can_schedule(c);
+  cspvars[x._id].schedule_on_fix.push(c->cqidx);
 }
 
 void Solver::setVarName(Var v, std::string const& name)
@@ -985,6 +1022,55 @@ Clause *Solver::enqueueFill(Lit p, vec<Lit>& ps)
   return 0L;
 }
 
+/*************************************************************************
+
+  Queue handling
+
+  schedule(c): puts the constraint c into the queue it wants. Note
+  this is static, otherwise we would need a virtual function call +
+  bringing the cons into the cache
+
+  unschedule(c): remove c from the queue
+
+  reset_queue(): remove all constraints from the queue
+ */
+void Solver::schedule(int cqidx)
+{
+  consqueue * cq = &consqs[cqidx];
+  consqueue * p = &priority_stubs[cq->priority+1];
+  cq->prev = p->prev;
+  cq->next = p;
+  p->prev = cq;
+  cq->prev->next = cq;
+}
+
+int Solver::first_scheduled()
+{
+  consqueue * q = prop_queue;
+  while( q && !q->c )
+    q = q->next;
+  if( q && q->c ) return q - &consqs[0];
+  else return -1;
+}
+
+void Solver::unschedule(int cqidx)
+{
+  // note we do not reset prev/next, there is no reason to write back
+  consqueue * cq = &consqs[cqidx];
+  cq->next->prev = cq->prev;
+  cq->prev->next = cq->next;
+}
+
+void Solver::reset_queue()
+{
+  for(int i = 0; i != priority_stubs.size(); ++i) {
+    if( i != priority_stubs.size() - 1 )
+      priority_stubs[i].next = &priority_stubs[i+1];
+    if( i )
+      priority_stubs[i].prev = &priority_stubs[i-1];
+  }
+}
+
 /*_________________________________________________________________________________________________
 |
 |  propagate : [void]  ->  [Clause*]
@@ -993,10 +1079,16 @@ Clause *Solver::enqueueFill(Lit p, vec<Lit>& ps)
 |    Propagates all enqueued facts. If a conflict arises, the conflicting clause is returned,
 |    otherwise NULL.
 |
+|    Propagation involves both unit propagation and constraint propagation
+|    for constraints that wake on changes.
+|
+|    Additionally, it puts in the constraint queue all propagators that
+|    want to be scheduled on changes.
+|
 |    Post-conditions:
 |      * the propagation queue is empty, even if there was a conflict.
 |________________________________________________________________________________________________@*/
-Clause* Solver::propagate()
+Clause* Solver::propagate_inner()
 {
     Clause* confl     = NULL;
     int     num_props = 0;
@@ -1071,20 +1163,29 @@ Clause* Solver::propagate()
 
         domevent const & pe = events[toInt(p)];
         vec<cons*> *dewakes = 0L;
+        vec<int> *desched = 0L;
         if( noevent(pe) ) goto SetPropagation;
         switch(pe.type) {
-        case domevent::NEQ: dewakes=&(cspvars[pe.x._id].wake_on_dom); break;
-        case domevent::EQ: dewakes=&(cspvars[pe.x._id].wake_on_fix); break;
+        case domevent::NEQ:
+          dewakes=&(cspvars[pe.x._id].wake_on_dom);
+          desched=&(cspvars[pe.x._id].schedule_on_dom);
+          break;
+        case domevent::EQ:
+          dewakes=&(cspvars[pe.x._id].wake_on_fix);
+          desched=&(cspvars[pe.x._id].schedule_on_fix);
+          break;
         case domevent::LEQ:
-          if( pe.x.max(*this) < pe.d )
-            dewakes = 0L;
-          else
-            dewakes=&(cspvars[pe.x._id].wake_on_ub); break;
+          if( pe.x.max(*this) >= pe.d ) {
+            dewakes=&(cspvars[pe.x._id].wake_on_ub);
+            desched=&(cspvars[pe.x._id].schedule_on_ub);
+          }
+          break;
         case domevent::GEQ:
-          if( pe.x.min(*this) > pe.d )
-            dewakes = 0L;
-          else
-            dewakes=&(cspvars[pe.x._id].wake_on_lb); break;
+          if( pe.x.min(*this) <= pe.d ) {
+            dewakes=&(cspvars[pe.x._id].wake_on_lb);
+            desched=&(cspvars[pe.x._id].schedule_on_lb);
+          }
+          break;
         case domevent::NONE: assert(0);
         }
         if( !dewakes ) goto SetPropagation;
@@ -1108,13 +1209,25 @@ Clause* Solver::propagate()
         if(confl)
           break;
 
+        for( int *si = &((*desched)[0]),*siend = si+desched->size();
+             si != siend; ++si)
+          schedule(*si);
+
+
     SetPropagation:
         setevent const & se = setevents[toInt(p)];
         if( noevent(se) ) continue;
         vec<cons*> *sewakes = 0L;
+        vec<int> *sesched = 0L;
         switch(se.type) {
-        case setevent::IN: sewakes=&(setvars[pe.x._id].wake_on_in); break;
-        case setevent::EX: sewakes=&(setvars[pe.x._id].wake_on_ex); break;
+        case setevent::IN:
+          sewakes=&(setvars[pe.x._id].wake_on_in);
+          sesched=&(setvars[pe.x._id].schedule_on_in);
+          break;
+        case setevent::EX:
+          sewakes=&(setvars[pe.x._id].wake_on_ex);
+          sesched=&(setvars[pe.x._id].schedule_on_ex);
+          break;
         case setevent::NONE: assert(0);
         }
         for( cons **ci = &((*sewakes)[0]),
@@ -1133,11 +1246,44 @@ Clause* Solver::propagate()
             break;
           }
         }
+
+        if( confl )
+          break;
+
+        for( int *si = &((*sesched)[0]),*siend = si+sesched->size();
+             si != siend; ++si)
+          schedule(*si);
     }
     propagations += num_props;
     simpDB_props -= num_props;
 
     return confl;
+}
+
+Clause *Solver::propagate()
+{
+  Clause *confl = NULL;
+  int next = -1;
+  do {
+    if( next >= 0 ) {
+      unschedule(next);
+      confl = consqs[next].c->propagate(*this);
+      if( confl ) {
+        qhead = trail.size();
+        reset_queue();
+        return confl;
+      }
+    }
+    if( qhead < trail.size() )
+      confl = propagate_inner();
+    if( confl ) {
+      reset_queue();
+      return confl;
+    }
+
+    next = first_scheduled();
+  } while( qhead < trail.size() || next >= 0);
+  return 0L;
 }
 
 /*_________________________________________________________________________________________________

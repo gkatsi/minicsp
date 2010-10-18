@@ -172,7 +172,8 @@ public:
     void     uncheckedEnqueue (Lit p, Clause* from = NULL);                            // Enqueue a literal. Assumes value of literal is undefined.
     bool     enqueue          (Lit p, Clause* from = NULL);                            // Test if fact 'p' contradicts current state, enqueue otherwise.
     Clause*  enqueueFill      (Lit p, vec<Lit>& ps);                                   // Create an inactive clause that includes p and ps and force p
-    Clause*  propagate        ();                                                      // Perform unit propagation. Returns possibly conflicting clause.
+    Clause*  propagate        ();                                                      // Perform unit and constraint propagation.
+                                                                                       // Returns conflicting clause or NULL
 
     void     newDecisionLevel ();                                                      // Begins a new decision level.
     void     cancelUntil      (int level);                                             // Backtrack until a certain level.
@@ -211,6 +212,9 @@ protected:
     vec<Clause*>        learnts;          // List of learnt clauses.
     vec<Clause*>        inactive;         // List of non-propagating clauses.
     vec<cons*>          conses;           // List of problem constraints.
+    vec<consqueue>      consqs;           // Stubs for constraints in the propagation queue
+    vec<consqueue>      priority_stubs;   // Stubs for priorities
+    consqueue*          prop_queue;       // propagation queue (aggregate for all priorities)
     double              cla_inc;          // Amount to bump next clause with.
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
     double              var_inc;          // Amount to bump next variable with.
@@ -273,6 +277,16 @@ protected:
     void     gcInactive       ();                                                      // Collect inactive and unlocked clauses
     void     removeSatisfied  (vec<Clause*>& cs);                                      // Shrink 'cs' to contain only non-satisfied clauses.
     void     uncheckedEnqueue_np(Lit p, Clause *from);                                 // uncheckedEnqueue with no CSP propagation
+    Clause*  propagate_inner  ();                                                      // Perform unit propagation, wake propagators,
+                                                                                       // schedule propagators. Returns conflicting clause or NULL
+
+    // Constraint queue
+    //
+    void     ensure_can_schedule(cons *c);             // Create a consqueue for c
+    void     schedule(int idx);                        // Put consqs[idx].c in its queue
+    int      first_scheduled();                        // Head of the queue, <0 if queue is empty
+    void     unschedule(int idx);                      // Remove consqs[idx].c from the queue
+    void     reset_queue();                            // Remove everything from the queue
 
     // Maintaining Variable/Clause activity:
     //
