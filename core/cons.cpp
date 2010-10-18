@@ -2503,7 +2503,7 @@ namespace regular {
       ns = max(ns, max(t.q0, t.q1));
     }
 
-    size_t accepting; // all accepting states are merged into one
+    size_t accepting=0; // all accepting states are merged into one
     vector<int> remap(ns+1);
     // map from set of (s, q1) to all the q0s that have this. In the
     // end we merge all q0s in the same bucket. inefficient, this
