@@ -91,6 +91,66 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(schedule01);
+
+  // a prop wakes in all event combinations
+  void schedule02()
+  {
+    Solver s;
+    vector<cspvar> d, l, u, f;
+    d = s.newCSPVarArray(2, 5, 10);
+    l = s.newCSPVarArray(2, 5, 10);
+    u = s.newCSPVarArray(2, 5, 10);
+    f = s.newCSPVarArray(2, 5, 10);
+
+    vector<int> wakes;
+
+    post_test(s, 1, wakes, d, l, u, f);
+
+    int exp[] = { 1, -1 };
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+
+    // lbound change triggers dom schedule
+    wakes.clear();
+    s.newDecisionLevel();
+    d[0].setmin(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+    s.cancelUntil(0);
+
+    // ubound change triggers dom schedule
+    wakes.clear();
+    s.newDecisionLevel();
+    d[0].setmax(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+    s.cancelUntil(0);
+
+    // fix triggers dom schedule
+    wakes.clear();
+    s.newDecisionLevel();
+    d[0].assign(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(schedule02);
+
+  // schedule 2 propagators
+  // reschedule 1 propagator, no others present
+  // reschedule 1 propagator, first in queue
+  // reschedule 1 propagator, middle of queue
+  // reschedule 1 propagator, end of queue
+
+  // check that queue is cleared correctly: schedule p, fail before p
+  // is executed, backtrack and make decisions that do not schedule p
+  // again. p must not be in wakes.
+
+  //--------------------------------------------------
+  // multiple priorities
+
+  // 2 priority 0, 1 priority 1
+  // 4 priority 0, 2 priority 1, 1 priority 2
 }
 
 void schedule_test()

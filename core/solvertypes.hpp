@@ -316,7 +316,7 @@ struct consqueue
   int priority;
 
   consqueue() : next(0L), prev(0L), c(0L), priority(0) {}
-  consqueue(cons *pc) : next(0L), prev(0L), c(pc) {}
+  consqueue(cons *pc, int pp) : next(0L), prev(0L), c(pc), priority(pp) {}
 };
 
 class cons

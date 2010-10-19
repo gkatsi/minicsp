@@ -395,7 +395,7 @@ void Solver::ensure_can_schedule(cons *c)
   assert( c->priority >= 0 && c->priority <= MAX_PRIORITY );
   if( c->cqidx < 0 ) {
     c->cqidx = consqs.size();
-    consqs.push( consqueue(c) );
+    consqs.push( consqueue(c, c->priority) );
   }
 }
 
@@ -1038,6 +1038,7 @@ void Solver::schedule(int cqidx)
 {
   consqueue * cq = &consqs[cqidx];
   consqueue * p = &priority_stubs[cq->priority+1];
+  if( p->prev == cq ) return; // already there
   cq->prev = p->prev;
   cq->next = p;
   p->prev = cq;
