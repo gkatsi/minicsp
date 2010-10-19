@@ -213,7 +213,6 @@ protected:
     vec<Clause*>        inactive;         // List of non-propagating clauses.
     vec<cons*>          conses;           // List of problem constraints.
     vec<consqueue>      consqs;           // Stubs for constraints in the propagation queue
-    vec<consqueue>      priority_stubs;   // Stubs for priorities
     consqueue*          prop_queue;       // propagation queue (aggregate for all priorities)
     double              cla_inc;          // Amount to bump next clause with.
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.

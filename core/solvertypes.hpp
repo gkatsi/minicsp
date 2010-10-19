@@ -309,12 +309,12 @@ bool operator==(cspvar x1, cspvar x2);
 // a stub for a constraint which goes in the priority queue.
 struct consqueue
 {
-  consqueue *next, *prev;
+  int next, prev; // indices into consqs
   cons *c;
   int priority;
 
-  consqueue() : next(0L), prev(0L), c(0L), priority(0) {}
-  consqueue(cons *pc, int pp) : next(0L), prev(0L), c(pc), priority(pp) {}
+  consqueue() : next(-1), prev(-1), c(0L), priority(0) {}
+  consqueue(cons *pc, int pp) : next(-1), prev(-1), c(pc), priority(pp) {}
 };
 
 class cons

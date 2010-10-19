@@ -68,9 +68,9 @@ Solver::Solver() :
 
     , active_constraint(0L)
 {
-  priority_stubs.growTo(MAX_PRIORITY+1);
+  consqs.growTo(MAX_PRIORITY+1);
   reset_queue();
-  prop_queue = &priority_stubs[0];
+  prop_queue = &consqs[0];
 }
 
 
@@ -1036,40 +1036,40 @@ Clause *Solver::enqueueFill(Lit p, vec<Lit>& ps)
  */
 void Solver::schedule(int cqidx)
 {
-  consqueue * cq = &consqs[cqidx];
-  consqueue * p = &priority_stubs[cq->priority+1];
-  if( cq->next ) return; // already scheduled
-  cq->prev = p->prev;
-  cq->next = p;
-  p->prev = cq;
-  cq->prev->next = cq;
+  consqueue & cq = consqs[cqidx];
+  consqueue & p = consqs[cq.priority+1];
+  if( cq.next >= 0 ) return; // already scheduled
+  cq.prev = p.prev;
+  cq.next = cq.priority+1;
+  p.prev = cqidx;
+  consqs[cq.prev].next = cqidx;
 }
 
 int Solver::first_scheduled()
 {
-  consqueue * q = prop_queue;
-  while( q && !q->c )
-    q = q->next;
-  if( q && q->c ) return q - &consqs[0];
+  int cqidx = 0;
+  while( cqidx >= 0 && !consqs[cqidx].c )
+    cqidx = consqs[cqidx].next;
+  if( cqidx >= 0 && consqs[cqidx].c ) return cqidx;
   else return -1;
 }
 
 void Solver::unschedule(int cqidx)
 {
   consqueue * cq = &consqs[cqidx];
-  cq->next->prev = cq->prev;
-  cq->prev->next = cq->next;
-  cq->next = 0L;
-  cq->prev = 0L;
+  consqs[cq->next].prev = cq->prev;
+  consqs[cq->prev].next = cq->next;
+  cq->next = -1;
+  cq->prev = -1;
 }
 
 void Solver::reset_queue()
 {
-  for(int i = 0; i != priority_stubs.size(); ++i) {
-    if( i != priority_stubs.size() - 1 )
-      priority_stubs[i].next = &priority_stubs[i+1];
+  for(int i = 0; i != MAX_PRIORITY+1; ++i) {
+    if( i < MAX_PRIORITY )
+      consqs[i].next = i+1;
     if( i )
-      priority_stubs[i].prev = &priority_stubs[i-1];
+      consqs[i].prev = i-1;
   }
 }
 
