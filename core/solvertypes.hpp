@@ -306,8 +306,6 @@ class cspvar
 
 bool operator==(cspvar x1, cspvar x2);
 
-class cons;
-
 // a stub for a constraint which goes in the priority queue.
 struct consqueue
 {
@@ -349,6 +347,12 @@ class cons
   virtual std::ostream& print(Solver& s, std::ostream& os) const;
   /* as above, but also any state (var domains, etc) */
   virtual std::ostream& printstate(Solver& s, std::ostream& os) const;
+
+  /* Set scheduling priority. This has no effect if the propagator has
+     been scheduled already, so it must be called in the constructor
+     of a constraint, before it calls schedule_on_*
+  */
+  void set_priority(int p) { priority = p; }
 };
 
 // all the fixed or non-backtracked data of a csp variable

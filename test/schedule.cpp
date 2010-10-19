@@ -1,10 +1,13 @@
 #include <iostream>
 #include "test.hpp"
 #include "solver.hpp"
+#include "cons.hpp"
 
 using namespace std;
 
 namespace {
+  typedef map<size_t, vector<domevent> > action_schedule;
+
   class test_cons : public cons
   {
   public:
@@ -16,6 +19,7 @@ namespace {
     vector<cspvar> _u;
     vector<cspvar> _f;
 
+    action_schedule _actions;
 
     test_cons(Solver &s,
               int id,
@@ -23,10 +27,14 @@ namespace {
               vector<cspvar> const& d,
               vector<cspvar> const& l,
               vector<cspvar> const& u,
-              vector<cspvar> const& f) :
+              vector<cspvar> const& f,
+              action_schedule const & actions,
+              int priority) :
       _id(id), _wakes(wakes),
-      _d(d), _l(l), _u(u), _f(f)
+      _d(d), _l(l), _u(u), _f(f),
+      _actions(actions)
     {
+      set_priority(priority);
       for(size_t i = 0; i != _d.size(); ++i)
         s.schedule_on_dom(_d[i], this);
       for(size_t i = 0; i != _l.size(); ++i)
@@ -37,9 +45,47 @@ namespace {
         s.schedule_on_fix(_f[i], this);
     }
 
+    void add_all_reasons(Solver &s, vec<Lit>& ps, vector<cspvar>& v,
+                         cspvar except)
+    {
+      for(size_t i = 0; i != v.size(); ++i) {
+        if( v[i] == except ) continue;
+        pushifdef( ps, v[i].r_min(s) );
+        pushifdef( ps, v[i].r_max(s) );
+        for( int q = v[i].min(s)+1; q < v[i].max(s); ++q)
+          if( !v[i].indomain(s, q) )
+            ps.push( v[i].r_neq(s, q));
+      }
+    }
+
     Clause *propagate(Solver& s)
     {
       _wakes.push_back(_id);
+      action_schedule::const_iterator i =
+        _actions.find(_wakes.size());
+      if( i == _actions.end() ) return 0L;
+
+      vec<Lit> ps;
+      vector<domevent> const& vde = i->second;
+      for(size_t q = 0; q != vde.size(); ++q) {
+        domevent de = vde[q];
+        ps.clear();
+
+        add_all_reasons(s, ps, _d, de.x);
+        add_all_reasons(s, ps, _l, de.x);
+        add_all_reasons(s, ps, _u, de.x);
+        add_all_reasons(s, ps, _f, de.x);
+
+        Lit p;
+        switch( de.type ) {
+        case domevent::EQ: p = de.x.e_eq(s, de.d); break;
+        case domevent::NEQ: p = de.x.e_neq(s, de.d); break;
+        case domevent::LEQ: p = de.x.e_leq(s, de.d); break;
+        case domevent::GEQ: p = de.x.e_geq(s, de.d); break;
+        case domevent::NONE: assert(0);
+        }
+        DO_OR_RETURN(s.enqueueFill(p, ps));
+      }
       return 0L;
     }
   };
@@ -52,7 +98,22 @@ namespace {
                  vector<cspvar> const& u,
                  vector<cspvar> const& f)
   {
-    cons *con = new test_cons(s, id, wakes, d, l, u, f);
+    action_schedule a;
+    cons *con = new test_cons(s, id, wakes, d, l, u, f, a, 0);
+    s.addConstraint(con);
+  }
+
+  void post_test(Solver &s,
+                 int id,
+                 vector<int>& wakes,
+                 vector<cspvar> const& d,
+                 vector<cspvar> const& l,
+                 vector<cspvar> const& u,
+                 vector<cspvar> const& f,
+                 action_schedule const & actions,
+                 int priority = 0)
+  {
+    cons *con = new test_cons(s, id, wakes, d, l, u, f, actions, priority);
     s.addConstraint(con);
   }
 
@@ -246,19 +307,159 @@ namespace {
   REGISTER_TEST(schedule03);
 
   // reschedule 1 propagator, no others present
-  // reschedule 1 propagator, first in queue
-  // reschedule 1 propagator, middle of queue
-  // reschedule 1 propagator, end of queue
+  void schedule04()
+  {
+    Solver s;
+    vector<cspvar> d, l, u, f;
+    d = s.newCSPVarArray(2, 5, 10);
+
+    vector<int> wakes;
+
+    action_schedule a;
+    a[1].push_back(domevent(d[0], domevent::NEQ, 7));
+    post_test(s, 1, wakes, d, l, u, f, a);
+    post_eq(s, d[0], d[1], 0);
+
+    int exp0[] = { -1 };
+    int exp1[] = { 1, 1, -1 };
+    assert( !s.propagate() );
+    assert( compare_events( wakes, exp0 ) );
+
+    s.newDecisionLevel();
+    d[0].remove(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp1) );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(schedule04);
+
+  // reschedule propagator
+  void schedule05()
+  {
+    Solver s;
+    vector<cspvar> d0, d1, l, u, f;
+    vector<cspvar> x = s.newCSPVarArray(5, 5, 10);
+    d0.assign(x.begin(), x.begin()+2);
+    d1.assign(x.begin()+1, x.begin()+3);
+
+    vector<int> wakes;
+
+    action_schedule a;
+    a[1].push_back(domevent(d0[0], domevent::NEQ, 7));
+    post_test(s, 1, wakes, d0, l, u, f, a);
+    post_test(s, 2, wakes, d1, l, u, f);
+
+    post_eq(s, x[0], x[3], 0);
+    post_eq(s, x[3], x[2], 0);
+    post_eq(s, x[2], x[4], 0);
+    post_eq(s, x[4], x[0], 0);
+
+    int exp0[] = { -1 };
+    int exp1[] = { 1, 2, 1, -1 };
+    assert( !s.propagate() );
+    assert( compare_events( wakes, exp0 ) );
+
+    s.newDecisionLevel();
+    x[0].remove(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp1) );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(schedule05);
 
   // check that queue is cleared correctly: schedule p, fail before p
   // is executed, backtrack and make decisions that do not schedule p
   // again. p must not be in wakes.
+  void schedule_clear()
+  {
+    Solver s;
+    vector<cspvar> d, l, u, f;
+    d = s.newCSPVarArray(3, 5, 10);
+    Var b = s.newVar();
+
+    vector<int> wakes;
+    post_test(s, 1, wakes, d, l, u, f);
+    post_eq(s, d[0], d[1], 0);
+    post_less_re(s, d[0], d[1], 0, Lit(b));
+
+    int exp[] = { -1 };
+
+    s.newDecisionLevel();
+    s.enqueue( Lit(b) );
+    assert( s.propagate() );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    s.enqueue( ~Lit(b) );
+    assert( !s.propagate() );
+    s.cancelUntil(0);
+
+    assert( compare_events(wakes, exp) );
+  }
+  REGISTER_TEST(schedule_clear);
 
   //--------------------------------------------------
   // multiple priorities
 
-  // 2 priority 0, 1 priority 1
-  // 4 priority 0, 2 priority 1, 1 priority 2
+  // 2 priority 0, 2 priority 1, 1 priority 2
+  void schedule_priority_01()
+  {
+    Solver s;
+    vector<cspvar> d0, d1, l, u, f;
+    vector<cspvar> x = s.newCSPVarArray(3, 5, 10);
+    d0.assign(x.begin(), x.begin()+2);
+    d1.assign(x.begin()+1, x.begin()+3);
+
+    vector<int> wakes;
+    action_schedule a1, a2, a3, a4, a5;
+    post_test(s, 1, wakes,  x, l, u, f, a1, 2);
+    post_test(s, 2, wakes, d0, l, u, f, a2, 1);
+    post_test(s, 3, wakes, d1, l, u, f, a3, 1);
+    post_test(s, 4, wakes, d0, l, u, f, a4, 0);
+    post_test(s, 5, wakes, d1, l, u, f, a5, 0);
+
+    post_eq(s, x[0], x[2], 0);
+
+    int exp[] = { 4, 5, 2, 3, 1, -1 };
+    s.newDecisionLevel();
+    x[0].remove(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(schedule_priority_01);
+
+  // 2 priority 0, 2 priority 1, 1 priority 2, with some actions
+  // thrown in
+  void schedule_priority_02()
+  {
+    Solver s;
+    vector<cspvar> d0, d1, l, u, f;
+    vector<cspvar> x = s.newCSPVarArray(3, 5, 10);
+    d0.assign(x.begin(), x.begin()+2);
+    d1.assign(x.begin()+1, x.begin()+3);
+
+    vector<int> wakes;
+    action_schedule a1, a2, a3, a4, a5;
+    a2[3].push_back( domevent( x[0], domevent::NEQ, 7 ) );
+    a1[8].push_back( domevent( x[0], domevent::NEQ, 8 ) );
+
+    post_test(s, 1, wakes,  x, l, u, f, a1, 2);
+    post_test(s, 2, wakes, d0, l, u, f, a2, 1);
+    post_test(s, 3, wakes, d1, l, u, f, a3, 1);
+    post_test(s, 4, wakes, d0, l, u, f, a4, 0);
+    post_test(s, 5, wakes, d1, l, u, f, a5, 0);
+
+    post_eq(s, x[0], x[2], 0);
+
+    int exp[] = { 4, 5, 2, 4, 5, 3, 2, 1, 4, 5, 2, 3, 1, -1 };
+    s.newDecisionLevel();
+    x[0].remove(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(schedule_priority_02);
 }
 
 void schedule_test()
