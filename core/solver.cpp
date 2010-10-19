@@ -1038,7 +1038,7 @@ void Solver::schedule(int cqidx)
 {
   consqueue * cq = &consqs[cqidx];
   consqueue * p = &priority_stubs[cq->priority+1];
-  if( p->prev == cq ) return; // already there
+  if( cq->next ) return; // already scheduled
   cq->prev = p->prev;
   cq->next = p;
   p->prev = cq;
@@ -1056,10 +1056,11 @@ int Solver::first_scheduled()
 
 void Solver::unschedule(int cqidx)
 {
-  // note we do not reset prev/next, there is no reason to write back
   consqueue * cq = &consqs[cqidx];
   cq->next->prev = cq->prev;
   cq->prev->next = cq->next;
+  cq->next = 0L;
+  cq->prev = 0L;
 }
 
 void Solver::reset_queue()

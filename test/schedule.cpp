@@ -133,10 +133,118 @@ namespace {
     assert( !s.propagate() );
     assert( compare_events(wakes, exp) );
     s.cancelUntil(0);
+
+    // dom triggers lbnd schedule
+    wakes.clear();
+    s.newDecisionLevel();
+    l[0].remove(s, 5, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+    s.cancelUntil(0);
+
+    // dom triggers ubnd schedule
+    wakes.clear();
+    s.newDecisionLevel();
+    u[0].remove(s, 10, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+    s.cancelUntil(0);
+
+    // lbnd+ubnd triggers fix schedule
+    wakes.clear();
+    s.newDecisionLevel();
+    f[0].setmin(s, 7, NO_REASON);
+    f[0].setmax(s, 7, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+    s.cancelUntil(0);
+
+    // fix triggers dom schedule
+    wakes.clear();
+    s.newDecisionLevel();
+    d[0].assign(s, 7, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+    s.cancelUntil(0);
+
+    // fix triggers lbnd schedule
+    wakes.clear();
+    s.newDecisionLevel();
+    l[0].assign(s, 7, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+    s.cancelUntil(0);
+
+    // fix triggers ubnd schedule
+    wakes.clear();
+    s.newDecisionLevel();
+    u[0].assign(s, 7, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp) );
+    s.cancelUntil(0);
   }
   REGISTER_TEST(schedule02);
 
   // schedule 2 propagators
+  void schedule03()
+  {
+    Solver s;
+    vector<cspvar> d0, d1, l, u, f;
+    vector<cspvar> x = s.newCSPVarArray(3, 5, 10);
+    d0.push_back(x[0]);
+    d0.push_back(x[1]);
+    d1.push_back(x[1]);
+    d1.push_back(x[2]);
+
+    vector<int> wakes;
+    post_test(s, 1, wakes, d0, l, u, f);
+    post_test(s, 2, wakes, d1, l, u, f);
+
+    int exp1[] = { 1, -1 };
+    wakes.clear();
+    s.newDecisionLevel();
+    x[0].remove(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp1) );
+    s.cancelUntil(0);
+
+    int exp2[] = { 2, -1 };
+    wakes.clear();
+    s.newDecisionLevel();
+    x[2].remove(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp2) );
+    s.cancelUntil(0);
+
+    int exp3[] = { 1, 2, -1 };
+    wakes.clear();
+    s.newDecisionLevel();
+    x[0].remove(s, 6, NO_REASON);
+    x[2].remove(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp3) );
+    s.cancelUntil(0);
+
+    int exp4[] = { 2, 1, -1 };
+    wakes.clear();
+    s.newDecisionLevel();
+    x[2].remove(s, 6, NO_REASON);
+    x[0].remove(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp4) );
+    s.cancelUntil(0);
+
+    wakes.clear();
+    s.newDecisionLevel();
+    x[1].remove(s, 6, NO_REASON);
+    x[0].remove(s, 6, NO_REASON);
+    assert( !s.propagate() );
+    assert( compare_events(wakes, exp3) || compare_events(wakes, exp4) );
+    s.cancelUntil(0);
+
+  }
+  REGISTER_TEST(schedule03);
+
   // reschedule 1 propagator, no others present
   // reschedule 1 propagator, first in queue
   // reschedule 1 propagator, middle of queue
