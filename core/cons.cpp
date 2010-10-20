@@ -2384,12 +2384,6 @@ void post_element(Solver &s, cspvar R, cspvar I,
   }
 }
 
-/* Set constraints */
-class cons_set_in;
-class cons_set_subset;
-class cons_set_union;
-class cons_set_card;
-
 class cons_table;
 
 /* Global constraints */
