@@ -232,11 +232,16 @@ class cspvar
   int id() const { return _id; }
   bool valid() const { return _id >= 0; }
 
+  // current domain
   bool indomain(Solver& s, int d) const;
   int min(Solver& s) const;
   int max(Solver& s) const;
 
   int domsize(Solver& s) const;
+
+  // the original domain
+  int omin(Solver& s) const;
+  int omax(Solver& s) const;
 
   /* the reason can be an existing clause, a clause to be generated
      from a vec<Lit> or a cons, which will lazily be called on to

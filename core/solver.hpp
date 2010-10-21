@@ -181,6 +181,8 @@ public:
     int cspvarmax(cspvar x);              // get the current max of x
     int cspvarmin(cspvar x);              // get the current min of x
     int cspvardsize(cspvar x);            // get the current domain size of x (which may be smaller than max - min + 1)
+    int cspvaromax(cspvar x);             // get the initial max of x
+    int cspvaromin(cspvar x);             // get the initial min of x
     Var cspvareqi(cspvar x, int d);       // get the propositional var representing x = d
     Var cspvarleqi(cspvar x, int d);      // get the propositional var representing x <= d
     int setvarumin(setvar x) const;       // get the smallest element in the universe of x
@@ -604,6 +606,16 @@ inline int Solver::cspvardsize(cspvar x)
   return deref<cspvar_bt>(cspvarbt[x._id]).dsize;
 }
 
+inline int Solver::cspvaromin(cspvar x)
+{
+  return cspvars[x._id].omin;
+}
+
+inline int Solver::cspvaromax(cspvar x)
+{
+  return cspvars[x._id].omax;
+}
+
 inline Var Solver::cspvareqi(cspvar x, int d)
 {
   return cspvars[x._id].eqi(d);
@@ -653,6 +665,16 @@ inline int cspvar::max(Solver &s) const
 inline int cspvar::domsize(Solver &s) const
 {
   return s.cspvardsize(*this);
+}
+
+inline int cspvar::omin(Solver &s) const
+{
+  return s.cspvaromin(*this);
+}
+
+inline int cspvar::omax(Solver &s) const
+{
+  return s.cspvaromax(*this);
 }
 
 inline Var cspvar::eqi(Solver &s, int d) const
