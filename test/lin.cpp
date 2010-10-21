@@ -323,14 +323,14 @@ namespace {
   {
     Solver s;
     vector<cspvar> x = s.newCSPVarArray(8, 0, 9);
-    cspvar S = x[0];
-    cspvar E = x[1];
-    cspvar N = x[2];
-    cspvar D = x[3];
-    cspvar M = x[4];
-    cspvar O = x[5];
-    cspvar R = x[6];
-    cspvar Y = x[7];
+    cspvar S = x[0]; s.setCSPVarName(S, "S");
+    cspvar E = x[1]; s.setCSPVarName(E, "E");
+    cspvar N = x[2]; s.setCSPVarName(N, "N");
+    cspvar D = x[3]; s.setCSPVarName(D, "D");
+    cspvar M = x[4]; s.setCSPVarName(M, "M");
+    cspvar O = x[5]; s.setCSPVarName(O, "O");
+    cspvar R = x[6]; s.setCSPVarName(R, "R");
+    cspvar Y = x[7]; s.setCSPVarName(Y, "Y");
 
     vector<cspvar> v;
     vector<int> c;
