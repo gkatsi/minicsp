@@ -2443,6 +2443,12 @@ class cons_alldiff : public cons
   /* SCCs */
   // produce a clause that describes why there is no matching
   void explain_conflict(Solver& s, vec<Lit> &ps);
+  // add to ps the reason that q is inconsistent. May require other
+  // values to be explained and these are pushed to to_explain.
+  void explain_value(Solver &s, int q,
+                     vec<Lit>& ps,
+                     vector<bool>& explained,
+                     vector<int>& to_explain);
 
   void tarjan_unroll_stack(vertex root);
   // start the dfs from variable var
@@ -2657,6 +2663,52 @@ bool cons_alldiff::find_matching(Solver &s)
   return true;
 }
 
+void cons_alldiff::explain_value(Solver &s, int q,
+                                 vec<Lit>& ps,
+                                 vector<bool>& explained,
+                                 vector<int>& to_explain)
+{
+  vector<bool> hallvals( umax-umin+1, false );
+  int minhval = umax, maxhval = umin;
+  int scc = valcomp[q - umin];
+  assert( 2*comp_numvars[scc] == components[scc].size() );
+
+  std::cout << q << " in component {";
+  for(size_t i = 0; i != components[scc].size(); ++i) {
+    if( i ) std::cout << ", ";
+    vertex vx = components[scc][i];
+    if( vx.first ) std::cout << cspvar_printer(s, _x[vx.second]);
+    else std::cout << vx.second;
+  }
+  std::cout << "}\n";
+
+  // first gather the values of the Hall set
+  for(size_t i = 0; i != components[scc].size(); ++i) {
+    vertex vx = components[scc][i];
+    if( vx.first ) continue; // var
+    hallvals[vx.second-umin] = true;
+    explained[vx.second-umin] = true;
+    minhval = std::min(minhval, vx.second);
+    maxhval = std::max(maxhval, vx.second);
+  }
+  // now describe that the variables in the SCC have been reduced to
+  // form a Hall set
+  for(size_t i = 0; i != components[scc].size(); ++i) {
+    vertex vx = components[scc][i];
+    if( !vx.first ) continue; // val
+    cspvar v2 = _x[vx.second];
+    pushifdef( ps, v2.r_geq(s, minhval) );
+    pushifdef( ps, v2.r_leq(s, maxhval) );
+    for(int p = minhval+1; p < maxhval; ++p)
+      if( !hallvals[p - umin] ) {
+        if( v2.indomain(s, p) )
+          to_explain.push_back(p);
+        else
+          ps.push( v2.r_neq(s, p) );
+      }
+  }
+}
+
 void cons_alldiff::explain_conflict(Solver &s, vec<Lit>& ps)
 {
   std::cout << "explaining conflict\n";
@@ -2669,6 +2721,8 @@ void cons_alldiff::explain_conflict(Solver &s, vec<Lit>& ps)
   tarjan_dfs_var(s, fvar, index);
   cspvar v = _x[fvar];
 
+  std::cout << "free var is " << cspvar_printer(s, v) << "\n";
+
   ps.clear();
   // describe the domain of fvar
   pushifdef( ps, v.r_min(s) );
@@ -2679,35 +2733,18 @@ void cons_alldiff::explain_conflict(Solver &s, vec<Lit>& ps)
 
   // and all the Hall sets that remove the rest of the values
   vector<bool> explained( umax-umin+1, false );
+  vector<int> to_explain;
   for(int q = v.min(s); q <= v.max(s); ++q) {
     if( !v.indomain(s, q) ) continue;
     if( explained[q-umin] ) continue;
-    vector<bool> hallvals( umax-umin+1, false );
-    int minhval = umax, maxhval = umin;
-    int scc = valcomp[q - umin];
-    assert( 2*comp_numvars[scc] == components[scc].size() );
+    explain_value(s, q, ps, explained, to_explain);
+  }
 
-    // first gather the values of the Hall set
-    for(size_t i = 0; i != components[scc].size(); ++i) {
-      vertex vx = components[scc][i];
-      if( vx.first ) continue; // var
-      hallvals[vx.second-umin] = true;
-      explained[vx.second-umin] = true;
-      minhval = std::min(minhval, vx.second);
-      maxhval = std::max(maxhval, vx.second);
-    }
-    // now describe that the variables in the SCC have been reduced to
-    // form a Hall set
-    for(size_t i = 0; i != components[scc].size(); ++i) {
-      vertex vx = components[scc][i];
-      if( !vx.first ) continue; // val
-      cspvar v2 = _x[vx.second];
-      pushifdef( ps, v2.r_geq(s, minhval) );
-      pushifdef( ps, v2.r_leq(s, maxhval) );
-      for(int p = minhval+1; p < maxhval; ++p)
-        if( !hallvals[p - umin] )
-          ps.push( v2.r_neq(s, p) );
-    }
+  // note in this loop that to_explain.size() might change in the body
+  // of the loop
+  for(size_t i = 0; i != to_explain.size(); ++i) {
+    if( explained[ to_explain[i] - umin ] ) continue;
+    explain_value(s, to_explain[i], ps, explained, to_explain);
   }
 
   tarjan_clear();

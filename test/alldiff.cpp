@@ -102,6 +102,57 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(alldiff05);
+
+  // a couple of hall sets working together to produce unsat
+  void alldiff06()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(8, 1, 10);
+    post_alldiff(s, x);
+
+    vec<Lit> exp;
+    for(int i = 2; i != 4; ++i) {
+      exp.push(x[i].r_neq(s, 5));
+      exp.push(x[i].r_leq(s, 6));
+      exp.push(x[i].r_geq(s, 4));
+    }
+    for(int i = 5; i != 8; ++i) {
+      exp.push(x[i].r_geq(s, 3));
+      exp.push(x[i].r_leq(s, 8));
+      // unfortunate that we have to have 4 and 6 as well, since they
+      // are unnecessary
+      exp.push(x[i].r_neq(s, 4));
+      exp.push(x[i].r_neq(s, 5));
+      exp.push(x[i].r_neq(s, 6));
+    }
+    exp.push(x[1].r_geq(s, 3));
+    exp.push(x[1].r_leq(s, 8));
+    exp.push(x[1].r_neq(s, 5));
+
+    s.newDecisionLevel();
+    for(int i = 2; i != 4; ++i) {
+      x[i].setmin(s, 4, NO_REASON);
+      x[i].setmax(s, 6, NO_REASON);
+      x[i].remove(s, 5, NO_REASON);
+    }
+    for(int i = 5; i != 8; ++i) {
+      x[i].setmin(s, 3, NO_REASON);
+      x[i].setmax(s, 8, NO_REASON);
+      x[i].remove(s, 4, NO_REASON);
+      x[i].remove(s, 5, NO_REASON);
+      x[i].remove(s, 6, NO_REASON);
+    }
+    x[1].setmin(s, 3, NO_REASON);
+    x[1].setmax(s, 8, NO_REASON);
+    x[1].remove(s, 5, NO_REASON);
+    Clause *c = s.propagate();
+    assert(c);
+    cout << "Got " << print(s, c) << "\n";
+    cout << "Expected " << print(s, &exp) << "\n";
+    assert_clause_exact(c, exp);
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(alldiff06);
 }
 
 void alldiff_test()
