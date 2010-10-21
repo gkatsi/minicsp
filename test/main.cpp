@@ -6,6 +6,7 @@ void le_test();
 void lin_test();
 void element_test();
 void regular_test();
+void alldiff_test();
 void set_test();
 
 int main()
@@ -18,6 +19,7 @@ int main()
   lin_test();
   element_test();
   regular_test();
+  alldiff_test();
   set_test();
   return 0;
 }

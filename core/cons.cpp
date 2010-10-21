@@ -4,6 +4,7 @@
 #include <map>
 #include <list>
 #include <algorithm>
+#include <limits>
 #include <cassert>
 #include "cons.hpp"
 #include "solver.hpp"
@@ -2387,15 +2388,527 @@ void post_element(Solver &s, cspvar R, cspvar I,
 class cons_table;
 
 /* Global constraints */
-class cons_alldiff;
-class cons_gcc;
+
+/* All different: each variable gets a distinct value */
+class cons_alldiff : public cons
+{
+  vector<cspvar> _x;
+  // the matching, kept and updated between calls. No need to update
+  // it on backtracking, whatever we had before is still valid
+  vector<int> matching;
+  vector<int> matching0; // double buffering
+  vec<Lit> reason;
+
+  int umin, umax; // the minimum and maximum values in the universe
+
+  unsigned nmatched;
+
+  typedef pair<bool, int> vertex;
+
+  // all the following are here to avoid allocations
+  vector<int> valn;     // all edges, sorted by value
+  vector<int> valnlim;  // the first edge of a value
+  vector<unsigned char> varfree; // is the var/val used by the matching?
+  vector<unsigned char> valfree;
+  vector<unsigned char> valvisited, varvisited; // for the BFS in matching,
+                                       // whether it is in the stack in
+                                       // tarjan's scc
+  vector<int> valbackp, varbackp; // back pointers to reconstruct the
+                                  // augmenting path
+  vector<int> valvisited_toclear;
+  vector<int> varvisited_toclear;
+
+  vector<int> varindex, varlowlink;
+  vector<int> valindex, vallowlink;
+
+  vector<int> varcomp, valcomp;
+  vector< vector< vertex > > components;
+  vector< unsigned > comp_numvars;
+  vector< vertex > tarjan_stack;
+
+  bool find_initial_matching(Solver& s) {
+    nmatched = 0;
+    greedy_matching(s);
+    return find_matching(s);
+  }
+
+  // back edges
+  void construct_valn(Solver& s);
+
+  // matching
+  void greedy_matching(Solver& s);
+  void clear_visited();
+  bool find_matching(Solver& s);
+
+  /* SCCs */
+  // produce a clause that describes why there is no matching
+  void explain_conflict(Solver& s, vec<Lit> &ps);
+
+  void tarjan_unroll_stack(vertex root);
+  // start the dfs from variable var
+  void tarjan_dfs_var(Solver& s, size_t var, size_t& index);
+  // start the dfs from value val
+  void tarjan_dfs_val(Solver& s, int val, size_t& index);
+  // reset all structures that were touched by tarjan_*
+  void tarjan_clear();
+public:
+  cons_alldiff(Solver &s, vector<cspvar> const& x) : _x(x)
+  {
+    static const int idx_undef = std::numeric_limits<int>::max();
+
+    umin = _x[0].min(s);
+    umax = _x[0].max(s);
+    for(size_t i = 0; i != _x.size(); ++i) {
+      umin = std::min( umin, _x[i].min(s) );
+      umax = std::max( umax, _x[i].max(s) );
+      s.schedule_on_dom(_x[i], this);
+      s.wake_on_fix(_x[i], this);
+    }
+
+    matching.resize(_x.size(), umin-1);
+
+    varfree.resize(_x.size(), true);
+    varvisited.resize(_x.size(), false);
+    varbackp.resize(_x.size(), umin-1);
+    varindex.resize(_x.size(), idx_undef);
+    varlowlink.resize(_x.size(), idx_undef);
+    varcomp.resize(_x.size(), idx_undef );
+
+    valfree.resize(umax-umin+1, true);
+    valvisited.resize(umax-umin+1, false);
+    valbackp.resize(umax-umin+1, -1);
+    valindex.resize(umax-umin+1, idx_undef);
+    vallowlink.resize(umax-umin+1, idx_undef);
+    valcomp.resize(umax-umin+1, idx_undef);
+
+    construct_valn(s);
+
+    if( !find_initial_matching(s) )
+      throw unsat();
+
+    std::cout << "Initial matching: ";
+    for(size_t i = 0; i != _x.size(); ++i) {
+      if( i ) std::cout << ", ";
+      std::cout << cspvar_printer(s, _x[i]) << " = "
+                << matching[i];
+    }
+    std::cout << "\n";
+  }
+
+  Clause* wake(Solver &s, Lit p);
+  Clause *propagate(Solver& s);
+  void clone(Solver& other);
+  ostream& print(Solver &s, ostream& os) const;
+  ostream& printstate(Solver& s, ostream& os) const;
+};
+
+void cons_alldiff::clone(Solver& other)
+{
+  cons *con = new cons_alldiff(other, _x);
+  other.addConstraint(con);
+}
+
+ostream& cons_alldiff::print(Solver& s, ostream& os) const
+{
+  os << "alldifferent(";
+  for(size_t i = 0; i != _x.size(); ++i) {
+    if( i ) os << ", ";
+    os << cspvar_printer(s, _x[i]);
+  }
+  os << ")";
+  return os;
+}
+
+ostream& cons_alldiff::printstate(Solver&s, ostream& os) const
+{
+  print(s, os);
+  os << " (with ";
+  for(size_t i = 0; i != _x.size(); ++i) {
+    if( i ) os << ", ";
+    os << cspvar_printer(s, _x[i]) << " in " << domain_as_set(s, _x[i]);
+  }
+  os << ")";
+  return os;
+}
+
+void cons_alldiff::construct_valn(Solver& s)
+{
+  valnlim.clear();
+  valn.clear();
+  valnlim.push_back(0);
+  for(int i = umin; i <= umax; ++i) {
+    for(size_t j = 0; j != _x.size(); ++j)
+      if(_x[j].indomain(s, i))
+        valn.push_back(j);
+    valnlim.push_back(valn.size());
+  }
+}
+
+void cons_alldiff::greedy_matching(Solver &s)
+{
+  std::cout << "before greedy, Matching: ";
+  for(size_t i = 0; i != _x.size(); ++i) {
+    if( i ) std::cout << ", ";
+    std::cout << cspvar_printer(s, _x[i]) << " = "
+              << matching[i];
+  }
+  std::cout << "\n";
+  const size_t n = _x.size();
+  for(size_t i = 0; i != n; ++i) {
+    for(int q = _x[i].min(s); q <= _x[i].max(s); ++q) {
+      if( valfree[q-umin] ) {
+        valfree[q-umin] = false;
+        varfree[i] = false;
+        matching[i] = q;
+        ++nmatched;
+        break;
+      }
+    }
+  }
+  std::cout << "greedily matched " << nmatched << " variables\n";
+  std::cout << "Matching: ";
+  for(size_t i = 0; i != _x.size(); ++i) {
+    if( i ) std::cout << ", ";
+    std::cout << cspvar_printer(s, _x[i]) << " = "
+              << matching[i];
+  }
+  std::cout << "\n";
+}
+
+void cons_alldiff::clear_visited()
+{
+  for(size_t i = 0; i != valvisited_toclear.size(); ++i)
+    valvisited[ valvisited_toclear[i]-umin ] = false;
+  for(size_t i = 0; i != varvisited_toclear.size(); ++i)
+    varvisited[ varvisited_toclear[i] ] = false;
+  valvisited_toclear.clear();
+  varvisited_toclear.clear();
+}
+
+bool cons_alldiff::find_matching(Solver &s)
+{
+  const size_t n = _x.size();
+  while( nmatched < n ) {
+    // find a free variable
+    size_t fvar;
+    for(fvar = 0; !varfree[fvar]; ++fvar)
+      ;
+    // do a bfs for an augmenting path
+    std::list<int> varfrontier;
+    std::list<int> valfrontier;
+    varfrontier.push_back(fvar);
+    int pathend = umin-1;
+    do {
+      while( !varfrontier.empty() ) {
+        size_t var = varfrontier.front();
+        varfrontier.pop_front();
+        int qend = _x[var].max(s);
+        for(int q = _x[var].min(s); q <= qend ; ++q) {
+          if( !_x[var].indomain(s, q) ) continue;
+          if( matching[var] == q )
+            continue;
+          if( valvisited[q-umin] )
+            continue;
+          valbackp[q-umin] = var;
+          if( valfree[q-umin] ) {
+            pathend = q;
+            goto augment_path;
+          }
+          valfrontier.push_back(q);
+          valvisited[q-umin] = true;
+          valvisited_toclear.push_back(q);
+          std::cout << "\tedge (x" << var << ", " << q << ")\n";
+        }
+      }
+      while( !valfrontier.empty() ) {
+        int q = valfrontier.front();
+        valfrontier.pop_front();
+        for(size_t vni = valnlim[q-umin], vniend = valnlim[q+1-umin];
+            vni != vniend; ++vni) {
+          size_t var = valn[ vni ];
+          if( matching[var] != q )
+            continue;
+          if( varvisited[var] )
+            continue;
+          varfrontier.push_back(var);
+          varbackp[var] = q;
+          varvisited[var] = true;
+          varvisited_toclear.push_back(var);
+          std::cout << "\tedge (" << q << ", x" << var << ")\n";
+        }
+      }
+    } while( !varfrontier.empty() );
+    clear_visited();
+    return false;
+  augment_path:
+    valfree[pathend-umin] = false;
+    int val = pathend;
+    int var = valbackp[pathend-umin];
+    matching[var] = pathend;
+    while( !varfree[var] ) {
+      val = varbackp[var];
+      var = valbackp[val-umin];
+      matching[var] = val;
+    }
+    ++nmatched;
+    varfree[fvar] = false;
+    clear_visited();
+  }
+  return true;
+}
+
+void cons_alldiff::explain_conflict(Solver &s, vec<Lit>& ps)
+{
+  std::cout << "explaining conflict\n";
+  // find a free var...
+  size_t fvar;
+  for(fvar = 0; !varfree[fvar]; ++fvar)
+    ;
+  // ... and all SCCs reachable from it ...
+  size_t index = 0;
+  tarjan_dfs_var(s, fvar, index);
+  cspvar v = _x[fvar];
+
+  ps.clear();
+  // describe the domain of fvar
+  pushifdef( ps, v.r_min(s) );
+  pushifdef( ps, v.r_max(s) );
+  for(int q = v.min(s)+1; q < v.max(s); ++q)
+    if( !v.indomain(s, q) )
+      ps.push( v.r_neq(s, q) );
+
+  // and all the Hall sets that remove the rest of the values
+  vector<bool> explained( umax-umin+1, false );
+  for(int q = v.min(s); q <= v.max(s); ++q) {
+    if( !v.indomain(s, q) ) continue;
+    if( explained[q-umin] ) continue;
+    vector<bool> hallvals( umax-umin+1, false );
+    int minhval = umax, maxhval = umin;
+    int scc = valcomp[q - umin];
+    assert( 2*comp_numvars[scc] == components[scc].size() );
+
+    // first gather the values of the Hall set
+    for(size_t i = 0; i != components[scc].size(); ++i) {
+      vertex vx = components[scc][i];
+      if( vx.first ) continue; // var
+      hallvals[vx.second-umin] = true;
+      explained[vx.second-umin] = true;
+      minhval = std::min(minhval, vx.second);
+      maxhval = std::max(maxhval, vx.second);
+    }
+    // now describe that the variables in the SCC have been reduced to
+    // form a Hall set
+    for(size_t i = 0; i != components[scc].size(); ++i) {
+      vertex vx = components[scc][i];
+      if( !vx.first ) continue; // val
+      cspvar v2 = _x[vx.second];
+      pushifdef( ps, v2.r_geq(s, minhval) );
+      pushifdef( ps, v2.r_leq(s, maxhval) );
+      for(int p = minhval+1; p < maxhval; ++p)
+        if( !hallvals[p - umin] )
+          ps.push( v2.r_neq(s, p) );
+    }
+  }
+
+  tarjan_clear();
+}
+
+void cons_alldiff::tarjan_unroll_stack(vertex root)
+{
+  int scc = components.size();
+  components.push_back( vector<vertex>() );
+  comp_numvars.push_back( 0 );
+  vector<vertex> & comp = components.back();
+  unsigned & numvars = comp_numvars.back();
+  vertex vp;
+  do {
+    vp = tarjan_stack.back(); tarjan_stack.pop_back();
+    comp.push_back(vp);
+    if( vp.first ) {
+      varcomp[vp.second] = scc;
+      varvisited[vp.second] = false;
+      ++numvars;
+    } else {
+      valcomp[vp.second-umin] = scc;
+      valvisited[vp.second-umin] = false;
+    }
+  } while( vp != root );
+}
+
+void cons_alldiff::tarjan_clear()
+{
+  static const int idx_undef = std::numeric_limits<int>::max();
+
+  for(size_t i = 0; i != varvisited_toclear.size(); ++i) {
+    int var = varvisited_toclear[i];
+    varindex[var] = idx_undef;
+    varlowlink[var] = idx_undef;
+    varcomp[var] = idx_undef;
+  }
+  for(size_t i = 0; i != valvisited_toclear.size(); ++i) {
+    int val = valvisited_toclear[i];
+    valindex[val - umin] = idx_undef;
+    vallowlink[val - umin] = idx_undef;
+    valcomp[val - umin] = idx_undef;
+  }
+  valvisited_toclear.clear();
+  varvisited_toclear.clear();
+  components.clear();
+  comp_numvars.clear();
+}
+
+void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
+{
+  static const int idx_undef = std::numeric_limits<int>::max();
+
+  varvisited_toclear.push_back(var);
+  varindex[var] = index;
+  varlowlink[var] = index;
+  ++index;
+  tarjan_stack.push_back( make_pair(true, var) );
+  for(int q = _x[var].min(s), qend = _x[var].max(s); q <= qend; ++q) {
+    if( matching[var] == q || // edge is (q, var), not (var, q)
+        !_x[var].indomain(s, q) ) // no edge at all
+      continue;
+    if( valindex[q-umin] == idx_undef  ) {
+      tarjan_dfs_val(s, q, index);
+      varlowlink[var] = std::min(varlowlink[var], vallowlink[q-umin]);
+    } else if( valvisited[q-umin] ) { // q is in stack
+      varlowlink[var] = std::min(varlowlink[var], valindex[q-umin] );
+    }
+  }
+  if( varlowlink[var] == varindex[var] )
+    tarjan_unroll_stack( make_pair(true, var) );
+}
+
+void cons_alldiff::tarjan_dfs_val(Solver &s, int val, size_t& index)
+{
+  static const int idx_undef = std::numeric_limits<int>::max();
+
+  valvisited_toclear.push_back(val);
+  valindex[val-umin] = index;
+  vallowlink[val-umin] = index;
+  valvisited[val-umin] = true;
+  ++index;
+  tarjan_stack.push_back( make_pair(false, val) );
+  for(int q = valnlim[val-umin], qend = valnlim[val+1-umin]; q != qend; ++q) {
+    int var = valn[q];
+    if( matching[var] != val ) // edge is (var, val)
+      continue;
+    if( varindex[var] == idx_undef  ) {
+      tarjan_dfs_var(s, var, index);
+      vallowlink[val-umin] = std::min(vallowlink[val-umin], varlowlink[var]);
+    } else if( varvisited[var] ) { // var is in stack
+      vallowlink[val-umin] = std::min(vallowlink[val-umin], varindex[var] );
+    }
+  }
+  if( vallowlink[val-umin] == valindex[val-umin] )
+    tarjan_unroll_stack( make_pair(false, val) );
+}
+
+Clause* cons_alldiff::wake(Solver &s, Lit p)
+{
+  const size_t n = _x.size();
+  domevent de = s.event(p);
+  if( de.type != domevent::EQ ) return 0L;
+
+  reason.clear();
+  reason.push(~p);
+  for(size_t i = 0; i != n; ++i) {
+    if( de.x == _x[i] ) continue;
+    if( !_x[i].indomain(s, de.d) ) continue;
+    DO_OR_RETURN(_x[i].removef(s, de.d, reason));
+  }
+  return 0L;
+}
+
+Clause* cons_alldiff::propagate(Solver &s)
+{
+  std::cout << "propagating " << cons_state_printer(s, *this) << "\n";
+  const size_t n = _x.size();
+  bool valid = true; // is the current matching still valid?
+  for(size_t i = 0; i != n; ++i) {
+    if( !_x[i].indomain( s, matching[i] ) ) {
+      if(valid) {
+        valid = false;
+        matching0 = matching; // if we detect failure, we will copy
+                              // matching0 back to matching so on
+                              // backtracking we will still have a
+                              // valid matching
+      }
+      varfree[i] = true;
+      valfree[ matching[i] - umin ] = true;
+      matching[i] = umin-1;
+      --nmatched;
+    }
+  }
+  if( valid ) {
+    std::cout << "Matching: ";
+    for(size_t i = 0; i != _x.size(); ++i) {
+      if( i ) std::cout << ", ";
+      std::cout << cspvar_printer(s, _x[i]) << " = "
+                << matching[i];
+    }
+    std::cout << "\n";
+    return 0L;
+  }
+
+  construct_valn(s);
+  if( find_matching(s) ) {
+    std::cout << "Matching: ";
+    for(size_t i = 0; i != _x.size(); ++i) {
+      if( i ) std::cout << ", ";
+      std::cout << cspvar_printer(s, _x[i]) << " = "
+                << matching[i];
+    }
+    std::cout << "\n";
+    return 0L;
+  }
+
+  std::cout << "Best matching: ";
+  for(size_t i = 0; i != _x.size(); ++i) {
+    if( i ) std::cout << ", ";
+    if( matching[i] >= umin )
+      std::cout << cspvar_printer(s, _x[i]) << " = "
+                << matching[i];
+    else
+      std::cout << cspvar_printer(s, _x[i]) << " = "
+                << "XX";
+  }
+  std::cout << "\n";
+
+  reason.clear();
+  explain_conflict(s, reason);
+  Clause *r = Clause_new(reason);
+  s.addInactiveClause(r);
+  matching = matching0;
+  return r;
+}
 
 void post_alldiff(Solver &s, std::vector<cspvar> const &x)
 {
-  for(size_t i = 0; i != x.size(); ++i)
-    for(size_t j = i+1; j != x.size(); ++j)
-      post_neq(s, x[i], x[j], 0);
+  vector<cspvar> xp;
+  vector<int> rem;
+  for(size_t i = 0; i != x.size(); ++i) {
+    if( x[i].min(s) == x[i].max(s) ) {
+      rem.push_back(x[i].min(s));
+    } else
+      xp.push_back(x[i]);
+  }
+  for(size_t i = 0; i != xp.size(); ++i) {
+    for(size_t q = 0; q != rem.size(); ++q)
+      xp[i].remove(s, q, NO_REASON);
+  }
+  // FIXME: find disconnected components and post one alldiff for
+  // each. or do it dynamically in the propagator
+
+  if( xp.empty() ) return;
+
+  cons *con = new cons_alldiff(s, xp);
+  s.addConstraint(con);
 }
+
+class cons_gcc;
 
 /* Regular */
 namespace regular {
@@ -2658,3 +3171,4 @@ void post_regular(Solver &s, vector< cspvar > const& vars,
 
   if( !gac ) return;
 }
+
