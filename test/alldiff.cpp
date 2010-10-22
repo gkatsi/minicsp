@@ -153,6 +153,63 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(alldiff06);
+
+  // pruning tests
+  void alldiff07()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(5, 1, 10);
+    post_alldiff(s, x);
+
+    s.newDecisionLevel();
+    for(int i = 2; i != 4; ++i) {
+      x[i].setmin(s, 4, NO_REASON);
+      x[i].setmax(s, 6, NO_REASON);
+      x[i].remove(s, 5, NO_REASON);
+    }
+    assert(!s.propagate());
+    for(int i = 0; i != 5; ++i) {
+      assert( i == 2 || i == 3 ||
+              (!x[i].indomain(s, 4) &&
+               !x[i].indomain(s, 6)));
+    }
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(alldiff07);
+
+  void alldiff08()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(5, 1, 10);
+    post_alldiff(s, x);
+
+    s.newDecisionLevel();
+    x[0].setmax(s, 2, NO_REASON);
+    x[1].setmax(s, 2, NO_REASON);
+    assert(!s.propagate());
+    assert(x[2].min(s) == 3);
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(alldiff08);
+
+  // an edge that crosses SCCs but is safe
+  void alldiff09()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(5, 1, 10);
+    post_alldiff(s, x);
+
+    s.newDecisionLevel();
+    x[0].setmax(s, 3, NO_REASON);
+    x[1].setmax(s, 2, NO_REASON);
+    x[2].setmin(s, 3, NO_REASON);
+    x[3].setmin(s, 3, NO_REASON);
+    x[4].setmin(s, 3, NO_REASON);
+    assert(!s.propagate());
+    assert(x[0].indomain(s, 3));
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(alldiff09);
 }
 
 void alldiff_test()
