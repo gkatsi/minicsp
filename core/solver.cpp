@@ -843,11 +843,6 @@ void Solver::uncheckedEnqueue_np(Lit p, Clause *from)
       assert(foundp);
     }
 #endif
-
-#ifdef EXPENSIVE_INVARIANTS
-    if( active_constraint )
-      debugclause(from, active_constraint);
-#endif
 }
 
 /* We do manual domain updates here, rather than wait for
@@ -884,6 +879,11 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
 
     check_debug_solution(p, from);
     uncheckedEnqueue_np(p, from);
+
+#ifdef EXPENSIVE_INVARIANTS
+    if( active_constraint )
+      debugclause(from, active_constraint);
+#endif
 
     // update csp var and propagate, if applicable
     domevent const &pevent = events[toInt(p)];
