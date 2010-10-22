@@ -745,6 +745,10 @@ void Solver::debugclause(Clause *from, cons *c)
   events.copyTo(s1.events);
   setevents.copyTo(s1.setevents);
 
+  s1.varnames.resize(nv);
+  s1.cspvarnames.resize( cspvarnames.size() );
+  s1.setvarnames.resize( setvarnames.size() );
+
   cspvars.copyTo(s1.cspvars);
   for(int i = 0; i != cspvars.size(); ++i) {
     cspvar x(i);
