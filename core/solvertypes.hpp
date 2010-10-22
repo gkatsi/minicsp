@@ -520,6 +520,10 @@ class setvar_data
   cspvar card() const { return _card; }
 public:
   setvar_data() {}
+  setvar_data(setvar_data& s) :
+    min(s.min), max(s.max), firstbool(s.firstbool),
+    _card(s._card)
+  {}
 };
 
 struct setevent

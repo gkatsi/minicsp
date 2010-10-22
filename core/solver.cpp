@@ -764,6 +764,9 @@ void Solver::debugclause(Clause *from, cons *c)
     } else
       x.setmax(s1, xbt.max, (Clause*)0L);
   }
+
+  setvars.copyTo(s1.setvars);
+
   s1.propagate();
 
   s1.trace = trace;
