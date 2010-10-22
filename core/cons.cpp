@@ -2510,7 +2510,7 @@ public:
 
 void cons_alldiff::clone(Solver& other)
 {
-  cons *con = new cons_alldiff(other, _x);
+  cons *con = new cons_alldiff(other, _x, _gac);
   other.addConstraint(con);
 }
 
