@@ -1227,12 +1227,12 @@ Clause* Solver::propagate_inner()
         vec<int> *sesched = 0L;
         switch(se.type) {
         case setevent::IN:
-          sewakes=&(setvars[pe.x._id].wake_on_in);
-          sesched=&(setvars[pe.x._id].schedule_on_in);
+          sewakes=&(setvars[se.x._id].wake_on_in);
+          sesched=&(setvars[se.x._id].schedule_on_in);
           break;
         case setevent::EX:
-          sewakes=&(setvars[pe.x._id].wake_on_ex);
-          sesched=&(setvars[pe.x._id].schedule_on_ex);
+          sewakes=&(setvars[se.x._id].wake_on_ex);
+          sesched=&(setvars[se.x._id].schedule_on_ex);
           break;
         case setevent::NONE: assert(0);
         }
