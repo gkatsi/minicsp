@@ -1743,6 +1743,12 @@ Clause *cons_pbvar::wake(Solver &s, Lit)
   _ubreason.shrink(n - ubi + 1);
   DO_OR_RETURN(_rhs.setmaxf(s, ub, _ubreason));
 
+  // check again, because rhs might have had holes!
+  if( _rhs.min(s) > lb )
+    nonimpliedlb = true;
+  if( _rhs.max(s) < ub )
+    nonimpliedub = true;
+
   for(int i = 0; i != _ubreason.size(); ++i)
     _lbreason.push(_ubreason[i]);
 

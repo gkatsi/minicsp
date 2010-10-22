@@ -336,6 +336,28 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(pbvar03);
+
+  // this is meant to test the clause produced, so is meaningful with
+  // EXPENSIVE_INVARIANTS turned on.
+  void pbvar04()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(3, 0, 1);
+    vector<int> w(3);
+    for(int i = 0; i != 3; ++i) w[i] = 1;
+    cspvar rhs = s.newCSPVar(0, 3);
+    post_pb(s, x, w, 0, rhs);
+
+    s.newDecisionLevel();
+    rhs.remove(s, 1, NO_REASON);
+    x[1].setmax(s, 0, NO_REASON);
+    x[2].setmax(s, 0, NO_REASON);
+    assert( !s.propagate() );
+    assert(x[0].max(s) == 0);
+    assert(rhs.max(s) == 0);
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(pbvar04);
 }
 
 void pb_test()
