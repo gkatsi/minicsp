@@ -2584,11 +2584,10 @@ void cons_alldiff::clear_visited()
 bool cons_alldiff::find_matching(Solver &s)
 {
   const size_t n = _x.size();
-  while( nmatched < n ) {
-    // find a free variable
-    size_t fvar;
-    for(fvar = 0; !varfree[fvar]; ++fvar)
-      ;
+  // find a free variable
+  for(size_t fvar = 0; fvar != n && nmatched < n; ++fvar ) {
+    if ( !varfree[fvar] ) continue;
+
     // do a bfs for an augmenting path
     std::list<int> varfrontier;
     std::list<int> valfrontier;
