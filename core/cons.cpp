@@ -2787,6 +2787,7 @@ void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
   varvisited_toclear.push_back(var);
   varindex[var] = index;
   varlowlink[var] = index;
+  varvisited[var] = true;
   ++index;
   tarjan_stack.push_back( make_pair(true, var) );
   for(int q = _x[var].min(s), qend = _x[var].max(s); q <= qend; ++q) {
