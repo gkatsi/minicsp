@@ -147,8 +147,6 @@ namespace {
     x[1].remove(s, 5, NO_REASON);
     Clause *c = s.propagate();
     assert(c);
-    cout << "Got " << print(s, c) << "\n";
-    cout << "Expected " << print(s, &exp) << "\n";
     assert_clause_exact(c, exp);
     s.cancelUntil(0);
   }

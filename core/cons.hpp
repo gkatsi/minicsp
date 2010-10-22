@@ -186,8 +186,9 @@ void post_max(Solver &s, cspvar x, cspvar y, cspvar z);
 void post_element(Solver &s, cspvar R, cspvar I,
                   std::vector<cspvar> const& X, int offset=0);
 
-// alldiff
-void post_alldiff(Solver &s, std::vector<cspvar> const& vars);
+// alldiff. if gac is false it behaves like a clique of != and also
+// detects gac disentailment, otherwise enforces gac like usual
+void post_alldiff(Solver &s, std::vector<cspvar> const& vars, bool gac = true);
 
 /* Regular
  *
