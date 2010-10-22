@@ -370,7 +370,7 @@ namespace {
   // check that queue is cleared correctly: schedule p, fail before p
   // is executed, backtrack and make decisions that do not schedule p
   // again. p must not be in wakes.
-  void schedule_clear()
+  void schedule_clear01()
   {
     Solver s;
     vector<cspvar> d, l, u, f;
@@ -396,7 +396,39 @@ namespace {
 
     assert( compare_events(wakes, exp) );
   }
-  REGISTER_TEST(schedule_clear);
+  REGISTER_TEST(schedule_clear01);
+
+  // check that queue is cleared correctly, take 2: schedule p, fail
+  // before p is executed, backtrack and make decisions that schedule
+  // p again. p must be in wakes.
+  void schedule_clear02()
+  {
+    Solver s;
+    vector<cspvar> d, l, u, f;
+    d = s.newCSPVarArray(3, 5, 10);
+    Var b = s.newVar();
+
+    vector<int> wakes;
+    post_test(s, 1, wakes, d, l, u, f);
+    post_eq(s, d[0], d[1], 0);
+    post_less_re(s, d[0], d[1], 0, Lit(b));
+
+    int exp[] = { 1, -1 };
+
+    s.newDecisionLevel();
+    s.enqueue( Lit(b) );
+    assert( s.propagate() );
+    s.cancelUntil(0);
+
+    s.newDecisionLevel();
+    d[0].remove(s, 7, NO_REASON);
+    assert( !s.propagate() );
+    s.cancelUntil(0);
+
+    assert( compare_events(wakes, exp) );
+  }
+  REGISTER_TEST(schedule_clear02);
+
 
   //--------------------------------------------------
   // multiple priorities

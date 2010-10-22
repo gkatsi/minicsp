@@ -1076,6 +1076,13 @@ void Solver::unschedule(int cqidx)
 
 void Solver::reset_queue()
 {
+  int cqidx = 0;
+  while( cqidx >= 0 ) {
+    int nxt = consqs[cqidx].next;
+    consqs[cqidx].next = -1;
+    consqs[cqidx].prev = -1;
+    cqidx = nxt;
+  }
   for(int i = 0; i != MAX_PRIORITY+1; ++i) {
     if( i < MAX_PRIORITY )
       consqs[i].next = i+1;
@@ -1225,7 +1232,6 @@ Clause* Solver::propagate_inner()
         for( int *si = &((*desched)[0]),*siend = si+desched->size();
              si != siend; ++si)
           schedule(*si);
-
 
     SetPropagation:
         setevent const & se = setevents[toInt(p)];
