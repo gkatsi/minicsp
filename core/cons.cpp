@@ -2401,8 +2401,10 @@ class cons_alldiff : public cons
   vector<cspvar> _x;
   // the matching, kept and updated between calls. No need to update
   // it on backtracking, whatever we had before is still valid
-  vector<int> matching;
+  vector<int> matching;    // from var to val
+  vector<int> revmatching; // from val to var
   vector<int> matching0; // double buffering
+  vector<int> revmatching0;
   vec<Lit> reason;
 
   int umin, umax; // the minimum and maximum values in the universe
@@ -2412,8 +2414,6 @@ class cons_alldiff : public cons
   typedef pair<bool, int> vertex;
 
   // all the following are here to avoid allocations
-  vector<int> valn;     // all edges, sorted by value
-  vector<int> valnlim;  // the first edge of a value
   vector<unsigned char> varfree; // is the var/val used by the matching?
   vector<unsigned char> valfree;
   vector<unsigned char> valvisited, varvisited; // for the BFS in matching,
@@ -2437,9 +2437,6 @@ class cons_alldiff : public cons
     greedy_matching(s);
     return find_matching(s);
   }
-
-  // back edges
-  void construct_valn(Solver& s);
 
   // matching
   void greedy_matching(Solver& s);
@@ -2478,6 +2475,7 @@ public:
     }
 
     matching.resize(_x.size(), umin-1);
+    revmatching.resize(umax-umin+1, -1);
 
     varfree.resize(_x.size(), true);
     varvisited.resize(_x.size(), false);
@@ -2492,8 +2490,6 @@ public:
     valindex.resize(umax-umin+1, idx_undef);
     vallowlink.resize(umax-umin+1, idx_undef);
     valcomp.resize(umax-umin+1, idx_undef);
-
-    construct_valn(s);
 
     if( !find_initial_matching(s) )
       throw unsat();
@@ -2543,19 +2539,6 @@ ostream& cons_alldiff::printstate(Solver&s, ostream& os) const
   return os;
 }
 
-void cons_alldiff::construct_valn(Solver& s)
-{
-  valnlim.clear();
-  valn.clear();
-  valnlim.push_back(0);
-  for(int i = umin; i <= umax; ++i) {
-    for(size_t j = 0; j != _x.size(); ++j)
-      if(_x[j].indomain(s, i))
-        valn.push_back(j);
-    valnlim.push_back(valn.size());
-  }
-}
-
 void cons_alldiff::greedy_matching(Solver &s)
 {
   std::cout << "before greedy, Matching: ";
@@ -2572,6 +2555,7 @@ void cons_alldiff::greedy_matching(Solver &s)
         valfree[q-umin] = false;
         varfree[i] = false;
         matching[i] = q;
+        revmatching[q-umin] = i;
         ++nmatched;
         break;
       }
@@ -2635,19 +2619,13 @@ bool cons_alldiff::find_matching(Solver &s)
       while( !valfrontier.empty() ) {
         int q = valfrontier.front();
         valfrontier.pop_front();
-        for(size_t vni = valnlim[q-umin], vniend = valnlim[q+1-umin];
-            vni != vniend; ++vni) {
-          size_t var = valn[ vni ];
-          if( matching[var] != q )
-            continue;
-          if( varvisited[var] )
-            continue;
-          varfrontier.push_back(var);
-          varbackp[var] = q;
-          varvisited[var] = true;
-          varvisited_toclear.push_back(var);
-          std::cout << "\tedge (" << q << ", x" << var << ")\n";
-        }
+        int var = revmatching[q - umin];
+        if( var < 0 || varvisited[var] ) continue;
+        varfrontier.push_back(var);
+        varbackp[var] = q;
+        varvisited[var] = true;
+        varvisited_toclear.push_back(var);
+        std::cout << "\tedge (" << q << ", x" << var << ")\n";
       }
     } while( !varfrontier.empty() );
     clear_visited();
@@ -2657,10 +2635,12 @@ bool cons_alldiff::find_matching(Solver &s)
     int val = pathend;
     int var = valbackp[pathend-umin];
     matching[var] = pathend;
+    revmatching[pathend-umin] = var;
     while( !varfree[var] ) {
       val = varbackp[var];
       var = valbackp[val-umin];
       matching[var] = val;
+      revmatching[val-umin] = var;
     }
     ++nmatched;
     varfree[fvar] = false;
@@ -2834,16 +2814,13 @@ void cons_alldiff::tarjan_dfs_val(Solver &s, int val, size_t& index)
   valvisited[val-umin] = true;
   ++index;
   tarjan_stack.push_back( make_pair(false, val) );
-  for(int q = valnlim[val-umin], qend = valnlim[val+1-umin]; q != qend; ++q) {
-    int var = valn[q];
-    if( matching[var] != val ) // edge is (var, val)
-      continue;
-    if( varindex[var] == idx_undef  ) {
-      tarjan_dfs_var(s, var, index);
-      vallowlink[val-umin] = std::min(vallowlink[val-umin], varlowlink[var]);
-    } else if( varvisited[var] ) { // var is in stack
-      vallowlink[val-umin] = std::min(vallowlink[val-umin], varindex[var] );
-    }
+  int var = revmatching[val-umin];
+  if( var < 0 ) return;
+  if( varindex[var] == idx_undef  ) {
+    tarjan_dfs_var(s, var, index);
+    vallowlink[val-umin] = std::min(vallowlink[val-umin], varlowlink[var]);
+  } else if( varvisited[var] ) { // var is in stack
+    vallowlink[val-umin] = std::min(vallowlink[val-umin], varindex[var] );
   }
   if( vallowlink[val-umin] == valindex[val-umin] )
     tarjan_unroll_stack( make_pair(false, val) );
@@ -2874,6 +2851,7 @@ Clause* cons_alldiff::propagate(Solver &s)
     if( !_x[i].indomain( s, matching[i] ) ) {
       if(valid) {
         valid = false;
+        revmatching0 = revmatching;
         matching0 = matching; // if we detect failure, we will copy
                               // matching0 back to matching so on
                               // backtracking we will still have a
@@ -2881,6 +2859,7 @@ Clause* cons_alldiff::propagate(Solver &s)
       }
       varfree[i] = true;
       valfree[ matching[i] - umin ] = true;
+      revmatching[ matching[i]-umin ] = -1;
       matching[i] = umin-1;
       --nmatched;
     }
@@ -2896,7 +2875,6 @@ Clause* cons_alldiff::propagate(Solver &s)
     return 0L;
   }
 
-  construct_valn(s);
   if( find_matching(s) ) {
     std::cout << "Matching: ";
     for(size_t i = 0; i != _x.size(); ++i) {
@@ -2925,6 +2903,7 @@ Clause* cons_alldiff::propagate(Solver &s)
   Clause *r = Clause_new(reason);
   s.addInactiveClause(r);
   matching = matching0;
+  revmatching = revmatching0;
   return r;
 }
 
