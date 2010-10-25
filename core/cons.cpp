@@ -2468,20 +2468,13 @@ class cons_alldiff : public cons
                      vector<unsigned char>& explained,
                      vector<int>& to_explain);
 
-  void tarjan_unroll_stack(Solver& s, vertex root);
+  void tarjan_unroll_stack(vertex root);
   // start the dfs from variable var
   void tarjan_dfs_var(Solver& s, size_t var, size_t& index);
   // start the dfs from value val
   void tarjan_dfs_val(Solver& s, int val, size_t& index);
   // reset all structures that were touched by tarjan_*
   void tarjan_clear();
-
-  void print_matching(Solver& s) {
-    for(size_t i = 0; i != _x.size(); ++i) {
-      if( i ) cout << ", ";
-      cout << cspvar_printer(s, _x[i]) << " = " << matching[i];
-    }
-  }
 public:
   cons_alldiff(Solver &s, vector<cspvar> const& x, bool gac = true) :
     _x(x), _gac(gac)
@@ -2516,12 +2509,6 @@ public:
 
     if( !find_initial_matching(s) )
       throw unsat();
-
-    DEXEC {
-      cout << "Initial matching: ";
-      print_matching(s);
-      cout << "\n";
-    }
   }
 
   Clause* wake(Solver &s, Lit p);
@@ -2588,18 +2575,9 @@ void cons_alldiff::clear_visited()
 bool cons_alldiff::find_matching(Solver &s)
 {
   const size_t n = _x.size();
-  DEXEC {
-    cout << "finding new matching\n";
-    cout << "starting from ";
-    print_matching(s);
-    cout << "\n";
-    cout << "nmatched = " << nmatched << ", target = " << n << "\n";
-  }
   // find a free variable
   for(size_t fvar = 0; fvar != n && nmatched < n; ++fvar ) {
     if ( !varfree(fvar) ) continue;
-
-    DOUT << "var " << cspvar_printer(s, _x[fvar]) << " is free\n";
 
     // do a bfs for an augmenting path
     std::list<int> varfrontier;
@@ -2622,7 +2600,6 @@ bool cons_alldiff::find_matching(Solver &s)
             pathend = q;
             goto augment_path;
           }
-          DOUT << "e(" << cspvar_printer(s, _x[var]) << ", " << q << ")\n";
           valfrontier.push_back(q);
           valvisited[q-umin] = true;
           valvisited_toclear.push_back(q);
@@ -2633,7 +2610,6 @@ bool cons_alldiff::find_matching(Solver &s)
         valfrontier.pop_front();
         int var = revmatching[q - umin];
         if( var < 0 || varvisited[var] ) continue;
-        DOUT << "e(" << q << ", " << cspvar_printer(s, _x[var]) << ")\n";
         varfrontier.push_back(var);
         varbackp[var] = q;
         varvisited[var] = true;
@@ -2646,27 +2622,16 @@ bool cons_alldiff::find_matching(Solver &s)
     int val = pathend;
     int var = valbackp[pathend-umin];
     assert( var >= 0 );
-    DOUT << "Changing " << cspvar_printer(s, _x[var])
-         << " from " << matching[var] << " to " << pathend
-         << "\n";
     matching[var] = pathend;
     revmatching[pathend-umin] = var;
     while( (unsigned)var != fvar ) {
       val = varbackp[var];
       var = valbackp[val-umin];
-      DOUT << "Changing " << cspvar_printer(s, _x[var])
-           << " from " << matching[var] << " to " << val
-           << "\n";;
       matching[var] = val;
       revmatching[val-umin] = var;
     }
     ++nmatched;
     clear_visited();
-  }
-  DEXEC {
-    cout << "augmented to ";
-    print_matching(s);
-    cout << "\n";
   }
   for(size_t i = 0; i != n; ++i)
     assert(!varfree(i));
@@ -2686,29 +2651,12 @@ void cons_alldiff::explain_value(Solver &s, int q,
     assert(revmatching[q-umin] >= 0);
     size_t var = revmatching[q-umin];
     cspvar v = _x[var];
-    DOUT << q << " is in a singleton SCC\n";
     hallvals[q-umin] = true;
     explained[q-umin] = 2;
     scc = varcomp[ revmatching[q-umin] ];
     assert( components[scc].size() == 1 );
   } else {
     assert( 2*comp_numvars[scc] == components[scc].size() );
-
-    DEXEC {
-      cout << "\tvalue " << q << " in scc ";
-      int i = valcomp[q-umin];
-      vector<vertex> const &scc = components[i];
-      for(size_t j = 0; j != scc.size(); ++j) {
-        vertex vx = scc[j];
-        if( j ) cout << ", ";
-        if( vx.first ) cout << cspvar_printer(s, _x[vx.second]);
-        else cout << vx.second;
-      }
-      if( comp_numvars[i]*2 == components[i].size() &&
-          hallcomp[i] )
-        cout << "\t\tHall set";
-      cout << "\n";
-    }
 
     // first gather the values of the Hall set
     for(size_t i = 0; i != components[scc].size(); ++i) {
@@ -2751,24 +2699,6 @@ void cons_alldiff::explain_conflict(Solver &s, vec<Lit>& ps)
   tarjan_dfs_var(s, fvar, index);
   cspvar v = _x[fvar];
 
-  DEXEC {
-    cout << "Components reachable from " << cspvar_printer(s, v)
-         << ":\n";
-    for(size_t i = 0; i != components.size(); ++i) {
-      vector<vertex> const &scc = components[i];
-      for(size_t j = 0; j != scc.size(); ++j) {
-        vertex vx = scc[j];
-        if( j ) cout << ", ";
-        if( vx.first ) cout << cspvar_printer(s, _x[vx.second]);
-        else cout << vx.second;
-      }
-      if( comp_numvars[i]*2 == components[i].size() &&
-          hallcomp[i] )
-        cout << "\t\tHall set";
-      cout << "\n";
-    }
-  }
-
   ps.clear();
   // describe the domain of fvar
   pushifdef( ps, v.r_min(s) );
@@ -2783,25 +2713,21 @@ void cons_alldiff::explain_conflict(Solver &s, vec<Lit>& ps)
   for(int q = v.min(s); q <= v.max(s); ++q) {
     if( !v.indomain(s, q) ) continue;
     if( explained[q-umin] == 2 ) continue;
-    DOUT << "Explaining value " << q << "\n";
     explain_value(s, q, ps, explained, to_explain);
   }
 
   // note in this loop that to_explain.size() might change in the body
   // of the loop
   for(size_t i = 0; i != to_explain.size(); ++i) {
-    DOUT << "Explaining additional value " << to_explain[i] << "\n";
-    if( explained[to_explain[i]-umin] == 2 ) {
-      DOUT << "\t\tExplained already\n";
+    if( explained[to_explain[i]-umin] == 2 )
       continue;
-    }
     explain_value(s, to_explain[i], ps, explained, to_explain);
   }
 
   tarjan_clear();
 }
 
-void cons_alldiff::tarjan_unroll_stack(Solver& s, vertex root)
+void cons_alldiff::tarjan_unroll_stack(vertex root)
 {
   int scc = components.size();
   components.push_back( vector<vertex>() );
@@ -2810,9 +2736,7 @@ void cons_alldiff::tarjan_unroll_stack(Solver& s, vertex root)
   vector<vertex> & comp = components.back();
   unsigned & numvars = comp_numvars.back();
   vertex vp;
-  DOUT << "scc ";
   do {
-    if( !comp.empty() ) DOUT << ", ";
     vp = tarjan_stack.back(); tarjan_stack.pop_back();
     comp.push_back(vp);
     if( vp.first ) {
@@ -2821,30 +2745,19 @@ void cons_alldiff::tarjan_unroll_stack(Solver& s, vertex root)
       if( varhasfree[vp.second] )
         hallcomp[scc] = false;
       ++numvars;
-      DOUT << cspvar_printer(s, _x[vp.second]);
     } else {
       valcomp[vp.second-umin] = scc;
       valvisited[vp.second-umin] = false;
-      DOUT << vp.second;
     }
   } while( vp != root );
-  if( hallcomp[scc] )
-    DOUT << "\t\tHall set";
-  DOUT << "\n";
   if( hallcomp[scc] ) return;
   // not a hall set, so we can reach a free value
   for(size_t j = 0; j != comp.size(); ++j) {
     vertex vx = comp[j];
-    if( vx.first ) {
-      DOUT << "\t\t" << cspvar_printer(s, _x[vx.second])
-                << " leads to free value "
-                << "through scc\n";
+    if( vx.first )
       varhasfree[vx.second] = true;
-    } else {
-      DOUT << "\t\t" << vx.second << " is free or has path to free"
-                << " through scc\n";
+    else
       valhasfree[vx.second-umin] = true;
-    }
   }
 }
 
@@ -2888,25 +2801,17 @@ void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
       continue;
     if( matching[var] == q ) // edge is (q, var), not (var, q)
       continue;
-    DOUT << "\tt e(" << cspvar_printer(s, _x[var]) << ", " << q << ")\n";
     if( valindex[q-umin] == idx_undef  ) {
       tarjan_dfs_val(s, q, index);
       varlowlink[var] = std::min(varlowlink[var], vallowlink[q-umin]);
-    } else if( valvisited[q-umin] ) { // q is in stack
+    } else if( valvisited[q-umin] ) // q is in stack
       varlowlink[var] = std::min(varlowlink[var], valindex[q-umin] );
-    }
-    if( valfree( q ) || valhasfree[q-umin] ) {
+    if( valfree( q ) || valhasfree[q-umin] )
       varhasfree[var] = true;
-      DOUT << "\t\t" << cspvar_printer(s, _x[var])
-                << " leads to free value "
-                << "through " << q
-                <<"\n";
-    }
   }
   if( varlowlink[var] == varindex[var] ) {
-    tarjan_unroll_stack( s, make_pair(true, var) );
+    tarjan_unroll_stack( make_pair(true, var) );
   }
-  DOUT << "\texiting " << cspvar_printer(s, _x[var]) << "\n";
 }
 
 void cons_alldiff::tarjan_dfs_val(Solver &s, int val, size_t& index)
@@ -2921,7 +2826,6 @@ void cons_alldiff::tarjan_dfs_val(Solver &s, int val, size_t& index)
   tarjan_stack.push_back( make_pair(false, val) );
   int var = revmatching[val-umin];
   if( var >= 0 ) {
-    DOUT << "\tt e(" << val << ", " << cspvar_printer(s, _x[var]) << ")\n";
     if( varindex[var] == idx_undef  ) {
       tarjan_dfs_var(s, var, index);
       vallowlink[val-umin] = std::min(vallowlink[val-umin], varlowlink[var]);
@@ -2931,13 +2835,9 @@ void cons_alldiff::tarjan_dfs_val(Solver &s, int val, size_t& index)
     valhasfree[val-umin] = varhasfree[var];
   } else
     valhasfree[val-umin] = true;
-  if( valhasfree[val-umin] ) {
-    DOUT << "\t\t" << val << " is free or has path to free\n";
-  }
   if( vallowlink[val-umin] == valindex[val-umin] ) {
-    tarjan_unroll_stack( s, make_pair(false, val) );
+    tarjan_unroll_stack( make_pair(false, val) );
   }
-  DOUT << "\texiting " << val << "\n";
 }
 
 Clause* cons_alldiff::wake(Solver &s, Lit p)
@@ -2958,9 +2858,6 @@ Clause* cons_alldiff::wake(Solver &s, Lit p)
 
 Clause* cons_alldiff::propagate(Solver &s)
 {
-  static int numcalls = 0;
-  ++numcalls;
-  DOUT << "propagating " << cons_state_printer(s, *this) << "\n";
   const size_t n = _x.size();
   assert(nmatched == n);
   bool valid = true; // is the current matching still valid?
@@ -2978,8 +2875,6 @@ Clause* cons_alldiff::propagate(Solver &s)
       revmatching[ matching[i]-umin ] = -1;
       matching[i] = umin-1;
       --nmatched;
-      DOUT << cspvar_printer(s, _x[i]) << " lost its support, "
-           << nmatched << " edges now\n";
     }
   }
   if( valid && !_gac ) {
@@ -2987,18 +2882,6 @@ Clause* cons_alldiff::propagate(Solver &s)
   }
 
   if( !valid && !find_matching(s) ) {
-    DEXEC {
-      cout << "Best matching:";
-      print_matching(s);
-      cout << "\n";
-
-      cout << "Free values: ";
-      for(int q = umin; q <= umax; ++q)
-        if( revmatching[q-umin] < 0 )
-          cout << q << ' ';
-      cout << "\n";
-    }
-
     reason.clear();
     explain_conflict(s, reason);
     Clause *r = Clause_new(reason);
@@ -3014,36 +2897,11 @@ Clause* cons_alldiff::propagate(Solver &s)
   if( !_gac )
     return 0L;
 
-  DEXEC {
-    cout << "Free values: ";
-    for(int q = umin; q <= umax; ++q)
-      if( revmatching[q-umin] < 0 )
-        cout << q << ' ';
-    cout << "\n";
-  }
-
   static const int idx_undef = std::numeric_limits<int>::max();
   for(size_t i = 0; i != n; ++i) {
     size_t index = 0;
     if( varindex[i] == idx_undef )
       tarjan_dfs_var(s, i, index);
-  }
-
-  DEXEC {
-    cout << "Components:\n";
-    for(size_t i = 0; i != components.size(); ++i) {
-      vector<vertex> const &scc = components[i];
-      for(size_t j = 0; j != scc.size(); ++j) {
-        vertex vx = scc[j];
-        if( j ) cout << ", ";
-        if( vx.first ) cout << cspvar_printer(s, _x[vx.second]);
-        else cout << vx.second;
-      }
-      if( comp_numvars[i]*2 == components[i].size() &&
-          hallcomp[i] )
-        cout << "\t\tHall set";
-      cout << "\n";
-    }
   }
 
   for(size_t i = 0; i != n; ++i) {
@@ -3060,11 +2918,8 @@ Clause* cons_alldiff::propagate(Solver &s)
         vector<int> to_explain;
         explain_value(s, q, reason, explained, to_explain);
         for(size_t j = 0; j != to_explain.size(); ++j) {
-          DOUT << "Explaining additional value " << to_explain[j] << "\n";
-          if( explained[to_explain[j]-umin] == 2 ) {
-            DOUT << "\t\tExplained already\n";
+          if( explained[to_explain[j]-umin] == 2 )
             continue;
-          }
           explain_value(s, to_explain[j], reason, explained, to_explain);
         }
         _x[i].removef(s, q, reason);
