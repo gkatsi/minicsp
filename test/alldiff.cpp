@@ -208,6 +208,46 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(alldiff09);
+
+  // a conflict where a part of the Hall set is not in an SCC, because
+  // it is disconnected
+  void alldiff10()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(6, 1, 10);
+    post_alldiff(s, x);
+
+    s.newDecisionLevel();
+    x[1].setmax(s, 4, NO_REASON);
+    x[2].setmax(s, 3, NO_REASON);
+    x[3].setmax(s, 3, NO_REASON);
+    x[4].setmax(s, 4, NO_REASON);
+    x[2].setmin(s, 2, NO_REASON);
+    x[3].setmin(s, 2, NO_REASON);
+    x[0].setmax(s, 5, NO_REASON);
+    x[5].setmax(s, 5, NO_REASON);
+    assert(s.propagate());
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(alldiff10);
+
+  // pruning, hall set A prunes bounds to create hall set B
+  void alldiff11()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(6, 1, 10);
+    post_alldiff(s, x);
+
+    s.newDecisionLevel();
+    x[4].setmax(s, 2, NO_REASON);
+    x[5].setmax(s, 2, NO_REASON);
+    x[2].setmax(s, 4, NO_REASON);
+    x[3].setmax(s, 4, NO_REASON);
+    assert(!s.propagate());
+    assert(!x[0].indomain(s, 4));
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(alldiff11);
 }
 
 void alldiff_test()
