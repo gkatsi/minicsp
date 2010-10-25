@@ -2904,6 +2904,7 @@ Clause* cons_alldiff::propagate(Solver &s)
       tarjan_dfs_var(s, i, index);
   }
 
+  vector<int> to_explain;
   for(size_t i = 0; i != n; ++i) {
     int vscc = varcomp[i];
     for(int q = _x[i].min(s); q <= _x[i].max(s); ++q) {
@@ -2913,9 +2914,9 @@ Clause* cons_alldiff::propagate(Solver &s)
       if( scc == vscc ) continue;
       if( comp_numvars[scc]*2 == components[scc].size() &&
           hallcomp[scc] ) { // Hall set
+        to_explain.clear();
         reason.clear();
         vector<unsigned char> explained(umax-umin+1, false);
-        vector<int> to_explain;
         explain_value(s, q, reason, explained, to_explain);
         for(size_t j = 0; j != to_explain.size(); ++j) {
           if( explained[to_explain[j]-umin] == 2 )
