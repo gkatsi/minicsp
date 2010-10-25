@@ -41,7 +41,7 @@ namespace {
     x[1].remove(s, 3, NO_REASON);
     x[2].remove(s, 3, NO_REASON);
     Clause *c = s.propagate();
-    assert_clause_exact(c, exp);
+    assert_clause_exact(s, c, exp);
     s.cancelUntil(0);
   }
   REGISTER_TEST(alldiff03);
@@ -67,7 +67,7 @@ namespace {
     x[2].remove(s, 2, NO_REASON);
     Clause *c = s.propagate();
     assert(c);
-    assert_clause_exact(c, exp);
+    assert_clause_exact(s, c, exp);
     s.cancelUntil(0);
   }
   REGISTER_TEST(alldiff04);
@@ -98,7 +98,7 @@ namespace {
     }
     Clause *c = s.propagate();
     assert(c);
-    assert_clause_exact(c, exp);
+    assert_clause_exact(s, c, exp);
     s.cancelUntil(0);
   }
   REGISTER_TEST(alldiff05);
@@ -147,7 +147,7 @@ namespace {
     x[1].remove(s, 5, NO_REASON);
     Clause *c = s.propagate();
     assert(c);
-    assert_clause_exact(c, exp);
+    assert_clause_exact(s, c, exp);
     s.cancelUntil(0);
   }
   REGISTER_TEST(alldiff06);

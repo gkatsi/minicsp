@@ -35,7 +35,7 @@ namespace {
 
     Clause *c = s.propagate();
     assert(c);
-    assert_clause_exact(c, expected);
+    assert_clause_exact(s, c, expected);
   }
   REGISTER_TEST(test01);
 
@@ -66,7 +66,7 @@ namespace {
 
     Clause *c = s.propagate();
     assert(c);
-    assert_clause_exact(c, expected);
+    assert_clause_exact(s, c, expected);
   }
   REGISTER_TEST(test02);
 
@@ -171,7 +171,7 @@ namespace {
 
     Clause *c = s.propagate();
     assert(c);
-    assert_clause_exact(c, expected);
+    assert_clause_exact(s, c, expected);
   }
   REGISTER_TEST(test06);
 
@@ -204,7 +204,7 @@ namespace {
 
     Clause *c = s.propagate();
     assert(c);
-    assert_clause_exact(c, expected);
+    assert_clause_exact(s, c, expected);
   }
   REGISTER_TEST(test07);
 
@@ -237,7 +237,7 @@ namespace {
 
     Clause *c = s.propagate();
     assert(c);
-    assert_clause_exact(c, expected);
+    assert_clause_exact(s, c, expected);
   }
   REGISTER_TEST(test08);
 

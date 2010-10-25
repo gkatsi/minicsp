@@ -1,13 +1,18 @@
 #include "test.hpp"
 #include "solver.hpp"
 
-void assert_clause_exact(Clause *to_test, vec<Lit> const& expected)
+void assert_clause_exact(Solver &s,
+                         Clause *to_test, vec<Lit> const& expected)
 {
+  if( expected.size() != to_test->size() )
+    std::cout << "Expected " << print(s, &expected)
+              << "\ngot " << print(s, to_test) << "\n";
   assert(expected.size() == to_test->size());
-  assert_clause_contains(to_test, expected);
+  assert_clause_contains(s, to_test, expected);
 }
 
-void assert_clause_contains(Clause *to_test, vec<Lit> const& expected)
+void assert_clause_contains(Solver &s,
+                            Clause *to_test, vec<Lit> const& expected)
 {
   for(int i = 0; i != expected.size(); ++i) {
     bool f = false;
@@ -16,6 +21,9 @@ void assert_clause_contains(Clause *to_test, vec<Lit> const& expected)
         f = true;
         break;
       }
+    if( !f )
+      std::cout << "Expected " << print(s, &expected)
+                << "\ngot " << print(s, to_test) << "\n";
     assert(f);
   }
 }
