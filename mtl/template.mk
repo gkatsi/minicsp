@@ -40,7 +40,7 @@ libd:	lib$(LIB)d.a
 ## Compile options
 %.o:			CFLAGS +=$(COPTIMIZE) -ggdb -D DEBUG
 %.op:			CFLAGS +=$(COPTIMIZE) -pg -ggdb -D NDEBUG
-%.od:			CFLAGS +=-O0 -ggdb -D DEBUG -D INVARIANTS
+%.od:			CFLAGS +=-O0 -ggdb -D DEBUG -D INVARIANTS -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
 %.or:			CFLAGS +=$(COPTIMIZE) -D NDEBUG
 %.oc:                   CFLAGS +=-O0 -fprofile-arcs -ftest-coverage -ggdb -D DEBUG
 
