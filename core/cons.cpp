@@ -15,6 +15,11 @@ using std::make_pair;
 using std::vector;
 using std::set;
 
+// for temporary debugging
+using std::cout;
+#define DOUT if(0) std::cout
+#define DEXEC if(0)
+
 /* x == y + c     and        x == -y + c
 
    implemented as x = W*y + c, but with W == 1 or W == -1
