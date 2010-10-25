@@ -1286,7 +1286,9 @@ Clause *Solver::propagate()
   do {
     if( next >= 0 ) {
       unschedule(next);
+      active_constraint = consqs[next].c;
       confl = consqs[next].c->propagate(*this);
+      active_constraint = 0L;
       if( confl ) {
         qhead = trail.size();
         reset_queue();
