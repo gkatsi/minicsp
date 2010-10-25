@@ -2403,6 +2403,8 @@ class cons_table;
 /* All different: each variable gets a distinct value */
 class cons_alldiff : public cons
 {
+  static const int idx_undef;
+
   vector<cspvar> _x;
   bool _gac;
   // the matching, kept and updated between calls. No need to update
@@ -2479,8 +2481,6 @@ public:
   cons_alldiff(Solver &s, vector<cspvar> const& x, bool gac = true) :
     _x(x), _gac(gac)
   {
-    static const int idx_undef = std::numeric_limits<int>::max();
-
     umin = _x[0].min(s);
     umax = _x[0].max(s);
     for(size_t i = 0; i != _x.size(); ++i) {
@@ -2517,6 +2517,8 @@ public:
   ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
+
+const int cons_alldiff::idx_undef = std::numeric_limits<int>::max();
 
 void cons_alldiff::clone(Solver& other)
 {
@@ -2763,8 +2765,6 @@ void cons_alldiff::tarjan_unroll_stack(vertex root)
 
 void cons_alldiff::tarjan_clear()
 {
-  static const int idx_undef = std::numeric_limits<int>::max();
-
   for(size_t i = 0; i != varvisited_toclear.size(); ++i) {
     int var = varvisited_toclear[i];
     varindex[var] = idx_undef;
@@ -2788,8 +2788,6 @@ void cons_alldiff::tarjan_clear()
 
 void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
 {
-  static const int idx_undef = std::numeric_limits<int>::max();
-
   varvisited_toclear.push_back(var);
   varindex[var] = index;
   varlowlink[var] = index;
@@ -2816,8 +2814,6 @@ void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
 
 void cons_alldiff::tarjan_dfs_val(Solver &s, int val, size_t& index)
 {
-  static const int idx_undef = std::numeric_limits<int>::max();
-
   valvisited_toclear.push_back(val);
   valindex[val-umin] = index;
   vallowlink[val-umin] = index;
@@ -2897,7 +2893,6 @@ Clause* cons_alldiff::propagate(Solver &s)
   if( !_gac )
     return 0L;
 
-  static const int idx_undef = std::numeric_limits<int>::max();
   for(size_t i = 0; i != n; ++i) {
     size_t index = 0;
     if( varindex[i] == idx_undef )
