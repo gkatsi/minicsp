@@ -68,7 +68,7 @@ Solver::Solver() :
 
     , active_constraint(0L)
 {
-  consqs.growTo(MAX_PRIORITY+1);
+  consqs.growTo(MAX_PRIORITY+2);
   reset_queue();
   prop_queue = &consqs[0];
 }
@@ -1083,8 +1083,8 @@ void Solver::reset_queue()
     consqs[cqidx].prev = -1;
     cqidx = nxt;
   }
-  for(int i = 0; i != MAX_PRIORITY+1; ++i) {
-    if( i < MAX_PRIORITY )
+  for(int i = 0; i <= MAX_PRIORITY+1; ++i) {
+    if( i <= MAX_PRIORITY )
       consqs[i].next = i+1;
     if( i )
       consqs[i].prev = i-1;

@@ -511,6 +511,28 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(schedule_priority_02);
+
+  // only high priority
+  void schedule_priority_03()
+  {
+    for(int p = 1; p <= MAX_PRIORITY; ++p) {
+      Solver s;
+      vector<cspvar> d, l, u, f;
+      d = s.newCSPVarArray(3, 5, 10);
+
+      vector<int> wakes;
+      action_schedule a;
+      post_test(s, 1, wakes,  d, l, u, f, a, p);
+
+      int exp[] = { 1, -1 };
+      s.newDecisionLevel();
+      d[0].remove(s, 6, NO_REASON);
+      assert( !s.propagate() );
+      assert( compare_events(wakes, exp) );
+      s.cancelUntil(0);
+    }
+  }
+  REGISTER_TEST(schedule_priority_03);
 }
 
 void schedule_test()
