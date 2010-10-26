@@ -12,7 +12,7 @@ namespace {
   {
   public:
     int _id;
-    vector<int> & _wakes;
+    vector<int> * _wakes; // if NULL, just fail on the first invocation
 
     vector<cspvar> _d;
     vector<cspvar> _l;
@@ -23,7 +23,7 @@ namespace {
 
     test_cons(Solver &s,
               int id,
-              vector<int>& wakes,
+              vector<int>* wakes,
               vector<cspvar> const& d,
               vector<cspvar> const& l,
               vector<cspvar> const& u,
@@ -60,9 +60,21 @@ namespace {
 
     Clause *propagate(Solver& s)
     {
-      _wakes.push_back(_id);
+      if(!_wakes) {
+        vec<Lit> ps;
+        cspvar x;
+        add_all_reasons(s, ps, _d, x);
+        add_all_reasons(s, ps, _l, x);
+        add_all_reasons(s, ps, _u, x);
+        add_all_reasons(s, ps, _f, x);
+        Clause *r = Clause_new(ps);
+        s.addInactiveClause(r);
+        return r;
+      }
+
+      (*_wakes).push_back(_id);
       action_schedule::const_iterator i =
-        _actions.find(_wakes.size());
+        _actions.find(_wakes->size());
       if( i == _actions.end() ) return 0L;
 
       vec<Lit> ps;
@@ -88,6 +100,13 @@ namespace {
       }
       return 0L;
     }
+
+    void clone(Solver &other)
+    {
+      cons *con = new test_cons(other, _id, 0L, _d, _l, _u, _f,
+                                _actions, 0);
+      other.addConstraint(con);
+    }
   };
 
   void post_test(Solver &s,
@@ -99,7 +118,7 @@ namespace {
                  vector<cspvar> const& f)
   {
     action_schedule a;
-    cons *con = new test_cons(s, id, wakes, d, l, u, f, a, 0);
+    cons *con = new test_cons(s, id, &wakes, d, l, u, f, a, 0);
     s.addConstraint(con);
   }
 
@@ -113,7 +132,7 @@ namespace {
                  action_schedule const & actions,
                  int priority = 0)
   {
-    cons *con = new test_cons(s, id, wakes, d, l, u, f, actions, priority);
+    cons *con = new test_cons(s, id, &wakes, d, l, u, f, actions, priority);
     s.addConstraint(con);
   }
 
