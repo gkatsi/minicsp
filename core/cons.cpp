@@ -2576,20 +2576,20 @@ void cons_alldiff::clear_visited()
 
 bool cons_alldiff::find_matching(Solver &s)
 {
+  std::vector<int> varfrontier;
+  std::vector<int> valfrontier;
   const size_t n = _x.size();
   // find a free variable
   for(size_t fvar = 0; fvar != n && nmatched < n; ++fvar ) {
     if ( !varfree(fvar) ) continue;
 
     // do a bfs for an augmenting path
-    std::list<int> varfrontier;
-    std::list<int> valfrontier;
     varfrontier.push_back(fvar);
     int pathend = umin-1;
     do {
       while( !varfrontier.empty() ) {
-        size_t var = varfrontier.front();
-        varfrontier.pop_front();
+        size_t var = varfrontier.back();
+        varfrontier.pop_back();
         int qend = _x[var].max(s);
         for(int q = _x[var].min(s); q <= qend ; ++q) {
           if( !_x[var].indomain(s, q) ) continue;
@@ -2608,8 +2608,8 @@ bool cons_alldiff::find_matching(Solver &s)
         }
       }
       while( !valfrontier.empty() ) {
-        int q = valfrontier.front();
-        valfrontier.pop_front();
+        int q = valfrontier.back();
+        valfrontier.pop_back();
         int var = revmatching[q - umin];
         if( var < 0 || varvisited[var] ) continue;
         varfrontier.push_back(var);
@@ -2633,6 +2633,8 @@ bool cons_alldiff::find_matching(Solver &s)
       revmatching[val-umin] = var;
     }
     ++nmatched;
+    valfrontier.clear();
+    varfrontier.clear();
     clear_visited();
   }
   for(size_t i = 0; i != n; ++i)
