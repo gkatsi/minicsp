@@ -2481,6 +2481,7 @@ public:
   cons_alldiff(Solver &s, vector<cspvar> const& x, bool gac = true) :
     _x(x), _gac(gac)
   {
+    set_priority(3);
     umin = _x[0].min(s);
     umax = _x[0].max(s);
     for(size_t i = 0; i != _x.size(); ++i) {
