@@ -31,9 +31,9 @@ class Solver;
 #define BOOST_PP_CAT(a, b) BOOST_PP_CAT_I(a, b)
 #define BOOST_PP_CAT_I(a, b) a ## b
 
-// the number of queues. 4 because it can be encoded in the unused low
+// the number of queues. 0--3 because it can be encoded in the unused low
 // order bits of a pointer in a system with word-alignment
-#define MAX_PRIORITY 4
+#define MAX_PRIORITY 3
 
 //=================================================================================================
 // Variables, literals, lifted booleans, clauses:
@@ -357,7 +357,10 @@ class cons
      been scheduled already, so it must be called in the constructor
      of a constraint, before it calls schedule_on_*
   */
-  void set_priority(int p) { priority = p; }
+  void set_priority(int p) {
+    assert(0 <= p && p <= MAX_PRIORITY);
+    priority = p;
+  }
 };
 
 // all the fixed or non-backtracked data of a csp variable
