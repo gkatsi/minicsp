@@ -944,7 +944,7 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
     cspvar x = _vars[i].second;
     _ps[nl] = litreason(s, lb, w, x);
     pspos[i] = nl;
-    nl += select( toInt(_ps[nl]), 1, 0 );
+    if( toInt(_ps[nl]) >= 0 ) ++nl;
     lb += vmin(s, w, x);
   }
 
