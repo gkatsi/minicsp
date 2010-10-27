@@ -78,7 +78,7 @@ Solver::~Solver()
 {
   for (int i = 0; i < learnts.size(); i++) free(learnts[i]);
   for (int i = 0; i < clauses.size(); i++) free(clauses[i]);
-  for (int i = 0; i < conses.size(); ++i) delete conses[i];
+  for (int i = 0; i < conses.size(); ++i) conses[i]->dispose();
   for (int i = 0; i != inactive.size(); ++i) free(inactive[i]);
   for (int i = 0; i != cspvars.size(); ++i) {
     cspvar_fixed & xf = cspvars[i];

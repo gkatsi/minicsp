@@ -361,6 +361,10 @@ class cons
     assert(0 <= p && p <= MAX_PRIORITY);
     priority = p;
   }
+
+  /* Allows allocation optimizations similar to the one for Clause,
+     which require that we call free(), not delete. */
+  virtual void dispose() { delete this; }
 };
 
 // all the fixed or non-backtracked data of a csp variable
