@@ -184,7 +184,9 @@ public:
     int cspvaromax(cspvar x);             // get the initial max of x
     int cspvaromin(cspvar x);             // get the initial min of x
     Var cspvareqi(cspvar x, int d);       // get the propositional var representing x = d
+    Var cspvareqiunsafe(cspvar x, int d); // get the propositional var representing x = d, for the brave
     Var cspvarleqi(cspvar x, int d);      // get the propositional var representing x <= d
+    Var cspvarleqiunsafe(cspvar x, int d);// get the propositional var representing x <= d, for the brave
     int setvarumin(setvar x) const;       // get the smallest element in the universe of x
     int setvarumax(setvar x) const;       // get the smallest element in the universe of x
     Var setvarini(setvar x, int d);       // get the propositional var representing d in x
@@ -621,9 +623,19 @@ inline Var Solver::cspvareqi(cspvar x, int d)
   return cspvars[x._id].eqi(d);
 }
 
+inline Var Solver::cspvareqiunsafe(cspvar x, int d)
+{
+  return cspvars[x._id].eqiUnsafe(d);
+}
+
 inline Var Solver::cspvarleqi(cspvar x, int d)
 {
   return cspvars[x._id].leqi(d);
+}
+
+inline Var Solver::cspvarleqiunsafe(cspvar x, int d)
+{
+  return cspvars[x._id].leqiUnsafe(d);
 }
 
 inline Var Solver::setvarumin(setvar x) const
@@ -650,6 +662,12 @@ inline bool cspvar::indomain(Solver &s, int d) const
 {
   Var xd = eqi(s, d);
   return xd != var_Undef && s.value( xd ) != l_False;
+}
+
+inline bool cspvar::indomainUnsafe(Solver &s, int d) const
+{
+  Var xd = eqiUnsafe(s, d);
+  return s.value( xd ) != l_False;
 }
 
 inline int cspvar::min(Solver &s) const
@@ -682,9 +700,19 @@ inline Var cspvar::eqi(Solver &s, int d) const
   return s.cspvareqi(*this, d);
 }
 
+inline Var cspvar::eqiUnsafe(Solver &s, int d) const
+{
+  return s.cspvareqiunsafe(*this, d);
+}
+
 inline Var cspvar::leqi(Solver &s, int d) const
 {
   return s.cspvarleqi(*this, d);
+}
+
+inline Var cspvar::leqiUnsafe(Solver &s, int d) const
+{
+  return s.cspvarleqiunsafe(*this, d);
 }
 
 inline Lit cspvar::r_geq(Solver &s, int d) const

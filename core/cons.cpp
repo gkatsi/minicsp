@@ -2604,7 +2604,7 @@ bool cons_alldiff::find_matching(Solver &s)
         varfrontier.pop_back();
         int qend = _x[var].max(s);
         for(int q = _x[var].min(s); q <= qend ; ++q) {
-          if( !_x[var].indomain(s, q) ) continue;
+          if( !_x[var].indomainUnsafe(s, q) ) continue;
           if( matching[var] == q )
             continue;
           if( valvisited[q-umin] )
@@ -2692,7 +2692,7 @@ void cons_alldiff::explain_value(Solver &s, int q,
       if( !hallvals[p - umin] ) {
         if( explained[p-umin] )
           continue;
-        if( v2.indomain(s, p) ) {
+        if( v2.indomainUnsafe(s, p) ) {
           to_explain.push_back(p);
           explained[p-umin] = 1;
         }
@@ -2718,14 +2718,14 @@ void cons_alldiff::explain_conflict(Solver &s, vec<Lit>& ps)
   pushifdef( ps, v.r_min(s) );
   pushifdef( ps, v.r_max(s) );
   for(int q = v.min(s)+1; q < v.max(s); ++q)
-    if( !v.indomain(s, q) )
+    if( !v.indomainUnsafe(s, q) )
       ps.push( v.r_neq(s, q) );
 
   // and all the Hall sets that remove the rest of the values
   vector<unsigned char> explained( umax-umin+1, false );
   vector<int> to_explain;
   for(int q = v.min(s); q <= v.max(s); ++q) {
-    if( !v.indomain(s, q) ) continue;
+    if( !v.indomainUnsafe(s, q) ) continue;
     if( explained[q-umin] == 2 ) continue;
     explain_value(s, q, ps, explained, to_explain);
   }
@@ -2803,7 +2803,7 @@ void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
   ++index;
   tarjan_stack.push_back( make_pair(true, var) );
   for(int q = _x[var].min(s), qend = _x[var].max(s); q <= qend; ++q) {
-    if( !_x[var].indomain(s, q) ) // no edge at all
+    if( !_x[var].indomainUnsafe(s, q) ) // no edge at all
       continue;
     if( matching[var] == q ) // edge is (q, var), not (var, q)
       continue;
@@ -2908,7 +2908,7 @@ Clause* cons_alldiff::propagate(Solver &s)
   for(size_t i = 0; i != n; ++i) {
     int vscc = varcomp[i];
     for(int q = _x[i].min(s); q <= _x[i].max(s); ++q) {
-      if( !_x[i].indomain(s, q) ) continue;
+      if( !_x[i].indomainUnsafe(s, q) ) continue;
       int scc = valcomp[q-umin];
       if( scc == idx_undef ) continue;
       if( scc == vscc ) continue;

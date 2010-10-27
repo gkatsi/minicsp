@@ -234,6 +234,8 @@ class cspvar
 
   // current domain
   bool indomain(Solver& s, int d) const;
+  // this performs no check whether ind(d)
+  bool indomainUnsafe(Solver& s, int d) const;
   int min(Solver& s) const;
   int max(Solver& s) const;
 
@@ -294,6 +296,10 @@ class cspvar
   /* Generating reasons */
   Var eqi(Solver &s, int d) const;
   Var leqi(Solver &s, int d) const;
+
+  // for when we know that d is in the original domain
+  Var eqiUnsafe(Solver &s, int d) const;
+  Var leqiUnsafe(Solver &s, int d) const;
 
   /* Generating reasons, convenience
 
