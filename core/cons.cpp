@@ -857,11 +857,11 @@ void post_abs(Solver& s, cspvar v1, cspvar v2, int c)
 */
 template<size_t N>
 class cons_lin_le : public cons {
-  vector< pair<int, cspvar> > _vars;
   int _c;
-  btptr _lbptr;
 
   vec<Lit> _ps;
+  size_t n;
+  pair<int, cspvar> _vars[0];
 
   // computes the minimum contribution of var x with coeff w:
   // w*x.min() if w>0, w*x.max() if w<0
@@ -878,7 +878,19 @@ public:
   void clone(Solver& other);
   ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
+
+  void dispose() { this->~cons_lin_le(); free(this); }
 };
+
+template<size_t N>
+cons *new_cons_lin_le(Solver &s,
+                      vector< pair<int, cspvar> > const& vars,
+                      int c)
+{
+  void *mem = malloc(sizeof(cons_lin_le<N>) +
+                     vars.size()*sizeof( pair<int, cspvar> ));
+  return new (mem) cons_lin_le<N>(s, vars, c);
+}
 
 template<size_t N>
 int cons_lin_le<N>::vmin(Solver &s, int w, cspvar x)
@@ -901,13 +913,13 @@ template<size_t N>
 cons_lin_le<N>::cons_lin_le(Solver &s,
                             vector< pair<int, cspvar> > const& vars,
                             int c) :
-  _vars(vars), _c(c)
+  _c(c)
 {
   assert(N == 0 || N == vars.size());
-  _lbptr = s.alloc_backtrackable(sizeof(int));
-  int & lb = s.deref<int>(_lbptr);
-  lb = _c;
+  n = vars.size();
+  int lb = _c;
   for(size_t i = 0; i != vars.size(); ++i) {
+    _vars[i] = vars[i];
     lb += vmin(s, _vars[i].first, _vars[i].second);
     if( _vars[i].first > 0 )
       s.wake_on_lb(_vars[i].second, this);
@@ -915,7 +927,7 @@ cons_lin_le<N>::cons_lin_le(Solver &s,
       s.wake_on_ub(_vars[i].second, this);
   }
   if( lb > 0 ) throw unsat();
-  _ps.growTo(_vars.size(), lit_Undef);
+  _ps.growTo(n, lit_Undef);
   if( wake(s, lit_Undef) )
     throw unsat();
 }
@@ -923,11 +935,9 @@ cons_lin_le<N>::cons_lin_le(Solver &s,
 template<size_t N>
 Clause *cons_lin_le<N>::wake(Solver &s, Lit)
 {
-  const size_t n = (N > 0) ? N : _vars.size();
-  int & lb = s.deref<int>(_lbptr);
-  int pspos[_vars.size()];
+  int pspos[n];
 
-  lb = _c;
+  int lb = _c;
   size_t nl = 0;
   for(size_t i = 0; i != n; ++i) {
     int w = _vars[i].first;
@@ -941,14 +951,14 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
   if( lb > 0 ) {
     // shrink _ps to contruct the clause, then bring it back to its
     // previous size
-    _ps.shrink(_vars.size() - nl );
+    _ps.shrink(n - nl );
     Clause *r = Clause_new(_ps);
-    _ps.growTo(_vars.size(), lit_Undef);
+    _ps.growTo(n, lit_Undef);
     s.addInactiveClause(r);
     return r;
   }
 
-  _ps.shrink(_vars.size() - nl );
+  _ps.shrink(n - nl );
   for(size_t i = 0; i != n; ++i) {
     Lit l = _ps[pspos[i]];
     int w = _vars[i].first;
@@ -983,7 +993,7 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
       }
     }
   }
-  _ps.growTo(_vars.size(), lit_Undef);
+  _ps.growTo(n, lit_Undef);
 
   return 0L;
 }
@@ -991,14 +1001,15 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
 template<size_t N>
 void cons_lin_le<N>::clone(Solver &other)
 {
-  cons *con = new cons_lin_le<N>(other, _vars, _c);
+  vector< pair<int, cspvar> > v(_vars, _vars+n);
+  cons *con = new_cons_lin_le<N>(other, v, _c);
   other.addConstraint(con);
 }
 
 template<size_t N>
 ostream& cons_lin_le<N>::print(Solver &s, ostream& os) const
 {
-  for(size_t i = 0; i != _vars.size(); ++i) {
+  for(size_t i = 0; i != n; ++i) {
     if( _vars[i].first == 1 ) {
       if( i != 0 )
         os << " + ";
@@ -1033,7 +1044,7 @@ ostream& cons_lin_le<N>::printstate(Solver& s, ostream& os) const
 {
   print(s, os);
   os << " (with ";
-  for(size_t i = 0; i != _vars.size(); ++i) {
+  for(size_t i = 0; i != n; ++i) {
     if( i ) os << ", ";
     cspvar x = _vars[i].second;
     os << cspvar_printer(s, x) << " in " << domain_as_range(s, x);
@@ -1085,10 +1096,10 @@ void post_lin_leq(Solver &s, vector<cspvar> const& vars,
 
   cons *con;
   switch(pairs.size()) {
-  case 1:   con = new cons_lin_le<1>(s, pairs, c); break;
-  case 2:   con = new cons_lin_le<2>(s, pairs, c); break;
-  case 3:   con = new cons_lin_le<3>(s, pairs, c); break;
-  default:  con = new cons_lin_le<0>(s, pairs, c); break;
+  case 1:   con = new_cons_lin_le<1>(s, pairs, c); break;
+  case 2:   con = new_cons_lin_le<2>(s, pairs, c); break;
+  case 3:   con = new_cons_lin_le<3>(s, pairs, c); break;
+  default:  con = new_cons_lin_le<0>(s, pairs, c); break;
   }
   s.addConstraint(con);
 }
