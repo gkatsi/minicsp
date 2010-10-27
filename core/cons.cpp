@@ -2425,6 +2425,8 @@ class cons_alldiff : public cons
   vector<unsigned char> valvisited, varvisited; // for the BFS in matching,
                                        // whether it is in the stack in
                                        // tarjan's scc
+  std::vector<int> varfrontier; // the frontier of the BFS
+  std::vector<int> valfrontier;
   vector<int> valbackp, varbackp; // back pointers to reconstruct the
                                   // augmenting path
   vector<int> valvisited_toclear;
@@ -2577,8 +2579,6 @@ void cons_alldiff::clear_visited()
 
 bool cons_alldiff::find_matching(Solver &s)
 {
-  std::vector<int> varfrontier;
-  std::vector<int> valfrontier;
   const size_t n = _x.size();
   // find a free variable
   for(size_t fvar = 0; fvar != n && nmatched < n; ++fvar ) {
