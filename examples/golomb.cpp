@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
 
   post_alldiff(s, x);
   x[0].assign(s, 0, NO_REASON);
+  post_less(s, x[1], x.back(), 0);
 
   bool sol = false, next = false;
   int opt = l;
