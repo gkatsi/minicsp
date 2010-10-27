@@ -757,6 +757,8 @@ public:
 
   void push(T const& t) { _data[_n] = t; ++_n; }
   void pop() { --_n; }
+
+  void shrink(int i) { _n -= i; }
 };
 
 #endif
