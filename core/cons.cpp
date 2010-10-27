@@ -2437,8 +2437,8 @@ class cons_alldiff : public cons
   vector<unsigned char> valhasfree;
 
   vector<int> varcomp, valcomp;
-  vector< vector< vertex > > components;
-  vector< unsigned > comp_numvars;
+  vector< vertex > components;
+  vector< size_t > comp_limit;
   vector< bool > hallcomp; // is the scc a Hall set?
   vector< vertex > tarjan_stack;
 
@@ -2505,6 +2505,8 @@ public:
     vallowlink.resize(umax-umin+1, idx_undef);
     valcomp.resize(umax-umin+1, idx_undef);
     valhasfree.resize(umax-umin+1, false );
+
+    comp_limit.push_back(0);
 
     if( !find_initial_matching(s) )
       throw unsat();
@@ -2649,7 +2651,8 @@ void cons_alldiff::explain_value(Solver &s, int q,
 {
   vector<unsigned char> hallvals( umax-umin+1, false );
   int scc = valcomp[q - umin];
-  if( components[scc].size() == 1 ) {
+  int sccsize = comp_limit[scc+1]-comp_limit[scc];
+  if( sccsize == 1 ) {
     assert(!valhasfree[q-umin]);
     assert(revmatching[q-umin] >= 0);
     size_t var = revmatching[q-umin];
@@ -2657,13 +2660,10 @@ void cons_alldiff::explain_value(Solver &s, int q,
     hallvals[q-umin] = true;
     explained[q-umin] = 2;
     scc = varcomp[ revmatching[q-umin] ];
-    assert( components[scc].size() == 1 );
   } else {
-    assert( 2*comp_numvars[scc] == components[scc].size() );
-
     // first gather the values of the Hall set
-    for(size_t i = 0; i != components[scc].size(); ++i) {
-      vertex vx = components[scc][i];
+    for(size_t i = comp_limit[scc]; i != comp_limit[scc+1]; ++i) {
+      vertex vx = components[i];
       if( vx.first ) continue; // var
       hallvals[vx.second-umin] = true;
       explained[vx.second-umin] = 2;
@@ -2671,8 +2671,8 @@ void cons_alldiff::explain_value(Solver &s, int q,
   }
   // now describe that the variables in the SCC have been reduced to
   // form a Hall set
-  for(size_t i = 0; i != components[scc].size(); ++i) {
-    vertex vx = components[scc][i];
+  for(size_t i = comp_limit[scc]; i != comp_limit[scc+1]; ++i) {
+    vertex vx = components[i];
     if( !vx.first ) continue; // val
     cspvar v2 = _x[vx.second];
     pushifdef( ps, v2.r_min(s) );
@@ -2732,31 +2732,27 @@ void cons_alldiff::explain_conflict(Solver &s, vec<Lit>& ps)
 
 void cons_alldiff::tarjan_unroll_stack(vertex root)
 {
-  int scc = components.size();
-  components.push_back( vector<vertex>() );
-  comp_numvars.push_back( 0 );
+  int scc = comp_limit.size()-1;
   hallcomp.push_back(true);
-  vector<vertex> & comp = components.back();
-  unsigned & numvars = comp_numvars.back();
   vertex vp;
   do {
     vp = tarjan_stack.back(); tarjan_stack.pop_back();
-    comp.push_back(vp);
+    components.push_back(vp);
     if( vp.first ) {
       varcomp[vp.second] = scc;
       varvisited[vp.second] = false;
       if( varhasfree[vp.second] )
         hallcomp[scc] = false;
-      ++numvars;
     } else {
       valcomp[vp.second-umin] = scc;
       valvisited[vp.second-umin] = false;
     }
   } while( vp != root );
+  comp_limit.push_back(components.size());
   if( hallcomp[scc] ) return;
   // not a hall set, so we can reach a free value
-  for(size_t j = 0; j != comp.size(); ++j) {
-    vertex vx = comp[j];
+  for(size_t j = comp_limit[scc]; j != comp_limit[scc+1]; ++j) {
+    vertex vx = components[j];
     if( vx.first )
       varhasfree[vx.second] = true;
     else
@@ -2783,7 +2779,7 @@ void cons_alldiff::tarjan_clear()
   valvisited_toclear.clear();
   varvisited_toclear.clear();
   components.clear();
-  comp_numvars.clear();
+  comp_limit.resize(1);
   hallcomp.clear();
 }
 
@@ -2905,8 +2901,8 @@ Clause* cons_alldiff::propagate(Solver &s)
       int scc = valcomp[q-umin];
       if( scc == idx_undef ) continue;
       if( scc == vscc ) continue;
-      if( comp_numvars[scc]*2 == components[scc].size() &&
-          hallcomp[scc] ) { // Hall set
+      int sccsize = comp_limit[scc+1]-comp_limit[scc];
+      if( sccsize > 1 && hallcomp[scc] ) { // Hall set
         to_explain.clear();
         reason.clear();
         vector<unsigned char> explained(umax-umin+1, false);
