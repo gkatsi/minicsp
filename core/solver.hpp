@@ -754,7 +754,8 @@ inline Clause *cspvar::remove(Solver &s, int d, Clause *c)
   return 0L;
 }
 
-inline Clause *cspvar::remove(Solver &s, int d, vec<Lit> &ps)
+template<typename V>
+inline Clause *cspvar::remove(Solver &s, int d, V& ps)
 {
   Var xd = eqi(s, d);
   if( xd == var_Undef ) return 0L;
@@ -766,7 +767,8 @@ inline Clause *cspvar::remove(Solver &s, int d, vec<Lit> &ps)
   return 0L;
 }
 
-inline Clause *cspvar::removef(Solver &s, int d, vec<Lit> &ps)
+template<typename V>
+inline Clause *cspvar::removef(Solver &s, int d, V& ps)
 {
   Var xd = eqi(s, d);
   if( xd == var_Undef ) return 0L;
@@ -793,7 +795,8 @@ inline Clause *cspvar::setmin(Solver &s, int d, Clause *c)
   return 0L;
 }
 
-inline Clause *cspvar::setmin(Solver &s, int d, vec<Lit> &ps)
+template<typename V>
+inline Clause *cspvar::setmin(Solver &s, int d, V& ps)
 {
   Var xd = leqi(s, d-1);
   if( xd == var_Undef ) {
@@ -810,7 +813,8 @@ inline Clause *cspvar::setmin(Solver &s, int d, vec<Lit> &ps)
   return 0L;
 }
 
-inline Clause *cspvar::setminf(Solver &s, int d, vec<Lit> &ps)
+template<typename V>
+inline Clause *cspvar::setminf(Solver &s, int d, V& ps)
 {
   Var xd = leqi(s, d-1);
   if( xd == var_Undef ) {
@@ -842,7 +846,8 @@ inline Clause *cspvar::setmax(Solver &s, int d, Clause *c)
   return 0L;
 }
 
-inline Clause *cspvar::setmax(Solver &s, int d, vec<Lit> &ps)
+template<typename V>
+inline Clause *cspvar::setmax(Solver &s, int d, V& ps)
 {
   Var xd = leqi(s, d);
   if( xd == var_Undef ) {
@@ -859,7 +864,8 @@ inline Clause *cspvar::setmax(Solver &s, int d, vec<Lit> &ps)
   return 0L;
 }
 
-inline Clause *cspvar::setmaxf(Solver &s, int d, vec<Lit> &ps)
+template<typename V>
+inline Clause *cspvar::setmaxf(Solver &s, int d, V& ps)
 {
   Var xd = leqi(s, d);
   if( xd == var_Undef ) {
@@ -889,7 +895,8 @@ inline Clause *cspvar::assign(Solver &s, int d, Clause *c)
   return 0L;
 }
 
-inline Clause *cspvar::assign(Solver &s, int d, vec<Lit> &ps)
+template<typename V>
+inline Clause *cspvar::assign(Solver &s, int d, V& ps)
 {
   Var xd = eqi(s, d);
   if( xd == var_Undef ) {
@@ -905,7 +912,8 @@ inline Clause *cspvar::assign(Solver &s, int d, vec<Lit> &ps)
   return 0L;
 }
 
-inline Clause *cspvar::assignf(Solver &s, int d, vec<Lit> &ps)
+template<typename V>
+inline Clause *cspvar::assignf(Solver &s, int d, V& ps)
 {
   Var xd = eqi(s, d);
   if( xd == var_Undef ) {
@@ -1050,7 +1058,8 @@ inline bool operator==(setvar x1, setvar x2)
 
 //==================================================
 //
-inline void pushifdef(vec<Lit>& ps, Lit p)
+template<typename V>
+inline void pushifdef(V& ps, Lit p)
 {
   if( var(p) >= 0 ) ps.push(p);
 }

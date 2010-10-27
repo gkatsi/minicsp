@@ -253,34 +253,43 @@ class cspvar
      failure, they throw unsat().
   */
   Clause *remove(Solver& s, int d, Clause *c);
-  Clause *remove(Solver& s, int d, vec<Lit>& reason);
+  template<typename V>
+  Clause *remove(Solver& s, int d, V& reason);
   Clause *remove(Solver& s, int d, cons *c);
 
   Clause *removerange(Solver &s, int rb, int re, Clause *c);
-  Clause *removerange(Solver &s, int rb, int re, vec<Lit>& reason);
+  template<typename V>
+  Clause *removerange(Solver &s, int rb, int re, V& reason);
   Clause *removerange(Solver &s, int rb, int re, cons *c);
 
   Clause *setmin(Solver& s, int m, Clause *c);
-  Clause *setmin(Solver& s, int m, vec<Lit>& reason);
+  template<typename V>
+  Clause *setmin(Solver& s, int m, V& reason);
   Clause *setmin(Solver& s, int m, cons *c);
 
   Clause *setmax(Solver& s, int m, Clause *c);
-  Clause *setmax(Solver& s, int m, vec<Lit>& reason);
+  template<typename V>
+  Clause *setmax(Solver& s, int m, V& reason);
   Clause *setmax(Solver& s, int m, cons *c);
 
   Clause *assign(Solver& s, int d, Clause *c);
-  Clause *assign(Solver& s, int d, vec<Lit>& reason);
+  template<typename V>
+  Clause *assign(Solver& s, int d, V& reason);
   Clause *assign(Solver& s, int d, cons *c);
 
-  /* the *f versions of the vec<Lit> overloads above fill in the
+  /* the *f versions of the template<V> overloads above fill in the
      reason with the appropriate e_ literal. The literal is push()ed
      into reason and pop()ed back before returning, so reason is
      not const but is not modified.
   */
-  Clause *removef(Solver& s, int d, vec<Lit>& reason);
-  Clause *setminf(Solver& s, int m, vec<Lit>& reason);
-  Clause *setmaxf(Solver& s, int m, vec<Lit>& reason);
-  Clause *assignf(Solver& s, int d, vec<Lit>& reason);
+  template<typename V>
+  Clause *removef(Solver& s, int d, V& reason);
+  template<typename V>
+  Clause *setminf(Solver& s, int m, V& reason);
+  template<typename V>
+  Clause *setmaxf(Solver& s, int m, V& reason);
+  template<typename V>
+  Clause *assignf(Solver& s, int d, V& reason);
 
   /* Generating reasons */
   Var eqi(Solver &s, int d) const;
@@ -724,5 +733,30 @@ T* throw_if_null(T* t)
   if(!t) throw unsat();
   return t;
 }
+
+//======================================================================
+// Provide a minimal vec<>-like interface to a (part of) a C
+// array. The C array is meant to be on the stack, possibly allocated
+// with alloca. This is a very dangerous class: the user must ensure
+// that the array passed is large enough to accept a push(), if it is
+// used.
+
+template<typename T>
+class stack_array
+{
+  size_t _n;
+  T* _data;
+public:
+  stack_array() : _n(0), _data(0L) {}
+  stack_array(size_t n, T* data) : _n(n), _data(data) {}
+
+  T& operator[](size_t i) { return _data[i]; }
+  T const& operator[](size_t i) const { return _data[i]; }
+  // hmph, this should return size_t but vec<> returns int
+  int size() const { return _n; }
+
+  void push(T const& t) { _data[_n] = t; ++_n; }
+  void pop() { --_n; }
+};
 
 #endif
