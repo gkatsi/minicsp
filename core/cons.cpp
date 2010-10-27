@@ -2473,8 +2473,6 @@ class cons_alldiff : public cons
   void tarjan_unroll_stack(vertex root);
   // start the dfs from variable var
   void tarjan_dfs_var(Solver& s, size_t var, size_t& index);
-  // start the dfs from value val
-  void tarjan_dfs_val(Solver& s, int val, size_t& index);
   // reset all structures that were touched by tarjan_*
   void tarjan_clear();
 public:
@@ -2803,7 +2801,28 @@ void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
     if( matching[var] == q ) // edge is (q, var), not (var, q)
       continue;
     if( valindex[q-umin] == idx_undef  ) {
-      tarjan_dfs_val(s, q, index);
+      //tarjan_dfs_val(s, q, index);
+      int val = q;
+      valvisited_toclear.push_back(val);
+      valindex[val-umin] = index;
+      vallowlink[val-umin] = index;
+      valvisited[val-umin] = true;
+      ++index;
+      tarjan_stack.push_back( make_pair(false, val) );
+      int var2 = revmatching[val-umin];
+      if( var2 >= 0 ) {
+        if( varindex[var2] == idx_undef  ) {
+          tarjan_dfs_var(s, var2, index);
+          vallowlink[val-umin] = std::min(vallowlink[val-umin], varlowlink[var2]);
+        } else if( varvisited[var2] ) { // var2 is in stack
+          vallowlink[val-umin] = std::min(vallowlink[val-umin], varindex[var2] );
+        }
+        valhasfree[val-umin] = varhasfree[var2];
+      } else
+        valhasfree[val-umin] = true;
+      if( vallowlink[val-umin] == valindex[val-umin] ) {
+        tarjan_unroll_stack( make_pair(false, val) );
+      }
       varlowlink[var] = std::min(varlowlink[var], vallowlink[q-umin]);
     } else if( valvisited[q-umin] ) // q is in stack
       varlowlink[var] = std::min(varlowlink[var], valindex[q-umin] );
@@ -2812,30 +2831,6 @@ void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
   }
   if( varlowlink[var] == varindex[var] ) {
     tarjan_unroll_stack( make_pair(true, var) );
-  }
-}
-
-void cons_alldiff::tarjan_dfs_val(Solver &s, int val, size_t& index)
-{
-  valvisited_toclear.push_back(val);
-  valindex[val-umin] = index;
-  vallowlink[val-umin] = index;
-  valvisited[val-umin] = true;
-  ++index;
-  tarjan_stack.push_back( make_pair(false, val) );
-  int var = revmatching[val-umin];
-  if( var >= 0 ) {
-    if( varindex[var] == idx_undef  ) {
-      tarjan_dfs_var(s, var, index);
-      vallowlink[val-umin] = std::min(vallowlink[val-umin], varlowlink[var]);
-    } else if( varvisited[var] ) { // var is in stack
-      vallowlink[val-umin] = std::min(vallowlink[val-umin], varindex[var] );
-    }
-    valhasfree[val-umin] = varhasfree[var];
-  } else
-    valhasfree[val-umin] = true;
-  if( vallowlink[val-umin] == valindex[val-umin] ) {
-    tarjan_unroll_stack( make_pair(false, val) );
   }
 }
 
