@@ -2455,6 +2455,8 @@ class cons_alldiff : public cons
   vector< bool > hallcomp; // is the scc a Hall set?
   vector< vertex > tarjan_stack;
 
+  vec<Lit>* reasons;
+
   bool varfree(size_t var) {
     return matching[var] < umin;
   }
@@ -2485,7 +2487,7 @@ class cons_alldiff : public cons
 
   void tarjan_unroll_stack(vertex root);
   // start the dfs from variable var
-  void tarjan_dfs_var(Solver& s, size_t var, size_t& index);
+  void tarjan_dfs(Solver& s, size_t var, size_t& index, bool conflict);
   // reset all structures that were touched by tarjan_*
   void tarjan_clear();
 public:
@@ -2521,9 +2523,12 @@ public:
 
     comp_limit.push_back(0);
 
+    reasons = new vec<Lit>[umax-umin+1 + _x.size()];
+
     if( !find_initial_matching(s) )
       throw unsat();
   }
+  ~cons_alldiff() { delete[] reasons; }
 
   Clause* wake(Solver &s, Lit p);
   Clause *propagate(Solver& s);
@@ -2710,7 +2715,7 @@ void cons_alldiff::explain_conflict(Solver &s, vec<Lit>& ps)
     ;
   // ... and all SCCs reachable from it ...
   size_t index = 0;
-  tarjan_dfs_var(s, fvar, index);
+  tarjan_dfs(s, fvar, index, true);
   cspvar v = _x[fvar];
 
   ps.clear();
@@ -2757,6 +2762,8 @@ void cons_alldiff::tarjan_unroll_stack(vertex root)
     } else {
       valcomp[vp.second-umin] = scc;
       valvisited[vp.second-umin] = false;
+      if( valhasfree[vp.second-umin] )
+        hallcomp[scc] = false;
     }
   } while( vp != root );
   comp_limit.push_back(components.size());
@@ -2787,6 +2794,8 @@ void cons_alldiff::tarjan_clear()
     valcomp[val - umin] = idx_undef;
     valhasfree[val - umin] = false;
   }
+  for(size_t i = 0; i != comp_limit.size()-1; ++i)
+    reasons[i].clear();
   valvisited_toclear.clear();
   varvisited_toclear.clear();
   components.clear();
@@ -2794,7 +2803,8 @@ void cons_alldiff::tarjan_clear()
   hallcomp.clear();
 }
 
-void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
+void cons_alldiff::tarjan_dfs(Solver &s, size_t var, size_t& index,
+                              bool conflict)
 {
   varvisited_toclear.push_back(var);
   varindex[var] = index;
@@ -2808,7 +2818,6 @@ void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
     if( matching[var] == q ) // edge is (q, var), not (var, q)
       continue;
     if( valindex[q-umin] == idx_undef  ) {
-      //tarjan_dfs_val(s, q, index);
       int val = q;
       valvisited_toclear.push_back(val);
       valindex[val-umin] = index;
@@ -2819,7 +2828,7 @@ void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
       int var2 = revmatching[val-umin];
       if( var2 >= 0 ) {
         if( varindex[var2] == idx_undef  ) {
-          tarjan_dfs_var(s, var2, index);
+          tarjan_dfs(s, var2, index, conflict);
           vallowlink[val-umin] = std::min(vallowlink[val-umin], varlowlink[var2]);
         } else if( varvisited[var2] ) { // var2 is in stack
           vallowlink[val-umin] = std::min(vallowlink[val-umin], varindex[var2] );
@@ -2835,6 +2844,19 @@ void cons_alldiff::tarjan_dfs_var(Solver &s, size_t var, size_t& index)
       varlowlink[var] = std::min(varlowlink[var], valindex[q-umin] );
     if( valfree( q ) || valhasfree[q-umin] )
       varhasfree[var] = true;
+    if( !conflict ) {
+      int scc = valcomp[q-umin];
+      if( scc == idx_undef ) continue; // q and var are in the same scc
+      if( hallcomp[scc] ) { // Hall set
+        if( reasons[scc].size() == 0 ) {
+          vector<int> to_explain;
+          vector<unsigned char> explained(umax-umin+1, false);
+          explain_value(s, q, reasons[scc], explained, to_explain);
+          assert(to_explain.empty());
+        }
+        _x[var].removef(s, q, reasons[scc]);
+      }
+    }
   }
   if( varlowlink[var] == varindex[var] ) {
     tarjan_unroll_stack( make_pair(true, var) );
@@ -2864,7 +2886,7 @@ Clause* cons_alldiff::propagate(Solver &s)
   bool valid = true; // is the current matching still valid?
   for(size_t i = 0; i != n; ++i) {
     assert( !varfree(i) );
-    if( !_x[i].indomain( s, matching[i] ) ) {
+    if( !_x[i].indomainUnsafe( s, matching[i] ) ) {
       if(valid) {
         valid = false;
         revmatching0 = revmatching;
@@ -2901,33 +2923,8 @@ Clause* cons_alldiff::propagate(Solver &s)
   for(size_t i = 0; i != n; ++i) {
     size_t index = 0;
     if( varindex[i] == idx_undef )
-      tarjan_dfs_var(s, i, index);
+      tarjan_dfs(s, i, index, false);
   }
-
-  vector<int> to_explain;
-  for(size_t i = 0; i != n; ++i) {
-    int vscc = varcomp[i];
-    for(int q = _x[i].min(s); q <= _x[i].max(s); ++q) {
-      if( !_x[i].indomainUnsafe(s, q) ) continue;
-      int scc = valcomp[q-umin];
-      if( scc == idx_undef ) continue;
-      if( scc == vscc ) continue;
-      int sccsize = comp_limit[scc+1]-comp_limit[scc];
-      if( sccsize > 1 && hallcomp[scc] ) { // Hall set
-        to_explain.clear();
-        reason.clear();
-        vector<unsigned char> explained(umax-umin+1, false);
-        explain_value(s, q, reason, explained, to_explain);
-        for(size_t j = 0; j != to_explain.size(); ++j) {
-          if( explained[to_explain[j]-umin] == 2 )
-            continue;
-          explain_value(s, to_explain[j], reason, explained, to_explain);
-        }
-        _x[i].removef(s, q, reason);
-      }
-    }
-  }
-
   tarjan_clear();
 
   assert(nmatched == n);
