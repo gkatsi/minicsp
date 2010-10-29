@@ -352,7 +352,7 @@ class cons
    *
    * wake() is executed during propagation of a single variable, while
    * propagate() is a delayed call. */
-  virtual Clause *wake(Solver&, Lit);
+  virtual Clause *wake(Solver&, Lit, void *);
   virtual Clause *propagate(Solver&);
   /* if this constraint forced a literal and set itself as reason, add
    * to c all literals that explain this pruning.
@@ -382,6 +382,8 @@ class cons
   virtual void dispose() { delete this; }
 };
 
+typedef std::pair<cons*, void*> wake_stub;
+
 // all the fixed or non-backtracked data of a csp variable
 class cspvar_fixed
 {
@@ -393,8 +395,12 @@ class cspvar_fixed
 
   /* a cons may either wake immediately (like an ilog demon or a
      gecode advisor) when we process a literal, or it may be scheduled
-     for execution later. */
-  vec<cons*>
+     for execution later (although unlike gecode advisors, it may do
+     propagation and cause failure in its wake()). When waking, it can
+     also associate with the event a piece of advice to itself (e.g.,
+     in n-ary propagators, the index of the variable that changed).
+  */
+  vec< wake_stub >
     wake_on_dom,
     wake_on_lb,
     wake_on_ub,
@@ -532,7 +538,7 @@ class setvar_data
   Var firstbool;
   cspvar _card;
 
-  vec<cons*> wake_on_in, wake_on_ex;
+  vec< wake_stub > wake_on_in, wake_on_ex;
   vec<int> schedule_on_in, schedule_on_ex;
 
   bool inu(int i) const { return i >= min && i <= max; }

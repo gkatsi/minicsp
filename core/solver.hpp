@@ -65,12 +65,14 @@ public:
        constraint is placed in a queue and then called when the
        assignment stack has been processed. Similar to the difference
        between a demon and a propagator in ilog. Unlike gecode
-       advisors, a constraint can prune when it wakes. */
-    void    wake_on_lit(Var, cons *c);                          // Wake this constraint when the Boolear Var is fixed
-    void    wake_on_dom(cspvar, cons*c);                        // Wake this constraint when a value of cspvar is pruned
-    void    wake_on_lb(cspvar, cons*c);                         // Wake this constraint when the lb of cspvar is changed
-    void    wake_on_ub(cspvar, cons*c);                         // Wake this constraint when the ub of cspvar is changed
-    void    wake_on_fix(cspvar, cons*c);                        // Wake this constraint when the cspvar is assigned
+       advisors, a constraint can prune when it wakes. A constraint
+       can also arrange to receive when it wakes a piece of advice
+    */
+    void    wake_on_lit(Var, cons *c, void *advice = 0L);       // Wake this constraint when the Boolear Var is fixed
+    void    wake_on_dom(cspvar, cons*c, void *advice = 0L);     // Wake this constraint when a value of cspvar is pruned
+    void    wake_on_lb(cspvar, cons*c, void *advice = 0L);      // Wake this constraint when the lb of cspvar is changed
+    void    wake_on_ub(cspvar, cons*c, void *advice = 0L);      // Wake this constraint when the ub of cspvar is changed
+    void    wake_on_fix(cspvar, cons*c, void *advice = 0L);     // Wake this constraint when the cspvar is assigned
 
     void    schedule_on_dom(cspvar, cons*c);                    // Schedule this constraint when a value of cspvar is pruned
     void    schedule_on_lb(cspvar, cons*c);                     // Schedule this constraint when the lb of cspvar is changed
@@ -223,7 +225,7 @@ protected:
     double              var_inc;          // Amount to bump next variable with.
 
     vec<vec<Clause*> >  watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
-    vec<vec<cons*> >    wakes_on_lit;     // 'wakes_on_lit[var(lit)]' is a list of csp constraints that wake when var is set
+    vec<vec<wake_stub> >wakes_on_lit;     // 'wakes_on_lit[var(lit)]' is a list of csp constraints that wake when var is set
 
     vec<char>           assigns;          // The current assignments (lbool:s stored as char:s).
     vec<char>           polarity;         // The preferred polarity of each variable.

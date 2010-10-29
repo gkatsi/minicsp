@@ -365,29 +365,29 @@ bool Solver::addConstraint(cons *c)
   return true;
 }
 
-void Solver::wake_on_lit(Var v, cons *c)
+void Solver::wake_on_lit(Var v, cons *c, void *advice)
 {
-  wakes_on_lit[v].push(c);
+  wakes_on_lit[v].push( make_pair(c, advice) );
 }
 
-void Solver::wake_on_dom(cspvar x, cons *c)
+void Solver::wake_on_dom(cspvar x, cons *c, void *advice)
 {
-  cspvars[x._id].wake_on_dom.push(c);
+  cspvars[x._id].wake_on_dom.push( make_pair(c, advice) );
 }
 
-void Solver::wake_on_lb(cspvar x, cons *c)
+void Solver::wake_on_lb(cspvar x, cons *c, void *advice)
 {
-  cspvars[x._id].wake_on_lb.push(c);
+  cspvars[x._id].wake_on_lb.push( make_pair(c, advice) );
 }
 
-void Solver::wake_on_ub(cspvar x, cons *c)
+void Solver::wake_on_ub(cspvar x, cons *c, void *advice)
 {
-  cspvars[x._id].wake_on_ub.push(c);
+  cspvars[x._id].wake_on_ub.push( make_pair(c, advice) );
 }
 
-void Solver::wake_on_fix(cspvar x, cons *c)
+void Solver::wake_on_fix(cspvar x, cons *c, void *advice)
 {
-  cspvars[x._id].wake_on_fix.push(c);
+  cspvars[x._id].wake_on_fix.push( make_pair(c, advice) );
 }
 
 void Solver::ensure_can_schedule(cons *c)
@@ -1160,17 +1160,18 @@ Clause* Solver::propagate_inner()
           break;
 
         /* Now propagate constraints that wake on this literal */
-        vec<cons*>& pwakes = wakes_on_lit[var(p)];
-        for(cons **ci = &pwakes[0],
-              **ciend = ci+pwakes.size();
+        vec< wake_stub >& pwakes = wakes_on_lit[var(p)];
+        for(wake_stub *ci = &pwakes[0],
+              *ciend = ci+pwakes.size();
             ci != ciend; ++ci) {
-          active_constraint = *ci;
-          confl = (*ci)->wake(*this, p);
+          cons *con = (*ci).first;
+          active_constraint = con;
+          confl = con->wake(*this, p, (*ci).second);
           active_constraint = 0L;
           if( confl ) {
             if( trace ) {
               cout << "Constraint "
-                   << cons_state_printer(*this, **ci) << " failed, "
+                   << cons_state_printer(*this, *con) << " failed, "
                    << "clause " << print(*this, confl) << "\n";
             }
             qhead = trail.size();
@@ -1182,7 +1183,7 @@ Clause* Solver::propagate_inner()
           break;
 
         domevent const & pe = events[toInt(p)];
-        vec<cons*> *dewakes = 0L;
+        vec< pair<cons*, void*> > *dewakes = 0L;
         vec<int> *desched = 0L;
         if( noevent(pe) ) goto SetPropagation;
         switch(pe.type) {
@@ -1209,16 +1210,17 @@ Clause* Solver::propagate_inner()
         case domevent::NONE: assert(0);
         }
         if( !dewakes ) goto SetPropagation;
-        for( cons **ci = &((*dewakes)[0]),
-               **ciend = ci+dewakes->size();
+        for( wake_stub *ci = &((*dewakes)[0]),
+               *ciend = ci+dewakes->size();
              ci != ciend; ++ci) {
-          active_constraint = *ci;
-          confl = (*ci)->wake(*this, p);
+          cons *con = (*ci).first;
+          active_constraint = con;
+          confl = con->wake(*this, p, (*ci).second);
           active_constraint = 0L;
           if( confl ) {
             if( trace ) {
               cout << "Constraint "
-                   << cons_state_printer(*this, **ci) << " failed, "
+                   << cons_state_printer(*this, *con) << " failed, "
                    << "clause @ " << confl << "\n";
             }
             qhead = trail.size();
@@ -1236,7 +1238,7 @@ Clause* Solver::propagate_inner()
     SetPropagation:
         setevent const & se = setevents[toInt(p)];
         if( noevent(se) ) continue;
-        vec<cons*> *sewakes = 0L;
+        vec<wake_stub> *sewakes = 0L;
         vec<int> *sesched = 0L;
         switch(se.type) {
         case setevent::IN:
@@ -1249,16 +1251,17 @@ Clause* Solver::propagate_inner()
           break;
         case setevent::NONE: assert(0);
         }
-        for( cons **ci = &((*sewakes)[0]),
-               **ciend = ci+sewakes->size();
+        for( wake_stub *ci = &((*sewakes)[0]),
+               *ciend = ci+sewakes->size();
              ci != ciend; ++ci) {
-          active_constraint = *ci;
-          confl = (*ci)->wake(*this, p);
+          cons *con = (*ci).first;
+          active_constraint = con;
+          confl = con->wake(*this, p, (*ci).second);
           active_constraint = 0L;
           if( confl ) {
             if( trace ) {
               cout << "Constraint "
-                   << cons_state_printer(*this, **ci) << " failed, "
+                   << cons_state_printer(*this, *con) << " failed, "
                    << "clause @ " << confl << "\n";
             }
             qhead = trail.size();
@@ -1738,7 +1741,7 @@ void Solver::checkLiteralCount()
     }
 }
 
-Clause* cons::wake(Solver&, Lit)
+Clause* cons::wake(Solver&, Lit, void *)
 {
   assert(0);
   return 0L;
