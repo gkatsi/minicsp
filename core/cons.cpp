@@ -175,7 +175,7 @@ public:
       throw unsat();
   }
 
-  virtual Clause *wake(Solver& s, Lit p, void *) {
+  virtual Clause *wake(Solver& s, Lit p) {
     _reason.clear();
     return eq::eq_propagate<W>(s, _x, _y, _c, p, _reason);
   }
@@ -279,12 +279,12 @@ public:
     DO_OR_THROW(neq::neq_initialize(s, _x, _y, _c, _reason));
   }
 
-  virtual Clause *wake(Solver& s, Lit p, void *);
+  virtual Clause *wake(Solver& s, Lit p);
   virtual void clone(Solver& other);
   virtual ostream& print(Solver &s, ostream& os) const;
 };
 
-Clause *cons_neq::wake(Solver& s, Lit event, void*)
+Clause *cons_neq::wake(Solver& s, Lit event)
 {
   _reason.clear();
   return neq::neq_propagate(s, _x, _y, _c, event, _reason);
@@ -369,13 +369,13 @@ public:
     _reason.capacity(5);
   }
 
-  Clause *wake(Solver& s, Lit p, void *);
+  Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
   ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
-Clause *cons_eq_re::wake(Solver &s, Lit p, void *)
+Clause *cons_eq_re::wake(Solver &s, Lit p)
 {
   domevent pevent = s.event(p);
   _reason.clear();
@@ -542,16 +542,16 @@ public:
     s.wake_on_lb(x, this);
     s.wake_on_ub(y, this);
     _reason.push(); _reason.push();
-    if( wake(s, lit_Undef, 0L) )
+    if( wake(s, lit_Undef) )
       throw unsat();
   }
 
-  virtual Clause *wake(Solver& s, Lit p, void *);
+  virtual Clause *wake(Solver& s, Lit p);
   virtual void clone(Solver& othersolver);
   virtual ostream& print(Solver &s, ostream& os) const;
 };
 
-Clause *cons_le::wake(Solver& s, Lit, void*)
+Clause *cons_le::wake(Solver& s, Lit)
 {
   _reason.clear();
   return leq::leq_propagate(s, _x, _y, _c, _reason);
@@ -606,13 +606,13 @@ public:
     s.wake_on_lit(var(_b), this);
   }
 
-  Clause *wake(Solver& s, Lit p, void *);
+  Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
   ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
-Clause *cons_leq_re::wake(Solver &s, Lit p, void *)
+Clause *cons_leq_re::wake(Solver &s, Lit p)
 {
   domevent pevent = s.event(p);
   _reason.clear();
@@ -755,26 +755,26 @@ public:
 
     for(int i = _x.min(s), iend = _x.max(s)+1; i != iend; ++i) {
       if( !_x.indomain(s, i) )
-        DO_OR_THROW(wake(s, _x.e_neq(s, i), 0L));
+        DO_OR_THROW(wake(s, _x.e_neq(s, i)));
       if( !_y.indomain(s, abs(i)-_c) )
         _x.remove(s, i, NO_REASON);
     }
 
     for(int i = _y.min(s), iend = _y.max(s)+1; i != iend; ++i) {
       if( !_y.indomain(s, i) )
-        DO_OR_THROW(wake(s, _y.e_neq(s, i), 0L));
+        DO_OR_THROW(wake(s, _y.e_neq(s, i)));
       if( !_x.indomain(s, i+_c) && !_x.indomain(s, -i-_c) )
         _y.remove(s, i, NO_REASON);
     }
   }
 
-  Clause *wake(Solver& s, Lit p, void *);
+  Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
   ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
-Clause* cons_abs::wake(Solver &s, Lit event, void *)
+Clause* cons_abs::wake(Solver &s, Lit event)
 {
   domevent e = s.event(event);
   _reason[0] = ~event;
@@ -874,7 +874,7 @@ public:
               vector< pair<int, cspvar> > const& vars,
               int c);
 
-  Clause *wake(Solver& s, Lit p, void *);
+  Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
   ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
@@ -928,12 +928,12 @@ cons_lin_le<N>::cons_lin_le(Solver &s,
   }
   if( lb > 0 ) throw unsat();
   _ps.growTo(n, lit_Undef);
-  if( wake(s, lit_Undef, 0L) )
+  if( wake(s, lit_Undef) )
     throw unsat();
 }
 
 template<size_t N>
-Clause *cons_lin_le<N>::wake(Solver &s, Lit, void *)
+Clause *cons_lin_le<N>::wake(Solver &s, Lit)
 {
   int pspos[n];
 
@@ -1456,7 +1456,7 @@ public:
           std::vector<Var> const& vars,
           std::vector<int> const& weights, int lb);
 
-  virtual Clause *wake(Solver& s, Lit p, void *);
+  virtual Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
   ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
@@ -1555,7 +1555,7 @@ cons_pb::cons_pb(Solver& s,
     s.wake_on_lit(_svars[i].second, this);
 }
 
-Clause *cons_pb::wake(Solver& s, Lit, void *)
+Clause *cons_pb::wake(Solver& s, Lit)
 {
   size_t np = _posvars.size(),
     nn = _negvars.size();
@@ -1704,13 +1704,13 @@ public:
     s.wake_on_ub(_rhs, this);
   }
 
-  Clause *wake(Solver& s, Lit p, void *);
+  Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
   ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
-Clause *cons_pbvar::wake(Solver &s, Lit, void *)
+Clause *cons_pbvar::wake(Solver &s, Lit)
 {
   size_t np = _posvars.size(),
     nn = _negvars.size(),
@@ -1934,16 +1934,16 @@ public:
     s.wake_on_ub(_z, this);
 
     _reason.capacity(5);
-    wake(s, lit_Undef, 0L);
+    wake(s, lit_Undef);
   }
 
-  Clause *wake(Solver& s, Lit p, void *);
+  Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
   ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
-Clause* cons_mult::wake(Solver &s, Lit, void *)
+Clause* cons_mult::wake(Solver &s, Lit)
 {
   using std::min;
   using std::max;
@@ -2115,16 +2115,16 @@ public:
     s.wake_on_ub(_y, this);
     s.wake_on_lb(_z, this);
     s.wake_on_ub(_z, this);
-    wake(s, lit_Undef, 0L);
+    wake(s, lit_Undef);
   }
 
-  Clause *wake(Solver& s, Lit p, void*);
+  Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
   ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
-Clause *cons_min::wake(Solver &s, Lit p, void *)
+Clause *cons_min::wake(Solver &s, Lit p)
 {
   using std::min;
 
@@ -2195,16 +2195,16 @@ public:
     s.wake_on_ub(_y, this);
     s.wake_on_lb(_z, this);
     s.wake_on_ub(_z, this);
-    wake(s, lit_Undef, 0L);
+    wake(s, lit_Undef);
   }
 
-  Clause *wake(Solver& s, Lit p, void *);
+  Clause *wake(Solver& s, Lit p);
   void clone(Solver& other);
   ostream& print(Solver &s, ostream& os) const;
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
-Clause *cons_max::wake(Solver &s, Lit p, void *)
+Clause *cons_max::wake(Solver &s, Lit p)
 {
   using std::max;
 
@@ -2530,7 +2530,7 @@ public:
   }
   ~cons_alldiff() { delete[] reasons; }
 
-  Clause* wake(Solver &s, Lit p, void *);
+  Clause* wake(Solver &s, Lit p);
   Clause *propagate(Solver& s);
   void clone(Solver& other);
   ostream& print(Solver &s, ostream& os) const;
@@ -2863,7 +2863,7 @@ void cons_alldiff::tarjan_dfs(Solver &s, size_t var, size_t& index,
   }
 }
 
-Clause* cons_alldiff::wake(Solver &s, Lit p, void *)
+Clause* cons_alldiff::wake(Solver &s, Lit p)
 {
   const size_t n = _x.size();
   domevent de = s.event(p);

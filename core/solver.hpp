@@ -66,7 +66,9 @@ public:
        assignment stack has been processed. Similar to the difference
        between a demon and a propagator in ilog. Unlike gecode
        advisors, a constraint can prune when it wakes. A constraint
-       can also arrange to receive when it wakes a piece of advice
+       can also arrange to receive when it wakes a piece of advice.
+       If advice == NULL, then the regular, non-advised wake() is
+       called, other wake_advised()
     */
     void    wake_on_lit(Var, cons *c, void *advice = 0L);       // Wake this constraint when the Boolear Var is fixed
     void    wake_on_dom(cspvar, cons*c, void *advice = 0L);     // Wake this constraint when a value of cspvar is pruned
