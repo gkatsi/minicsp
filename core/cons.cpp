@@ -2455,6 +2455,21 @@ class cons_alldiff : public cons
   vector< bool > hallcomp; // is the scc a Hall set?
   vector< vertex > tarjan_stack;
 
+  // SCC based decomposition
+  vector<size_t> sccs;
+  vector<size_t> scc_index;
+  btptr scc_splitpoint_ptr; // a bool[]. Note that unlike the Gent et
+                            // al paper, splitpoint[i] is true iff an
+                            // scc starts at i
+
+  vector<unsigned> scc_wake;
+  vector<unsigned> scc_wake_idx;
+  btptr scc_wake_size_ptr; // this is a single integer that is always
+                           // 0 after propagate(). So if wake()
+                           // records some changes and we backtrack
+                           // before propagate() runs, scc_wake is
+                           // automatically cleared
+
   vec<Lit>* reasons;
 
   bool varfree(size_t var) {
@@ -2485,7 +2500,7 @@ class cons_alldiff : public cons
                      vector<unsigned char>& explained,
                      vector<int>& to_explain);
 
-  void tarjan_unroll_stack(vertex root);
+  void tarjan_unroll_stack(Solver &s, vertex root);
   // start the dfs from variable var
   void tarjan_dfs(Solver& s, size_t var, size_t& index, bool conflict);
   // reset all structures that were touched by tarjan_*
@@ -2501,6 +2516,7 @@ public:
       umin = std::min( umin, _x[i].min(s) );
       umax = std::max( umax, _x[i].max(s) );
       s.schedule_on_dom(_x[i], this);
+      s.wake_on_dom(_x[i], this, reinterpret_cast<void*>(i+1));
       s.wake_on_fix(_x[i], this);
     }
 
@@ -2525,11 +2541,32 @@ public:
 
     reasons = new vec<Lit>[umax-umin+1 + _x.size()];
 
+    sccs.resize(_x.size());
+    scc_index.resize(_x.size());
+    scc_splitpoint_ptr = s.alloc_backtrackable((_x.size()+1)*sizeof(bool));
+    bool *scc_splitpoint = s.deref_array<bool>(scc_splitpoint_ptr);
+    for(size_t i = 0; i != _x.size(); ++i) {
+      sccs[i] = i;
+      scc_index[i] = i;
+      scc_splitpoint[i] = false;
+    }
+    scc_splitpoint[_x.size()] = true;
+
+    scc_wake.resize(_x.size());
+    scc_wake_idx.resize(_x.size());
+    for(size_t i = 0; i != _x.size(); ++i) {
+      scc_wake[i] = i;
+      scc_wake_idx[i] = i;
+    }
+    scc_wake_size_ptr = s.alloc_backtrackable(sizeof(size_t));
+    s.deref<size_t>(scc_wake_size_ptr) = 0;
+
     if( !find_initial_matching(s) )
       throw unsat();
   }
   ~cons_alldiff() { delete[] reasons; }
 
+  Clause* wake_advised(Solver &s, Lit p, void *);
   Clause* wake(Solver &s, Lit p);
   Clause *propagate(Solver& s);
   void clone(Solver& other);
@@ -2746,19 +2783,23 @@ void cons_alldiff::explain_conflict(Solver &s, vec<Lit>& ps)
   tarjan_clear();
 }
 
-void cons_alldiff::tarjan_unroll_stack(vertex root)
+void cons_alldiff::tarjan_unroll_stack(Solver &s, vertex root)
 {
   int scc = comp_limit.size()-1;
+  int numvars = 0;
+  size_t minvaridx = _x.size();
   hallcomp.push_back(true);
   vertex vp;
   do {
     vp = tarjan_stack.back(); tarjan_stack.pop_back();
     components.push_back(vp);
     if( vp.first ) {
+      ++numvars;
       varcomp[vp.second] = scc;
       varvisited[vp.second] = false;
       if( varhasfree[vp.second] )
         hallcomp[scc] = false;
+      minvaridx = std::min(minvaridx, scc_index[vp.second]);
     } else {
       valcomp[vp.second-umin] = scc;
       valvisited[vp.second-umin] = false;
@@ -2767,7 +2808,37 @@ void cons_alldiff::tarjan_unroll_stack(vertex root)
     }
   } while( vp != root );
   comp_limit.push_back(components.size());
-  if( hallcomp[scc] ) return;
+  if( hallcomp[scc] ) {
+    // split the constraint
+    // find the original scc...
+    if( numvars == 0 ) {
+      int val = components[comp_limit[scc]].second;
+      int var = revmatching[val-umin];
+      assert( var >= 0 );
+      minvaridx = scc_index[var];
+    }
+    unsigned vscc_start = minvaridx;
+    bool *scc_splitpoint = s.deref_array<bool>(scc_splitpoint_ptr);
+    for(; vscc_start > 0 && !scc_splitpoint[vscc_start]; --vscc_start)
+      ;
+    // ... now move this scc's variable to the beginning ...
+    int moved = 0;
+    unsigned i1 = vscc_start, i2 = vscc_start;
+    for(; moved < numvars; ) {
+      if( varcomp[ sccs[i1] ] == scc ) {
+        if( i1 > i2 ) {
+          std::swap(scc_index[sccs[i1]], scc_index[sccs[i2]]);
+          std::swap(sccs[i1], sccs[i2]);
+        }
+        ++i1; ++i2;
+        ++moved;
+      } else
+        ++i1;
+    }
+    // ... and mark the split.
+    scc_splitpoint[i2] = true;
+    return;
+  }
   // not a hall set, so we can reach a free value
   for(size_t j = comp_limit[scc]; j != comp_limit[scc+1]; ++j) {
     vertex vx = components[j];
@@ -2837,7 +2908,7 @@ void cons_alldiff::tarjan_dfs(Solver &s, size_t var, size_t& index,
       } else
         valhasfree[val-umin] = true;
       if( vallowlink[val-umin] == valindex[val-umin] ) {
-        tarjan_unroll_stack( make_pair(false, val) );
+        tarjan_unroll_stack( s, make_pair(false, val) );
       }
       varlowlink[var] = std::min(varlowlink[var], vallowlink[q-umin]);
     } else if( valvisited[q-umin] ) // q is in stack
@@ -2859,15 +2930,33 @@ void cons_alldiff::tarjan_dfs(Solver &s, size_t var, size_t& index,
     }
   }
   if( varlowlink[var] == varindex[var] ) {
-    tarjan_unroll_stack( make_pair(true, var) );
+    tarjan_unroll_stack( s, make_pair(true, var) );
   }
+}
+
+Clause* cons_alldiff::wake_advised(Solver &s, Lit p, void *advice)
+{
+  domevent de = s.event(p);
+
+  assert( de.type == domevent::NEQ );
+
+  size_t idx = reinterpret_cast<size_t>(advice)-1;
+  size_t & scc_wake_size = s.deref<size_t>(scc_wake_size_ptr);
+  if( scc_wake_idx[idx] >= scc_wake_size ) {
+    unsigned prev = scc_wake[scc_wake_size];
+    std::swap(scc_wake[scc_wake_size], scc_wake[scc_wake_idx[idx]]);
+    std::swap(scc_wake_idx[idx], scc_wake_idx[prev]);
+    ++scc_wake_size;
+  }
+  return 0L;
 }
 
 Clause* cons_alldiff::wake(Solver &s, Lit p)
 {
   const size_t n = _x.size();
   domevent de = s.event(p);
-  if( de.type != domevent::EQ ) return 0L;
+
+  assert( de.type == domevent::EQ );
 
   reason.clear();
   reason.push(~p);
@@ -2884,7 +2973,19 @@ Clause* cons_alldiff::propagate(Solver &s)
   const size_t n = _x.size();
   assert(nmatched == n);
   bool valid = true; // is the current matching still valid?
-  for(size_t i = 0; i != n; ++i) {
+
+  size_t & scc_wake_size = s.deref<size_t>(scc_wake_size_ptr);
+  bool *scc_splitpoint = s.deref_array<bool>(scc_splitpoint_ptr);
+
+  // the start index of those sccs that have been touched
+  unsigned touch_ccs[n];
+  bool touch_ccs_in[n];
+  unsigned touch_ccs_size = 0;
+
+  for(size_t i = 0; i != n; ++i) touch_ccs_in[i] = false;
+
+  for(size_t w = 0; w != scc_wake_size; ++w) {
+    size_t i = scc_wake[w];
     assert( !varfree(i) );
     if( !_x[i].indomainUnsafe( s, matching[i] ) ) {
       if(valid) {
@@ -2899,7 +3000,23 @@ Clause* cons_alldiff::propagate(Solver &s)
       matching[i] = umin-1;
       --nmatched;
     }
+    if( !_gac ) continue;
+    // we mark every variable we see so there is no danger of finding
+    // the start of the scc potentially linear number of times. this
+    // would be quadratic here.
+    unsigned vscc_start = scc_index[i];
+    for(; vscc_start > 0 && !scc_splitpoint[vscc_start]
+          && !touch_ccs_in[vscc_start]; --vscc_start)
+      touch_ccs_in[vscc_start] = true;
+    if( !touch_ccs_in[vscc_start] ) {
+      touch_ccs_in[vscc_start] = true;
+      touch_ccs[touch_ccs_size] = vscc_start;
+      ++touch_ccs_size;
+    } // else we stopped on touch_ccs_in[..] being true, so we have
+      // already added this scc to touch_ccs
   }
+  scc_wake_size = 0;
+
   if( valid && !_gac ) {
     return 0L;
   }
@@ -2920,11 +3037,20 @@ Clause* cons_alldiff::propagate(Solver &s)
   if( !_gac )
     return 0L;
 
-  for(size_t i = 0; i != n; ++i) {
-    size_t index = 0;
-    if( varindex[i] == idx_undef )
-      tarjan_dfs(s, i, index, false);
+  size_t index = 0;
+  for( unsigned scc = 0; scc != touch_ccs_size; ++scc ) {
+    size_t idx = touch_ccs[scc];
+    assert( varindex[ sccs[idx] ] == idx_undef );
+    size_t eidx = idx;
+    for(++eidx; !scc_splitpoint[eidx]; ++eidx)
+      ;
+    tarjan_dfs(s, sccs[idx], index, false);
+    for(++idx; idx != eidx; ++idx) {
+      if( varindex[ sccs[idx] ] == idx_undef )
+        tarjan_dfs(s, sccs[idx], index, false);
+    }
   }
+
   tarjan_clear();
 
   assert(nmatched == n);
@@ -2946,9 +3072,6 @@ void post_alldiff(Solver &s, std::vector<cspvar> const &x, bool gac)
     for(size_t q = 0; q != rem.size(); ++q)
       xp[i].remove(s, q, NO_REASON);
   }
-  // FIXME: find disconnected components and post one alldiff for
-  // each. or do it dynamically in the propagator
-
   if( xp.empty() ) return;
 
   cons *con = new cons_alldiff(s, xp, gac);
