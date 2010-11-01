@@ -45,6 +45,10 @@ Solver::Solver() :
   , verbosity        (0)
   , phase_saving     (true)
   , allow_clause_dbg (true)
+
+    // branching heuristics
+  , varbranch(VAR_VSIDS)
+  , valbranch(VAL_LEX)
     // Statistics: (formerly in 'SolverStats')
     //
   , starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0)
@@ -501,7 +505,7 @@ btptr Solver::alloc_backtrackable(unsigned size)
 // Major methods:
 
 
-Lit Solver::pickBranchLit(int polarity_mode, double random_var_freq)
+Lit Solver::pickBranchLitVSIDS(int polarity_mode, double random_var_freq)
 {
     Var next = var_Undef;
 
@@ -535,6 +539,40 @@ Lit Solver::pickBranchLit(int polarity_mode, double random_var_freq)
     return next == var_Undef ? lit_Undef : Lit(next, sign);
 }
 
+Lit Solver::pickBranchLitLex()
+{
+  for(int i = 0; i != cspvars.size(); ++i) {
+    cspvar x(i);
+    if( x.min(*this) != x.max(*this) ) {
+      return pickBranchLitFrom(x);
+    }
+  }
+  // everything instantiated. use pickBranchLitVSIDS to finish off any
+  // propositional strugglers
+  return pickBranchLitVSIDS(polarity_mode, random_var_freq);
+}
+
+Lit Solver::pickBranchLitFrom(cspvar x)
+{
+  switch(valbranch) {
+  case VAL_VSIDS: assert(0);
+  case VAL_LEX:   return Lit( x.eqi(*this, x.min(*this)) );
+  case VAL_BISECT:assert(0);
+  }
+  assert(0);
+}
+
+Lit Solver::pickBranchLit(int polarity_mode, double random_var_freq)
+{
+  switch(varbranch) {
+  case VAR_VSIDS: return pickBranchLitVSIDS(polarity_mode, random_var_freq);
+  case VAR_LEX:   return pickBranchLitLex();
+  case VAR_DOM:
+  case VAR_DOMWDEG:
+    assert(0);
+  }
+  assert(0);
+}
 
 /*_________________________________________________________________________________________________
 |

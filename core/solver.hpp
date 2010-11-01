@@ -41,6 +41,18 @@ class btptr {
   friend class Solver;
 };
 
+/* Branching heuristics: if VSIDS, choose a literal
+ * directly. Otherwise, choose a variable, then choose a value using
+ * the corresponding value branching heuristic.
+ */
+enum BranchHeuristic {
+    VAR_VSIDS, VAR_LEX, VAR_DOM, VAR_DOMWDEG
+};
+
+enum ValBranchHeuristic {
+    VAL_VSIDS, VAL_LEX, VAL_BISECT
+};
+
 class Solver {
 public:
 
@@ -161,6 +173,9 @@ public:
     bool      phase_saving;
     bool      allow_clause_dbg;   // set to 0 when the solver is cloned to avoid infinite recursion
 
+    BranchHeuristic varbranch;
+    ValBranchHeuristic valbranch;
+
     enum { polarity_true = 0, polarity_false = 1, polarity_user = 2, polarity_rnd = 3 };
 
     // Statistics: (read-only member variable)
@@ -273,7 +288,10 @@ protected:
     // Main internal methods:
     //
     void     insertVarOrder   (Var x);                                                 // Insert a variable in the decision order priority queue.
-    Lit      pickBranchLit    (int polarity_mode, double random_var_freq);             // Return the next decision variable.
+    Lit      pickBranchLit     (int polarity_mode, double random_var_freq);            // Return the next decision variable.
+    Lit      pickBranchLitVSIDS(int polarity_mode, double random_var_freq);            // ...using VSIDS
+    Lit      pickBranchLitLex  ();                                                     // ...Lex order of the CSP vars
+    Lit      pickBranchLitFrom (cspvar x);                                             // Branch within a chosen variable
     void     analyze          (Clause* confl, vec<Lit>& out_learnt, int& out_btlevel); // (bt = backtrack)
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
     bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
