@@ -1204,7 +1204,10 @@ Clause* Solver::propagate_inner()
             ci != ciend; ++ci) {
           cons *con = (*ci).first;
           active_constraint = con;
-          confl = con->wake(*this, p, (*ci).second);
+          if( (*ci).second )
+            confl = con->wake_advised(*this, p, (*ci).second);
+          else
+            confl = con->wake(*this, p);
           active_constraint = 0L;
           if( confl ) {
             if( trace ) {
@@ -1253,7 +1256,10 @@ Clause* Solver::propagate_inner()
              ci != ciend; ++ci) {
           cons *con = (*ci).first;
           active_constraint = con;
-          confl = con->wake(*this, p, (*ci).second);
+          if( (*ci).second )
+            confl = con->wake_advised(*this, p, (*ci).second);
+          else
+            confl = con->wake(*this, p);
           active_constraint = 0L;
           if( confl ) {
             if( trace ) {
@@ -1294,7 +1300,10 @@ Clause* Solver::propagate_inner()
              ci != ciend; ++ci) {
           cons *con = (*ci).first;
           active_constraint = con;
-          confl = con->wake(*this, p, (*ci).second);
+          if( (*ci).second )
+            confl = con->wake_advised(*this, p, (*ci).second);
+          else
+            confl = con->wake(*this, p);
           active_constraint = 0L;
           if( confl ) {
             if( trace ) {
@@ -1779,7 +1788,13 @@ void Solver::checkLiteralCount()
     }
 }
 
-Clause* cons::wake(Solver&, Lit, void *)
+Clause* cons::wake_advised(Solver&, Lit, void *)
+{
+  assert(0);
+  return 0L;
+}
+
+Clause* cons::wake(Solver&, Lit)
 {
   assert(0);
   return 0L;
