@@ -1182,6 +1182,8 @@ Clause* Solver::propagate_inner()
                 // Did not find watch -- clause is unit under assignment:
                 *j++ = &c;
                 if (value(first) == l_False){
+                    if( trace )
+                      cout << "Clause " << print(*this, &c) << " failed\n";
                     confl = &c;
                     qhead = trail.size();
                     // Copy the remaining watches:
@@ -1340,6 +1342,11 @@ Clause *Solver::propagate()
       confl = consqs[next].c->propagate(*this);
       active_constraint = 0L;
       if( confl ) {
+        if( trace ) {
+          cout << "Constraint "
+               << cons_state_printer(*this, *consqs[next].c) << " failed, "
+               << "clause @ " << confl << "\n";
+        }
         qhead = trail.size();
         reset_queue();
         return confl;
