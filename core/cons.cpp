@@ -17,8 +17,13 @@ using std::set;
 
 // for temporary debugging
 using std::cout;
+#ifdef INVARIANTS
+#define DOUT if(1) std::cout
+#define DEXEC if(1)
+#else
 #define DOUT if(0) std::cout
 #define DEXEC if(0)
+#endif
 
 /* x == y + c     and        x == -y + c
 
