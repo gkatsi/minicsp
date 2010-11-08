@@ -207,7 +207,7 @@ EOF
 
 CMD="$FLATZINC $FLATZINC_FLAGS $FZN"
 $QUIET "$THISPROG: $CMD"
-if ! $CMD | $CANONICALIZE | awk -f $AWK
+if ! $CMD | $CANONICALIZE #| awk -f $AWK
 then
     echo "$THISPROG: evaluation terminated abnormally" >&2
 fi
