@@ -207,7 +207,7 @@ namespace FlatZinc {
     AST::Array* solveAnnotations(void) const;
 
     /// Implement optimization
-    virtual void constrain();
+    void constrain();
 
     /// options
     bool findall; // find all solutions
