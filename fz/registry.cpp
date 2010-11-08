@@ -648,6 +648,13 @@ namespace FlatZinc {
       post_element(s, result, selector, iv, 1);
     }
 
+    /* alldiff */
+    void p_all_different(Solver& s, FlatZincModel& m,
+                         const ConExpr& ce, AST::Node* ann) {
+      vector<cspvar> iv = arg2intvarargs(s, m, ce[0]);
+      post_alldiff(s, iv);
+    }
+
     /* coercion constraints */
     void p_bool2int(Solver& s, FlatZincModel& m,
                     const ConExpr& ce, AST::Node* ann) {
@@ -1204,6 +1211,8 @@ namespace FlatZinc {
         registry().add("array_int_element", &p_array_int_element);
         registry().add("array_var_bool_element", &p_array_bool_element);
         registry().add("array_bool_element", &p_array_bool_element);
+
+        registry().add("all_different_int", &p_all_different);
 
         registry().add("bool2int", &p_bool2int);
 
