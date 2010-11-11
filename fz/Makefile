@@ -3,7 +3,7 @@ CORE      = ../core
 CHDRS     = $(wildcard *.hpp) $(wildcard $(MTL)/*.h)
 EXEC      = minicsp-fz
 CFLAGS    = -I$(MTL) -I$(CORE) -Wall -ffloat-store
-LFLAGS    = -lz
+LFLAGS    = 
 
 COREOBJS  = $(CORE)/solver.o $(CORE)/cons.o $(CORE)/setcons.o \
 	    $(CORE)/cmdline.o $(CORE)/utils.o
