@@ -587,7 +587,7 @@ namespace FlatZinc {
       cspvar x0 = getIntVar(s, m, ce[0]);
       cspvar x1 = getIntVar(s, m, ce[1]);
       cspvar x2 = getIntVar(s, m, ce[2]);
-      post_mult(s, x1, x2, x0); // note the order
+      post_mult(s, x2, x0, x1); // note the order
     }
     void p_int_div(Solver& s, FlatZincModel& m,
                    const ConExpr& ce, AST::Node* ann) {
