@@ -749,6 +749,29 @@ namespace {
   }
   REGISTER_TEST(leq_re03);
 
+  void leq_recount()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(-1, 1);
+    cspvar y = s.newCSPVar(-1, 1);
+    cspvar b = s.newCSPVar(0, 1);
+    post_leq_re(s, x, y, 0, b);
+    assert_num_solutions(s, 9);
+  }
+  REGISTER_TEST(leq_recount);
+
+  void geq_recount()
+  {
+    Solver s;
+    s.trace = 1;
+    cspvar x = s.newCSPVar(-1, 1);
+    cspvar y = s.newCSPVar(-1, 1);
+    cspvar b = s.newCSPVar(0, 1);
+    post_geq_re(s, x, y, 0, b);
+    assert_num_solutions(s, 9);
+  }
+  REGISTER_TEST(geq_recount);
+
   void max01()
   {
     Solver s;
