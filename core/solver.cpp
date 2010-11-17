@@ -1676,6 +1676,8 @@ bool Solver::solve(const vec<Lit>& assumps)
 
 
     if (status == l_True){
+        if( trace )
+          cout << "Solution ";
         // Extend & copy model:
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
@@ -1683,7 +1685,13 @@ bool Solver::solve(const vec<Lit>& assumps)
         for(int i = 0; i != cspvars.size(); ++i) {
           cspvar_bt& xb = deref<cspvar_bt>(cspvarbt[i]);
           cspmodel[i] = std::make_pair(xb.min, xb.max);
+          if( trace ) {
+            if( i ) cout << ", ";
+            cout << cspvar_printer(*this, cspvar(i))
+                 << " in " << domain_as_set(*this, cspvar(i));
+          }
         }
+        if( trace ) cout << "\n";
         cspsetmodel.growTo(setvars.size());
         for(int i = 0; i != setvars.size(); ++i) {
           set<int>& lb = cspsetmodel[i].first;
@@ -1731,13 +1739,13 @@ void Solver::excludeLast()
         exclude.push( Lit(xd.ini(j)));
     }
   }
-  addClause(exclude);
   if( trace ) {
-    cout << "added exclude clause (";
+    cout << "adding exclude clause (";
     for(int i = 0; i != exclude.size(); ++i)
       cout << lit_printer(*this, exclude[i]) << ' ';
     cout << ")\n";
   }
+  addClause(exclude);
 }
 
 //==================================================
