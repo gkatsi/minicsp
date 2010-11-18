@@ -21,6 +21,9 @@ namespace cmdline {
   void parse_solver_options(Solver &s, arglist& args) {
     s.learning = !has_option(args, "--nolearning");
     s.trace = has_option(args, "--trace");
+#ifdef INVARIANTS
+    s.debugclauses = has_option(args, "--debugclauses");
+#endif
     s.restarting = !has_option(args, "--norestart");
 
     pair<bool, int> has_base_restart =

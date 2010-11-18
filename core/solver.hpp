@@ -160,6 +160,7 @@ public:
     // Mode of operation:
     //
     bool      trace;              // if true, will output all prunings
+    bool      debugclauses;       // if true, will debug clauses generates by constraints *in debug mode only*
     bool      learning;           // can be set to false to disable learning
     bool      restarting;         // can be set to false to disable restarting
     double    var_decay;          // Inverse of the variable activity decay factor.                                            (default 1 / 0.95)

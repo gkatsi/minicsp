@@ -33,6 +33,7 @@ Solver::Solver() :
 
     // Parameters: (formerly in 'SearchParams')
     trace(false)
+  , debugclauses(false)
   , learning(true)
   , restarting(true)
   , var_decay(1 / 0.95), clause_decay(1 / 0.999), random_var_freq(0.02)
@@ -922,8 +923,8 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
     check_debug_solution(p, from);
     uncheckedEnqueue_np(p, from);
 
-#ifdef EXPENSIVE_INVARIANTS
-    if( active_constraint )
+#ifdef INVARIANTS
+    if( debugclauses && active_constraint )
       debugclause(from, active_constraint);
 #endif
 
