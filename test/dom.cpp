@@ -46,6 +46,7 @@ namespace {
     assert(x.min(s) == 9 );
     check_consistency(s,x);
   }
+  REGISTER_TEST(test01);
 
   void test02()
   {
@@ -60,6 +61,7 @@ namespace {
     assert( x.domsize(s) == 4 );
     check_consistency(s,x);
   }
+  REGISTER_TEST(test02);
 
   void test03()
   {
@@ -77,6 +79,7 @@ namespace {
     assert( x.max(s) == 6 );
     check_consistency(s,x);
   }
+  REGISTER_TEST(test03);
 
   void test04()
   {
@@ -92,6 +95,7 @@ namespace {
     assert( x.domsize(s) == 2 );
     check_consistency(s,x);
   }
+  REGISTER_TEST(test04);
 
   void test05()
   {
@@ -109,6 +113,7 @@ namespace {
     assert(x.domsize(s) == 1);
     check_consistency(s,x);
   }
+  REGISTER_TEST(test05);
 
   void test06()
   {
@@ -122,6 +127,7 @@ namespace {
     assert( x.domsize(s) == 9 );
     check_consistency(s,x);
   }
+  REGISTER_TEST(test06);
 
   void test07()
   {
@@ -132,6 +138,7 @@ namespace {
     assert( s.value(x.eqi(s, 3)) == l_True );
     check_consistency(s,x);
   }
+  REGISTER_TEST(test07);
 
   // do something twice
   void test08()
@@ -151,6 +158,7 @@ namespace {
     x.assign(s, 9, NO_REASON);
     check_consistency(s,x);
   }
+  REGISTER_TEST(test08);
 
   // assign to a value k when some values p,q s.t. k<p<=ub and
   // lb<=q<k are already pruned
@@ -166,6 +174,7 @@ namespace {
     x.assign(s, 8, NO_REASON);
     check_consistency(s,x);
   }
+  REGISTER_TEST(test09);
 
   // binary domains.
   void test10()
@@ -183,6 +192,7 @@ namespace {
     y.setmin(s, 1, NO_REASON);
     check_consistency(s,x);
   }
+  REGISTER_TEST(test10);
 
   // unary
   void test11()
@@ -198,6 +208,7 @@ namespace {
 
     MUST_BE_UNSAT( x.remove(s, 5, NO_REASON) );
   }
+  REGISTER_TEST(test11);
 
   // really basic stuff that should have been tested from the
   // beginning :(
@@ -217,57 +228,11 @@ namespace {
     assert( x.setmin(s, 15, c) );
     assert( x.setmax(s, 1, c) );
   }
+  REGISTER_TEST(test12);
 }
 
 void dom_test()
 {
   cerr << "dom tests\n";
-
-  cerr << "test01..." << flush;
-  test01();
-  cerr << "OK\n";
-
-  cerr << "test02..." << flush;
-  test02();
-  cerr << "OK\n";
-
-  cerr << "test03..." << flush;
-  test03();
-  cerr << "OK\n";
-
-  cerr << "test04..." << flush;
-  test04();
-  cerr << "OK\n";
-
-  cerr << "test05..." << flush;
-  test05();
-  cerr << "OK\n";
-
-  cerr << "test06..." << flush;
-  test06();
-  cerr << "OK\n";
-
-  cerr << "test07..." << flush;
-  test07();
-  cerr << "OK\n";
-
-  cerr << "test08..." << flush;
-  test08();
-  cerr << "OK\n";
-
-  cerr << "test09..." << flush;
-  test09();
-  cerr << "OK\n";
-
-  cerr << "test10..." << flush;
-  test10();
-  cerr << "OK\n";
-
-  cerr << "test11..." << flush;
-  test11();
-  cerr << "OK\n";
-
-  cerr << "test12..." << flush;
-  test12();
-  cerr << "OK\n";
+  the_test_container().run();
 }
