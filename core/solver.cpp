@@ -327,6 +327,8 @@ void Solver::addClause(vec<Lit>& ps)
         Clause* c = Clause_new(ps, false);
         clauses.push(c);
         attachClause(*c);
+        if( trace )
+          cout << "Added clause " << print(*this, c) << "\n";
     }
 }
 
@@ -603,9 +605,17 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
     int index   = trail.size() - 1;
     out_btlevel = 0;
 
+    if( trace && debugclauses )
+      cout << "cnfl analysis starting with "
+           << print(*this, confl) << "\n";
+
     do{
         assert(confl != NULL);          // (otherwise should be UIP)
         Clause& c = *confl;
+
+        if( trace && debugclauses )
+          cout << "resolving with "
+               << print(*this, confl) << "\n";
 
         if (c.learnt())
             claBumpActivity(c);
@@ -637,6 +647,10 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
     }while (pathC > 0);
     out_learnt[0] = ~p;
 
+    if( trace && debugclauses )
+      cout << "before minimization "
+           << print(*this, &out_learnt) << "\n";
+
     // Simplify conflict clause:
     //
     int i, j;
@@ -662,6 +676,10 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
     max_literals += out_learnt.size();
     out_learnt.shrink(i - j);
     tot_literals += out_learnt.size();
+
+    if( trace && debugclauses )
+      cout << "after minimization "
+           << print(*this, &out_learnt) << "\n";
 
     // Find correct backtrack level:
     //
@@ -823,6 +841,8 @@ void Solver::debugclause(Clause *from, cons *c)
   if(trace) {
     cout << "clause debugging: constraint is now in state\n"
          << cons_state_printer(s1, *s1.conses[0]) << "\n";
+    if( !confl )
+      cout << "*** no failure ***\n";
     cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
   }
   assert(confl);
@@ -1218,6 +1238,8 @@ Clause* Solver::propagate_inner()
                    << cons_state_printer(*this, *con) << " failed, "
                    << "clause " << print(*this, confl) << "\n";
             }
+            if( debugclauses )
+              debugclause(confl, con);
             qhead = trail.size();
             break;
           }
@@ -1270,6 +1292,8 @@ Clause* Solver::propagate_inner()
                    << cons_state_printer(*this, *con) << " failed, "
                    << "clause @ " << confl << "\n";
             }
+            if( debugclauses )
+              debugclause(confl, con);
             qhead = trail.size();
             break;
           }
@@ -1314,6 +1338,8 @@ Clause* Solver::propagate_inner()
                    << cons_state_printer(*this, *con) << " failed, "
                    << "clause @ " << confl << "\n";
             }
+            if( debugclauses )
+              debugclause(confl, con);
             qhead = trail.size();
             break;
           }
@@ -1348,6 +1374,8 @@ Clause *Solver::propagate()
                << cons_state_printer(*this, *consqs[next].c) << " failed, "
                << "clause @ " << confl << "\n";
         }
+        if( debugclauses )
+          debugclause(confl, consqs[next].c);
         qhead = trail.size();
         reset_queue();
         return confl;
