@@ -516,7 +516,7 @@ namespace leq {
   {
     if( _y.max(s) + _c < _x.min(s) ) { // failure
       pushifdef(_reason, _x.r_min(s));
-      pushifdef(_reason, _y.r_leq( s, _x.min(s) - _c ));
+      pushifdef(_reason, _y.r_leq( s, _x.min(s) - _c - 1));
       Clause *r = Clause_new(_reason);
       s.addInactiveClause(r);
       return r;

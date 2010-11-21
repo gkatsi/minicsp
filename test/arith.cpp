@@ -45,6 +45,21 @@ namespace {
   }
   REGISTER_TEST(test02);
 
+  void leq_fail()
+  {
+    Solver s;
+    // check that the clause generated is correct
+    s.debugclauses = 1;
+    cspvar x = s.newCSPVar(0, 2);
+    cspvar y = s.newCSPVar(0, 2);
+    post_leq(s, x, y, 0);
+    assert(!s.propagate());
+    x.assign(s, 2, NO_REASON);
+    y.assign(s, 1, NO_REASON);
+    assert(s.propagate());
+  }
+  REGISTER_TEST(leq_fail);
+
   void test03()
   {
     Solver s;
@@ -763,7 +778,6 @@ namespace {
   void geq_recount()
   {
     Solver s;
-    s.trace = 1;
     cspvar x = s.newCSPVar(-1, 1);
     cspvar y = s.newCSPVar(-1, 1);
     cspvar b = s.newCSPVar(0, 1);
