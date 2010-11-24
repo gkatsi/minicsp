@@ -426,7 +426,7 @@ namespace FlatZinc {
           // continue on to LEQ
         case domevent::LEQ:
           if( strict ) {
-            ++c;
+            --c;
           }
           if( !reif )
             post_lin_leq(s, iv, ia, -c);
