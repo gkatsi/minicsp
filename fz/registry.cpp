@@ -1194,8 +1194,8 @@ namespace FlatZinc {
         registry().add("int_lin_gt_reif", &p_int_lin_gt_reif);
         registry().add("int_lin_eq", &p_int_lin_eq);
         registry().add("int_lin_eq_reif", &p_int_lin_eq_reif);
-        registry().add("int_lin_ne", &p_int_lin_eq);
-        registry().add("int_lin_ne_reif", &p_int_lin_eq_reif);
+        registry().add("int_lin_ne", &p_int_lin_ne);
+        registry().add("int_lin_ne_reif", &p_int_lin_ne_reif);
         registry().add("int_plus", &p_int_plus);
         registry().add("int_minus", &p_int_minus);
         registry().add("int_abs", &p_int_abs);
