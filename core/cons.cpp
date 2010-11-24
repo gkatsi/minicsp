@@ -1305,24 +1305,31 @@ void post_lin_eq_iff_re(Solver &s,
                         int c,
                         cspvar b)
 {
+  assert(b.min(s)>=0 && b.max(s) <=1);
   cspvar b1 = s.newCSPVar(0,1);
   cspvar b2 = s.newCSPVar(0,1);
-  post_lin_leq_right_imp_re(s, vars, coeff, c, b1);
+  post_lin_leq_iff_re(s, vars, coeff, c, b1);
   vector<int> c1(coeff);
   for(size_t i = 0; i != vars.size(); ++i)
     c1[i] = -coeff[i];
-  post_lin_leq_right_imp_re(s, vars, c1, -c, b2);
+  post_lin_leq_iff_re(s, vars, c1, -c, b2);
+
+  Lit bl;
+  if( b.max(s) == 0 )
+    bl = ~Lit(b.eqi(s, 0));
+  else
+    bl = Lit(b.eqi(s, 1));
 
   vec<Lit> ps1, ps2, ps3;
-  ps1.push( ~Lit( b.eqi(s, 1) ) );
+  ps1.push( ~bl );
   ps1.push( Lit( b1.eqi(s, 1) ) );
 
-  ps2.push( ~Lit( b.eqi(s, 1) ) );
+  ps2.push( ~bl );
   ps2.push( Lit( b2.eqi(s, 1) ) );
 
   ps3.push( ~Lit( b1.eqi(s, 1) ) );
   ps3.push( ~Lit( b2.eqi(s, 1) ) );
-  ps3.push( Lit( b.eqi(s, 1)) );
+  ps3.push( bl );
 
   s.addClause(ps1);
   s.addClause(ps2);
