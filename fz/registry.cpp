@@ -589,13 +589,6 @@ namespace FlatZinc {
       cspvar x2 = getIntVar(s, m, ce[2]);
       post_mult(s, x2, x0, x1); // note the order
     }
-    void p_int_div(Solver& s, FlatZincModel& m,
-                   const ConExpr& ce, AST::Node* ann) {
-      cspvar x0 = getIntVar(s, m, ce[0]);
-      cspvar x1 = getIntVar(s, m, ce[1]);
-      cspvar x2 = getIntVar(s, m, ce[2]);
-      post_div(s, x1, x2, x0); // note the order
-    }
 
     void p_int_negate(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
@@ -1200,7 +1193,6 @@ namespace FlatZinc {
         registry().add("int_minus", &p_int_minus);
         registry().add("int_abs", &p_int_abs);
         registry().add("int_times", &p_int_times);
-        registry().add("int_div", &p_int_div);
         registry().add("int_negate", &p_int_negate);
         registry().add("int_min", &p_int_min);
         registry().add("int_max", &p_int_max);
