@@ -417,8 +417,8 @@ namespace {
     s.newDecisionLevel();
     assert(! y2.remove(s, -5, NO_REASON) );
     assert(! s.propagate() );
-    assert( !x2.indomain(s, 5) );
-    assert( !x2.indomain(s, -5) );
+    assert( x2.indomain(s, 5) );
+    assert( x2.indomain(s, -5) );
     s.cancelUntil(0);
   }
   REGISTER_TEST(abs02);
@@ -459,6 +459,20 @@ namespace {
     }
   }
   REGISTER_TEST(abs03);
+
+  // abs y<0 yields pruning events for y != -1, etc. They should be
+  // ignored by cons_abs
+  void abs04()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(-2, 2);
+    cspvar y = s.newCSPVar(-1, 1);
+    post_abs(s, x, y, 0);
+    s.propagate();
+    assert(x.min(s) == -1);
+    assert(x.max(s) == 1);
+  }
+  REGISTER_TEST(abs04);
 
   // mult, all positive
   void mult01()

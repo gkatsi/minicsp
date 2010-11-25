@@ -755,7 +755,8 @@ public:
       DO_OR_THROW(_y.setmin(s, 0, NO_REASON));
 
     if( _y.min(s) + _c > max(abs(x.max(s)), abs(x.min(s))) ||
-        _y.max(s) + _c < min(abs(x.max(s)), abs(x.min(s))) )
+        (x.min(s) > 0 &&
+         _y.max(s) + _c < min(abs(x.max(s)), abs(x.min(s)))) )
       throw unsat();
 
     for(int i = _x.min(s), iend = _x.max(s)+1; i != iend; ++i) {
@@ -797,6 +798,7 @@ Clause* cons_abs::wake(Solver &s, Lit event)
       return confl;
     }
   } else {
+    if( e.d < 0 ) return 0L;
     if( _x.indomain(s, e.d+_c) ) {
       _reason[1] = _x.e_neq( s, e.d+_c);
       DO_OR_RETURN(_x.remove(s, e.d+_c, _reason));
