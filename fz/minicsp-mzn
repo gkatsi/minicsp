@@ -74,7 +74,7 @@ EOF
 }
 
 cleanup () {
-    rm -f $ODZN $OMZN $FZN $AWK $TMPDZN
+    rm -f $FZN $AWK $TMPDZN
 }
 
 # Defaults.
@@ -92,6 +92,7 @@ touch $TMPDZN   # Ensure this file exists.
 # Parse flags.
 
 MZN2FZN_FLAGS="-I $MINICSP_DIR/mznlib"
+FZNBASE=minicsp-fzn
 
 while test $# -gt 0
 do
@@ -122,8 +123,10 @@ do
     -v|--verbose)           MZN2FZN_FLAGS="$MZN2FZN_FLAGS $ARG";;
     -c)                     CANONICALIZE="solns2dzn -c";;
     -D)                     echo "$1;" | sed 's/;;/;/g' >> $TMPDZN; shift;;
-    *.mzn)                  MZN=$ARG;;
-    *.dzn)                  DZN=$DZN" "$ARG;;
+    *.mzn)                  MZN=$ARG
+	                    FZNBASE=$FZNBASE-`basename $ARG .mzn`;;
+    *.dzn)                  DZN=$DZN" "$ARG
+	                    FZNBASE=$FZNBASE-`basename $ARG .dzn`;;
     *)                      FLATZINC_FLAGS="$FLATZINC_FLAGS $ARG";;
     esac
 done
@@ -139,26 +142,14 @@ fi
 
 MODEL=`basename $MZN .mzn`
 MODELDIR=`dirname $MZN`
-OMZN=$MODELDIR/$MODEL.o.mzn
-FZN=$MODEL.fzn
-OZN=$MODEL.ozn
-ODZN=$MODEL.o.dzn
-AWK=$MODEL.o.awk
+FZN=$FZNBASE.fzn
 
 # Flatten the model and create the model.o.mzn file.
-
-CMD="$MZN2FZN --output-omzn $MZN2FZN_FLAGS $MZN $DZN"
+CMD="$MZN2FZN -o $FZN $MZN2FZN_FLAGS -I $MODELDIR $MZN $DZN"
 $QUIET "$THISPROG: $CMD"
 if ! $CMD
 then
     echo "$THISPROG: flattening failed" >&2
-    cleanup
-    exit 1
-fi
-
-if ! test -r $OMZN
-then
-    echo "$THISPROG: flattening did not produce $OMZN"
     cleanup
     exit 1
 fi
@@ -173,41 +164,9 @@ fi
 # Evaluate the model, split out each solution and produce
 # formatted output.
 
-cat > $AWK << EOF
-    \$1 == "==========" {
-        print \$0;
-        exit;
-    }
-    \$1 == "----------" {
-        system("touch $ODZN");
-        system("$MZN2FZN --print-output $OMZN $ODZN");
-        system("echo > $ODZN");
-        print \$1
-        next
-    }
-    \$1 == "=====UNKNOWN=====" {
-        print \$1;
-        while (getline comment_line) {
-            print comment_line
-        }
-
-        exit;
-    }
-    \$1 == "=====UNBOUNDED=====" {
-        print \$1;
-        exit;
-    }
-    {
-        print \$0 >> "$ODZN";
-    }
-    END {
-        system("rm -f $ODZN");
-    }
-EOF
-
 CMD="$FLATZINC $FLATZINC_FLAGS $FZN"
 $QUIET "$THISPROG: $CMD"
-if ! $CMD | $CANONICALIZE #| awk -f $AWK
+if ! $CMD | $CANONICALIZE 
 then
     echo "$THISPROG: evaluation terminated abnormally" >&2
 fi
