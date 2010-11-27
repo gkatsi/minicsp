@@ -463,7 +463,7 @@ inline bool     Solver::okay          ()      const   { return ok; }
 // Debug + etc:
 
 
-#define reportf(format, args...) ( fflush(stdout), fprintf(stderr, format, ## args), fflush(stderr) )
+#define reportf(format, args...) ( fflush(stdout), fprintf(stdout, format, ## args), fflush(stdout) )
 
 static inline void logLit(FILE* f, Lit l)
 {
