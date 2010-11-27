@@ -6,7 +6,7 @@ FCTS_ROOT=${FCTS_ROOT:-./fcts}
 MZN=${MZN:-./minicsp-fz_debug}
 CANON=${CANON:-./solns2dzn -c}
 
-test()
+test_dir()
 {
     DIR=$1
     for i in `find $FCTS_ROOT/$DIR -name "*.fzn"`; do
@@ -25,12 +25,12 @@ test()
 }
 
 if test $# -eq 0; then
-    test builtins/int
+    test_dir builtins/int
 else
     while test $# -gt 0
     do
-	DIR=$1
+	TESTDIR=$1
 	shift
-	test $DIR
+	test_dir $TESTDIR
     done
 fi
