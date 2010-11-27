@@ -241,7 +241,7 @@ namespace FlatZinc {
     if (vs->alias) {
       bv[boolVarCount++] = bv[vs->i];
     } else {
-      bv[boolVarCount++] = solver.newCSPVar(0, 1);
+      bv[boolVarCount++] = solver.newCSPVar(vs2bsl(vs), vs2bsh(vs));
     }
     bv_introduced[boolVarCount-1] = vs->introduced;
   }
