@@ -701,6 +701,27 @@ namespace {
   }
   REGISTER_TEST(eq_re04);
 
+  void eq_re05()
+  {
+    Solver s;
+    s.debugclauses = 1;
+    cspvar x = s.newCSPVar(1, 10);
+    cspvar y = s.newCSPVar(1, 10);
+    cspvar b = s.newCSPVar(0, 1);
+
+    post_eq_re(s, x, y, 0, b);
+
+    s.newDecisionLevel();
+    x.assign(s, 5, NO_REASON);
+    y.setmin(s, 2, NO_REASON);
+    y.setmax(s, 7, NO_REASON);
+    y.remove(s, 5, NO_REASON);
+    assert( !s.propagate() );
+    assert( b.max(s) == 0 );
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(eq_re05);
+
   // leq_re, c == 0
   void leq_re01()
   {

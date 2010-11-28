@@ -336,6 +336,14 @@ namespace eq_re {
       pushifdef(_reason, _y.r_min(s));
       return true;
     } else {
+      if( _x.min(s) > _y.min(s) + _c )
+        pushifdef(_reason, _x.r_min(s) );
+      else
+        pushifdef(_reason, _y.r_min(s) );
+      if( _x.max(s) < _y.max(s) + _c )
+        pushifdef(_reason, _x.r_max(s));
+      else
+        pushifdef(_reason, _y.r_max(s));
       for(int i = max(_x.min(s), _y.min(s) + _c),
             iend = min(_x.max(s), _y.max(s) + _c)+1; i != iend; ++i) {
         if( _x.indomain(s, i) ) {
