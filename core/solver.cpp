@@ -845,6 +845,10 @@ void Solver::debugclause(Clause *from, cons *c)
       cout << "*** no failure ***\n";
     cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
   }
+  if( !confl ) {
+    cout << "constraint " << cons_state_printer(*this, *c)
+         << "\ngenerated incorrect clause\n";
+  }
   assert(confl);
 }
 
