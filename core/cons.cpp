@@ -324,6 +324,7 @@ namespace eq_re {
      _c). Also describe the prunings that made it so in _reason. Note
      if it returns false, _reason contains garbage. */
   bool disjoint_domains(Solver &s, cspvar _x, cspvar _y, int _c,
+                        int& watch,
                         vec<Lit>& _reason) {
     using std::min;
     using std::max;
@@ -336,6 +337,8 @@ namespace eq_re {
       pushifdef(_reason, _y.r_min(s));
       return true;
     } else {
+      if( _x.indomain(s, watch) && _y.indomain(s, watch - _c) )
+        return false;
       if( _x.min(s) > _y.min(s) + _c )
         pushifdef(_reason, _x.r_min(s) );
       else
@@ -347,9 +350,10 @@ namespace eq_re {
       for(int i = max(_x.min(s), _y.min(s) + _c),
             iend = min(_x.max(s), _y.max(s) + _c)+1; i != iend; ++i) {
         if( _x.indomain(s, i) ) {
-          if( _y.indomain(s, i-_c) )
+          if( _y.indomain(s, i-_c) ) {
+            watch = i;
             return false;
-          else
+          } else
             pushifdef(_reason, _y.r_neq(s, i-_c) );
         } else
           pushifdef(_reason, _x.r_neq(s,i));
@@ -364,6 +368,7 @@ class cons_eq_re : public cons {
   int _c;
   Lit _b;
   vec<Lit> _reason;
+  int _watch; // last known common value
 public:
   cons_eq_re(Solver &s,
              cspvar x, cspvar y, int c,
@@ -380,6 +385,7 @@ public:
     s.wake_on_fix(_y, this);
     s.wake_on_lit(var(_b), this);
     _reason.capacity(5);
+    _watch = _x.min(s) - 1;
   }
 
   Clause *wake(Solver& s, Lit p);
@@ -406,7 +412,7 @@ Clause *cons_eq_re::wake(Solver &s, Lit p)
       return neq::neq_propagate(s, _x, _y, _c, p, _reason);
   }
 
-  if( eq_re::disjoint_domains(s, _x, _y, _c, _reason) ) {
+  if( eq_re::disjoint_domains(s, _x, _y, _c, _watch, _reason) ) {
     DO_OR_RETURN(s.enqueueFill(~_b, _reason));
   } else if( _x.min(s) == _y.min(s)+_c &&
              _x.min(s) == _x.max(s) &&
@@ -450,7 +456,8 @@ ostream& cons_eq_re::printstate(Solver & s, ostream& os) const
 void post_eqneq_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
 {
   vec<Lit> reason;
-  if( eq_re::disjoint_domains(s, x, y, c, reason) ) {
+  int dummywatch = x.min(s)-1;
+  if( eq_re::disjoint_domains(s, x, y, c, dummywatch, reason) ) {
     s.uncheckedEnqueue(~b); // will not cause unsat, because b is
                             // unset by if test in callers
     return;
