@@ -372,20 +372,17 @@ class cons_eq_re : public cons {
 public:
   cons_eq_re(Solver &s,
              cspvar x, cspvar y, int c,
-             Lit b) :
-    _x(x), _y(y), _c(c), _b(b)
+             Lit b,
+             int initwatch) :
+    _x(x), _y(y), _c(c), _b(b),
+    _watch(initwatch)
   {
     s.wake_on_dom(_x, this);
-    s.wake_on_lb(_x, this);
-    s.wake_on_ub(_x, this);
     s.wake_on_fix(_x, this);
     s.wake_on_dom(_y, this);
-    s.wake_on_lb(_y, this);
-    s.wake_on_ub(_y, this);
     s.wake_on_fix(_y, this);
     s.wake_on_lit(var(_b), this);
     _reason.capacity(5);
-    _watch = _x.min(s) - 1;
   }
 
   Clause *wake(Solver& s, Lit p);
@@ -412,7 +409,10 @@ Clause *cons_eq_re::wake(Solver &s, Lit p)
       return neq::neq_propagate(s, _x, _y, _c, p, _reason);
   }
 
-  if( eq_re::disjoint_domains(s, _x, _y, _c, _watch, _reason) ) {
+  if( ((pevent.type == domevent::NEQ && pevent.d == _watch) ||
+       (pevent.type == domevent::GEQ && pevent.d > _watch) ||
+       (pevent.type == domevent::LEQ && pevent.d < _watch)) &&
+      eq_re::disjoint_domains(s, _x, _y, _c, _watch, _reason) ) {
     DO_OR_RETURN(s.enqueueFill(~_b, _reason));
   } else if( _x.min(s) == _y.min(s)+_c &&
              _x.min(s) == _x.max(s) &&
@@ -428,7 +428,7 @@ Clause *cons_eq_re::wake(Solver &s, Lit p)
 
 void cons_eq_re::clone(Solver & other)
 {
-  cons *con = new cons_eq_re(other, _x, _y, _c, _b);
+  cons *con = new cons_eq_re(other, _x, _y, _c, _b, _watch);
   other.addConstraint(con);
 }
 
@@ -468,7 +468,7 @@ void post_eqneq_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
     return;
   }
 
-  cons *con = new cons_eq_re(s, x, y, c, b);
+  cons *con = new cons_eq_re(s, x, y, c, b, dummywatch);
   s.addConstraint(con);
 }
 
