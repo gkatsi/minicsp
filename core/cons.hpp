@@ -225,3 +225,12 @@ namespace regular {
 void post_regular(Solver& s, std::vector<cspvar> const& x,
                   regular::automaton const& aut,
                   bool gac = true);
+
+/* Cumulative constraint: holds if a set of tasks 0..n-1 is scheduled
+   so that task i starts as s[i], has duration d[i] and requires r[i]
+   of a given resource, and the resource requirements of all tasks
+   running at any given time is less than c. */
+void post_cumulative(Solver& s, std::vector<cspvar> const& start,
+                     std::vector<cspvar> const& dur,
+                     std::vector<cspvar> const& req,
+                     cspvar cap);

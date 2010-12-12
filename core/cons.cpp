@@ -3371,3 +3371,104 @@ void post_regular(Solver &s, vector< cspvar > const& vars,
   if( !gac ) return;
 }
 
+namespace cumulative {
+  bool fixed(Solver& s, cspvar x)
+  {
+    return x.min(s) == x.max(s);
+  }
+
+  int value(Solver& s, cspvar x)
+  {
+    assert(fixed(s, x));
+    return x.min(s);
+  }
+}
+
+void post_cumulative(Solver& s, vector<cspvar> const& start,
+                     vector<cspvar> const& dur,
+                     vector<cspvar> const& req,
+                     cspvar cap)
+{
+  using namespace cumulative;
+
+  const size_t n = start.size();
+  assert( dur.size() == n && req.size() == n );
+  int mint = start[0].min(s);
+  int maxt = start[0].max(s)+dur[0].max(s);
+  for(size_t i = 1; i != n; ++i) {
+    mint = std::min(mint, start[i].min(s));
+    maxt = std::max(maxt, start[i].max(s) + dur[i].max(s));
+  }
+
+  Var truevar = s.newVar();
+  Lit truelit = Lit(truevar);
+  Lit falselit = ~Lit(truevar);
+  s.uncheckedEnqueue(truelit);
+
+  for(int t = mint; t != maxt+1; ++t) {
+    vector<Lit> running(n, lit_Undef);
+    bool unfixed_req = false;
+    for(size_t i = 0; i != n; ++i) {
+      if( start[i].min(s) > t || start[i].max(s) < t )
+        continue;
+
+      Lit started, finished;
+
+      started = start[i].e_leq(s, t);
+      if( fixed(s, dur[i]) ) {
+        if( start[i].min(s)+value(s, dur[i]) > t )
+          finished = falselit;
+        else if( start[i].max(s)+value(s, dur[i]) <= t )
+          finished = truelit;
+        else
+          finished = start[i].e_leq(s, t-value(s, dur[i]));
+      } else {
+        // s[i]+d[i] <= t <=> finished
+        // excellent use for neg_re, if we had it
+        cspvar b = s.newCSPVar(0, 1);
+        vector<cspvar> v(2);
+        vector<int> w(2);
+        v[0] = start[i]; w[0] = 1;
+        v[1] = dur[i];   w[1] = 1;
+        post_lin_leq_iff_re(s, v, w, -t, b);
+        finished = b.e_eq(s, 1);
+      }
+
+
+      running[i] = Lit(s.newVar());
+      vec<Lit> ps, ps2;
+      ps.push( started );
+      ps.push( ~running[i] );
+      s.addClause(ps);
+      ps.clear();
+
+      ps.push( ~finished );
+      ps.push( ~running[i] );
+      s.addClause(ps);
+      ps.clear();
+
+      ps2.push(~started);
+      ps2.push(finished);
+      ps2.push( running[i] );
+      s.addClause(ps2);
+
+      if( !fixed(s, req[i]) ) unfixed_req = true;
+    }
+
+    if( unfixed_req ) { // at least one task has unfixed resource
+                        // requirement
+      assert(0);
+    } else {
+      vector<int> w;
+      vector<int> v;
+      for(size_t i = 0; i != n; ++i) {
+        if( running[i] == lit_Undef ) continue;
+        w.push_back( value(s, req[i]) );
+        v.push_back( var(running[i]) );
+      }
+      cspvar tcap = s.newCSPVar(0, cap.max(s));
+      post_leq(s, tcap, cap, 0);
+      post_pb(s, v, w, 0, tcap);
+    }
+  }
+}

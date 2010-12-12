@@ -648,6 +648,16 @@ namespace FlatZinc {
       post_alldiff(s, iv);
     }
 
+    /* cumulative */
+    void p_cumulative(Solver& s, FlatZincModel& m,
+                      const ConExpr& ce, AST::Node* ann) {
+      vector<cspvar> start = arg2intvarargs(s, m, ce[0]);
+      vector<cspvar> dur = arg2intvarargs(s, m, ce[1]);
+      vector<cspvar> req = arg2intvarargs(s, m, ce[2]);
+      cspvar cap = getIntVar(s, m, ce[3]);
+      post_cumulative(s, start, dur, req, cap);
+    }
+
     /* coercion constraints */
     void p_bool2int(Solver& s, FlatZincModel& m,
                     const ConExpr& ce, AST::Node* ann) {
@@ -1205,6 +1215,7 @@ namespace FlatZinc {
         registry().add("array_bool_element", &p_array_bool_element);
 
         registry().add("all_different_int", &p_all_different);
+        registry().add("cumulative", &p_cumulative);
 
         registry().add("bool2int", &p_bool2int);
 
