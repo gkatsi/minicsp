@@ -3382,6 +3382,9 @@ namespace cumulative {
     assert(fixed(s, x));
     return x.min(s);
   }
+
+  typedef std::map<cspvar, vector<Lit> > running_map;
+  std::map<Solver *, running_map> solver_running;
 }
 
 void post_cumulative(Solver& s, vector<cspvar> const& start,
@@ -3412,6 +3415,16 @@ void post_cumulative(Solver& s, vector<cspvar> const& start,
       if( start[i].min(s) > t || start[i].max(s) < t )
         continue;
 
+      std::vector<Lit> & task_running = cumulative::solver_running[&s][start[i]];
+      if( !task_running.empty() &&
+          task_running[t - start[i].omin(s)] != lit_Undef) {
+        running[i] = task_running[t - start[i].omin(s)];
+        if( !fixed(s, req[i]) ) unfixed_req = true;
+        continue;
+      }
+      if( task_running.empty() )
+        task_running.resize( maxt-start[i].omin(s), lit_Undef );
+
       Lit started, finished;
 
       started = start[i].e_leq(s, t);
@@ -3436,6 +3449,7 @@ void post_cumulative(Solver& s, vector<cspvar> const& start,
 
 
       running[i] = Lit(s.newVar());
+      task_running[t - start[i].omin(s)] = running[i];
       vec<Lit> ps, ps2;
       ps.push( started );
       ps.push( ~running[i] );
