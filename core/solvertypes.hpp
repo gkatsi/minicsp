@@ -325,6 +325,7 @@ class cspvar
 };
 
 bool operator==(cspvar x1, cspvar x2);
+bool operator<(cspvar x1, cspvar x2);
 
 // a stub for a constraint which goes in the priority queue.
 struct consqueue

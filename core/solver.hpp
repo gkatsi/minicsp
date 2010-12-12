@@ -987,6 +987,11 @@ inline bool operator==(cspvar x1, cspvar x2)
   return x1.id() == x2.id();
 }
 
+inline bool operator<(cspvar x1, cspvar x2)
+{
+  return x1.id() < x2.id();
+}
+
 inline
 int setvar::umin(Solver &s) const {
   return s.setvarumin(*this);
