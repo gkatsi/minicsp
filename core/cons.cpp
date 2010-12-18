@@ -3429,6 +3429,11 @@ void post_cumulative(Solver& s, vector<cspvar> const& start,
 
       started = start[i].e_leq(s, t);
       if( fixed(s, dur[i]) ) {
+        if( value(s, dur[i]) == 1 ) {
+          running[i] = start[i].e_eq(s, t);
+          task_running[t - start[i].omin(s)] = running[i];
+          continue;
+        }
         if( start[i].min(s)+value(s, dur[i]) > t )
           finished = falselit;
         else if( start[i].max(s)+value(s, dur[i]) <= t )
