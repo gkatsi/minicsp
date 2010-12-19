@@ -115,6 +115,7 @@ Var Solver::newVar(bool sign, bool dvar)
     watches   .push();          // (list for negative literal)
 
     wakes_on_lit.push();
+    sched_on_lit.push();
 
     reason    .push(NULL);
     assigns   .push(toInt(l_Undef));
@@ -404,6 +405,12 @@ void Solver::ensure_can_schedule(cons *c)
     c->cqidx = consqs.size();
     consqs.push( consqueue(c, c->priority) );
   }
+}
+
+void Solver::schedule_on_lit(Var x, cons *c)
+{
+  ensure_can_schedule(c);
+  sched_on_lit[x].push(c->cqidx);
 }
 
 void Solver::schedule_on_dom(cspvar x, cons *c)
@@ -1251,6 +1258,11 @@ Clause* Solver::propagate_inner()
 
         if(confl)
           break;
+
+        for( int *si = &(sched_on_lit[var(p)][0]),
+               *siend = si+sched_on_lit[var(p)].size();
+             si != siend; ++si)
+          schedule(*si);
 
         domevent const & pe = events[toInt(p)];
         vec< pair<cons*, void*> > *dewakes = 0L;
