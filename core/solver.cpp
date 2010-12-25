@@ -798,6 +798,7 @@ void Solver::debugclause(Clause *from, cons *c)
   int nv = nVars();
   s1.watches.growTo(2*nv);
   s1.wakes_on_lit.growTo(nv);
+  s1.sched_on_lit.growTo(nv);
   s1.reason.growTo(nv, NULL);
   s1.assigns.growTo(nv, toInt(l_Undef));
   s1.level.growTo(nv, -1);
