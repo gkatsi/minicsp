@@ -5,7 +5,7 @@ EXEC      = test
 CFLAGS    = -I$(MTL) -I$(CORE) -Wall -ffloat-store
 LFLAGS    = -lz
 
-COREOBJS  = $(CORE)/solver.o $(CORE)/cons.o $(CORE)/setcons.o
+COREOBJS  = $(CORE)/solver.o $(CORE)/cons.o $(CORE)/setcons.o $(CORE)/nvalue.o
 CSRCS     = $(wildcard *.cpp)
 COBJS     = $(addsuffix .o, $(basename $(CSRCS))) $(COREOBJS)
 

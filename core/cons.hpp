@@ -190,6 +190,10 @@ void post_element(Solver &s, cspvar R, cspvar I,
 // detects gac disentailment, otherwise enforces gac like usual
 void post_alldiff(Solver &s, std::vector<cspvar> const& vars, bool gac = true);
 
+// atmostnvalue. The number of distinct values taken by the vector x
+// is at most N
+void post_atmostnvalue(Solver &s, std::vector<cspvar> const& x, cspvar N);
+
 /* Regular
  *
  * the sequence x[0]...x[n] is a string accepted by the automaton (nfa

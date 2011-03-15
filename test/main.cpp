@@ -7,6 +7,7 @@ void lin_test();
 void element_test();
 void regular_test();
 void alldiff_test();
+void nvalue_test();
 void set_test();
 
 int main()
@@ -20,6 +21,7 @@ int main()
   element_test();
   regular_test();
   alldiff_test();
+  nvalue_test();
   set_test();
   return 0;
 }
