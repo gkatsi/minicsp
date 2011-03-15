@@ -88,6 +88,7 @@ public:
     void    wake_on_ub(cspvar, cons*c, void *advice = 0L);      // Wake this constraint when the ub of cspvar is changed
     void    wake_on_fix(cspvar, cons*c, void *advice = 0L);     // Wake this constraint when the cspvar is assigned
 
+    void    schedule_on_lit(Var, cons*c);                       // Schedule this constraint when the Boolean Var is fixed
     void    schedule_on_dom(cspvar, cons*c);                    // Schedule this constraint when a value of cspvar is pruned
     void    schedule_on_lb(cspvar, cons*c);                     // Schedule this constraint when the lb of cspvar is changed
     void    schedule_on_ub(cspvar, cons*c);                     // Schedule this constraint when the ub of cspvar is changed
@@ -244,6 +245,7 @@ protected:
 
     vec<vec<Clause*> >  watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
     vec<vec<wake_stub> >wakes_on_lit;     // 'wakes_on_lit[var(lit)]' is a list of csp constraints that wake when var is set
+    vec<vec<int> >      sched_on_lit;     // 'wakes_on_lit[var(lit)]' is a list of csp constraints that wake when var is set
 
     vec<char>           assigns;          // The current assignments (lbool:s stored as char:s).
     vec<char>           polarity;         // The preferred polarity of each variable.
