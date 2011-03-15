@@ -30,6 +30,10 @@ public:
   }
 
   Clause *propagate(Solver &s);
+  void clone(Solver &other) {
+    cons *con = new cons_atmostnvalue(other, _x, _N);
+    other.addConstraint(con);
+  }
 };
 
 namespace {
@@ -57,9 +61,9 @@ Clause* cons_atmostnvalue::propagate(Solver &s)
   int highvar = 1;
   for(size_t i = 1; i < m; ) {
     i = i + 1 - reinit;
-    if( reinit || low < _x[i-1].min(s) )
+    if( low < _x[i-1].min(s) )
       low = _x[i-1].min(s);
-    if( reinit || high > _x[i-1].max(s) ) {
+    if( high > _x[i-1].max(s) ) {
       highvar = i-1;
       high = _x[i-1].max(s);
     }
@@ -67,6 +71,9 @@ Clause* cons_atmostnvalue::propagate(Solver &s)
     if( reinit ) {
       pushifdef( ps, _x[highvar].r_min(s) );
       ps.push( _x[highvar].r_max(s) );
+      low = _x[i-1].min(s);
+      high = _x[i-1].max(s);
+      highvar = i-1;
     }
     lb += reinit;
   }
