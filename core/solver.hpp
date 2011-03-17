@@ -1116,10 +1116,16 @@ inline bool operator==(setvar x1, setvar x2)
 
 //==================================================
 //
+
+// push p to ps iff var(p) >= 0. Return 1 if we did push, 0 otherwise
 template<typename V>
-inline void pushifdef(V& ps, Lit p)
+inline int pushifdef(V& ps, Lit p)
 {
-  if( var(p) >= 0 ) ps.push(p);
+  if( var(p) >= 0 ) {
+    ps.push(p);
+    return 1;
+  }
+  return 0;
 }
 
 struct push_temp_p {
