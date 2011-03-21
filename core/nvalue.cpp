@@ -1,6 +1,7 @@
 #include <algorithm>
 #include "solver.hpp"
 
+using std::cout;
 using std::vector;
 using std::min;
 using std::max;
@@ -149,21 +150,23 @@ Clause* cons_atmostnvalue::propagate(Solver &s)
 
   int highvar = 1;
   for(size_t i = 1; i < m; ) {
+    bool newlow = false, newhigh = false;
     i = i + 1 - reinit;
     if( low < _x[i-1].min(s) ) {
       low = _x[i-1].min(s);
-      lowvars.back() = i-1;
+      newlow = true;
     }
     if( high > _x[i-1].max(s) ) {
       high = _x[i-1].max(s);
       highvar = i-1;
-      highvars.back() = i-1;
+      newhigh = true;
     }
     reinit = (low > high);
     if( reinit ) {
       if( lows.size() > 1 )
         pushifdef( ps, _x[highvar].r_min(s) );
       ps.push( _x[highvar].r_max(s) );
+
       low = _x[i-1].min(s);
       high = _x[i-1].max(s);
       highvar = i-1;
@@ -174,6 +177,10 @@ Clause* cons_atmostnvalue::propagate(Solver &s)
     } else {
       lows.back() = low;
       highs.back() = high;
+      if( newlow )
+        lowvars.back() = i-1;
+      if( newhigh )
+        highvars.back() = i-1;
     }
     lb += reinit;
   }
@@ -209,11 +216,18 @@ Clause* cons_atmostnvalue::propagate(Solver &s)
         // not explain the low of the interval
         litsadded += pushifdef(ps, _x[lowvars[interval]].r_min(s));
         litsadded += pushifdef(ps, _x[lowvars[interval]].r_max(s));
+      } else {
+        ;
       }
     }
-    if( interval == 0 ||
-        _x[i].min(s) > highs[interval-1] )
+    if( interval == 0 )
       _x[i].setminf(s, lows[interval], ps );
+    else if(_x[i].min(s) > highs[interval-1] ) {
+      bool tmpadded = pushifdef( ps, _x[i].r_geq(s, highs[interval-1]+1) );
+      _x[i].setminf(s, lows[interval], ps );
+      if( tmpadded )
+        ps.pop();
+    }
   }
 
   sort(_x2.begin(), _x2.end(), decr_ub(s));
@@ -243,9 +257,14 @@ Clause* cons_atmostnvalue::propagate(Solver &s)
         litsadded += pushifdef(ps, _x[lowvars[realiv]].r_max(s));
       }
     }
-    if( interval == 0 ||
-        _x2[i].max(s) < lows[ni-interval] )
+    if( interval == 0 )
       _x2[i].setmaxf(s, highs[ni-1-interval], ps );
+    else if( _x2[i].max(s) < lows[ni-interval] ) {
+      bool tmpadded = pushifdef( ps, _x2[i].r_leq(s, lows[ni-interval]-1) );
+      _x2[i].setmaxf(s, highs[ni-1-interval], ps );
+      if( tmpadded )
+        ps.pop();
+    }
   }
 
   return 0L;
