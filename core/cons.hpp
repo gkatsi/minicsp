@@ -192,7 +192,26 @@ void post_alldiff(Solver &s, std::vector<cspvar> const& vars, bool gac = true);
 
 // atmostnvalue. The number of distinct values taken by the vector x
 // is at most N
+
+// BC propagator
 void post_atmostnvalue(Solver &s, std::vector<cspvar> const& x, cspvar N);
+// a propagator based on a heuristic for computing a max independent
+// set (the MD propagator from the Bessiere et al cpaior 2005 paper)
+void post_atmostnvalue_md(Solver &s, std::vector<cspvar> const& x, cspvar N);
+
+// independent set constraint.
+//
+// The constraint \alpha(G) <= N, where G is a graph with $n$
+// vertices, described by its adjacency matrix (see below). The
+// variables x describe the upper diagonal matrix X s.t. X + X^T is
+// the adjacency matrix of G.  So the first n-1 variables are the
+// edges between vertex 1 and vertices 2...n, the second n-2 are the
+// edges between vertex 2 and vertices 3...n and so on.
+//
+// Since this constraint is NP-hard even to check, it only gives a
+// lower bound even for complete assignments.
+void post_independent_set(Solver &s, size_t n, std::vector<Var> const& x,
+                          cspvar N);
 
 /* Regular
  *

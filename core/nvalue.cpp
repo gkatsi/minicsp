@@ -1,5 +1,6 @@
 #include <algorithm>
 #include "solver.hpp"
+#include "cons.hpp"
 
 using std::cout;
 using std::vector;
@@ -270,9 +271,144 @@ Clause* cons_atmostnvalue::propagate(Solver &s)
   return 0L;
 }
 
-
 void post_atmostnvalue(Solver &s, std::vector<cspvar> const& x, cspvar N)
 {
   cons *con = new cons_atmostnvalue(s, x, N);
   s.addConstraint(con);
+}
+
+/* Independent set constraint: Given an adjacency matrix of a graph,
+   compute a lower bound on the size of the maximum independent
+   set.
+
+   This uses the lower bound described in
+
+   M. Halld\'orsson and J. Radhakrishnan. Greed is good: Approximating
+   independent sets in sparse and bounded-degree graphs. In
+   Proceedings STOC-94, pages 439{448, 1994.
+
+   Roughly: remove the vertex of minimum degree along with its
+   neighborhood. Repeat until no vertices remain. This is a lower
+   bound on the size of the maximum independent set.
+
+*/
+class cons_independent_set : public cons
+{
+  int _n;
+  vector<Var> _x;
+  cspvar _N;
+
+  size_t idx(size_t i, size_t j);
+public:
+  cons_independent_set(Solver &s, size_t n, std::vector<Var> const& x,
+                       cspvar N) :
+    _n(n), _x(x), _N(N)
+  {
+    for(size_t i = 0; i != _x.size(); ++i)
+      s.schedule_on_lit(_x[i], this);
+  }
+
+  ostream& print(Solver &s, ostream& os) const;
+  ostream& printstate(Solver& s, ostream& os) const;
+  Clause *propagate(Solver &s);
+  void clone(Solver &other) {
+    cons *con = new cons_independent_set(other, _n, _x, _N);
+    other.addConstraint(con);
+  }
+};
+
+ostream& cons_independent_set::print(Solver& s, ostream& os) const
+{
+  os << "independent_set([";
+  for(size_t i = 0; i != _x.size(); ++i) {
+    if( i ) os << ", ";
+    os << var_printer(s, _x[i]);
+  }
+  os << "], " << cspvar_printer(s, _N) << ")";
+  return os;
+}
+
+ostream& cons_independent_set::printstate(Solver&s, ostream& os) const
+{
+  print(s, os);
+  os << " (with ";
+  for(size_t i = 0; i != _x.size(); ++i) {
+    os << lit_printer(s, Lit(_x[i])) << ", ";
+  }
+  os << cspvar_printer(s, _N) << " in " << domain_as_range(s, _N);
+  os << ")";
+  return os;
+}
+
+size_t cons_independent_set::idx(size_t i, size_t j)
+{
+  if( i > j ) return idx(j, i);
+  return _n*(_n-1)/2 - (_n-i)*(_n-i-1)/2 + j-i-1;
+}
+
+Clause *cons_independent_set::propagate(Solver &s)
+{
+  int nv = _n;
+  int lb = 0;
+  vec<Lit> ps;
+  vector<int> degrees(_n, 0);
+  vector<unsigned char> removed(_n, 0);
+  while( nv > 0 ) {
+    ++lb;
+    for(int i = 0; i != _n; ++i) {
+      if( removed[i] ) continue;
+      for(int j = i+1; j != _n; ++j) {
+        if( removed[j] ) continue;
+        if( s.value( _x[idx(i,j)]) != l_False ) {
+          ++degrees[i];
+          ++degrees[j];
+        }
+      }
+    }
+
+    int t = -1; // toremove
+    int md = degrees[0];
+    for(int i = 0; i != _n; ++i) {
+      if( removed[i] ) continue;
+      if(t < 0 || md > degrees[i]) {
+        t = i;
+        md = degrees[i];
+      }
+    }
+
+    assert(!removed[t]);
+    removed[t] = 1;
+    --nv;
+    for(int i = 0; i != _n; ++i) {
+      if( i == t ) continue;
+      if( removed[i] ) continue;
+      if( s.value( _x[idx(i,t)] ) != l_False ) {
+        removed[i] = 1;
+        --nv;
+      } else {
+        ps.push( Lit( _x[idx(i,t)] ) );
+        degrees[i] = 0;
+      }
+    }
+  }
+  return _N.setminf(s, lb, ps);
+}
+
+void post_independent_set(Solver &s, size_t n, std::vector<Var> const& x,
+                          cspvar N)
+{
+  cons *con = new cons_independent_set(s, n, x, N);
+  s.addConstraint(con);
+}
+
+void post_atmostnvalue_md(Solver &s, std::vector<cspvar> const& x, cspvar N)
+{
+  vector<Var> eq_re;
+  for(size_t i = 0; i != x.size(); ++i)
+    for(size_t j = i+1; j != x.size(); ++j) {
+      Var v = s.newVar();
+      eq_re.push_back(v);
+      post_eq_re(s, x[i], x[j], 0, Lit(v));
+    }
+  post_independent_set(s, x.size(), eq_re, N);
 }
