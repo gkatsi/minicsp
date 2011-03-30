@@ -266,7 +266,6 @@ protected:
 
     // csp stuff
     vec<cspvar_fixed>   cspvars;             // the fixed data for each cspvar
-    vec<btptr>          cspvarbt;            // the backtrackable data for each var
     vec<domevent>       events;              // the csp event that a literal corresponds to
     vec<setvar_data>    setvars;             // the fixed data for each setvar
     vec<setevent>       setevents;           // the set csp event that a literal corresponds to
@@ -620,17 +619,17 @@ Solver::cspSetModel(setvar x) const
 
 inline int Solver::cspvarmax(cspvar x)
 {
-  return deref<cspvar_bt>(cspvarbt[x._id]).max;
+  return cspvars[x._id].max;
 }
 
 inline int Solver::cspvarmin(cspvar x)
 {
-  return deref<cspvar_bt>(cspvarbt[x._id]).min;
+  return cspvars[x._id].min;
 }
 
 inline int Solver::cspvardsize(cspvar x)
 {
-  return deref<cspvar_bt>(cspvarbt[x._id]).dsize;
+  return cspvars[x._id].dsize;
 }
 
 inline int Solver::cspvaromin(cspvar x)

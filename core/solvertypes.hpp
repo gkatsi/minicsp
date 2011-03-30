@@ -394,9 +394,16 @@ class cspvar_fixed
 {
   friend class Solver;
 
+  // dynamic data
+  int min;
+  int max;
+  int dsize;
+
+  // static data
   int omin; // min and max in the *original* domain
   int omax;
   Var firstbool;
+
 
   /* a cons may either wake immediately (like an ilog demon or a
      gecode advisor) when we process a literal, or it may be scheduled
@@ -448,15 +455,6 @@ public:
     copyclauses(ps3, f.ps3);
     copyclauses(ps4, f.ps4);
   }
-};
-
-// backtracked data of a csp variable
-class cspvar_bt
-{
-  friend class Solver;
-  int min;
-  int max;
-  int dsize;
 };
 
 struct domevent

@@ -155,19 +155,15 @@ cspvar Solver::newCSPVar(int min, int max)
 
   cspvar_fixed & xf = cspvars.last();
 
-  btptr p = alloc_backtrackable(sizeof(cspvar_bt));
-  cspvarbt.push(p);
-  cspvar_bt & xbt = deref<cspvar_bt>(p);
-
   xf.omin = min;
   xf.omax = max;
-  xbt.min = min;
-  xbt.max = max;
-  xbt.dsize = max-min+1;
+  xf.min = min;
+  xf.max = max;
+  xf.dsize = max-min+1;
 
   // the propositional encoding of the domain
   xf.firstbool = newVar();
-  for(int i = 1; i != 2*xbt.dsize; ++i)
+  for(int i = 1; i != 2*xf.dsize; ++i)
     newVar();
 
   for(int i = xf.omin; i <= xf.omax; ++i) {
@@ -182,15 +178,15 @@ cspvar Solver::newCSPVar(int min, int max)
   }
 
   if( !unary ) {
-    xf.ps1.growTo(xbt.dsize);
-    xf.ps2.growTo(xbt.dsize);
-    xf.ps3.growTo(xbt.dsize);
-    xf.ps4.growTo(xbt.dsize);
+    xf.ps1.growTo(xf.dsize);
+    xf.ps2.growTo(xf.dsize);
+    xf.ps3.growTo(xf.dsize);
+    xf.ps4.growTo(xf.dsize);
   }
 
   // (x <= i) => (x <= i+1)
   // (x = i) <=> (x <= i) /\ -(x <= i-1)
-  for(int i = 0; i != xbt.dsize; ++i) {
+  for(int i = 0; i != xf.dsize; ++i) {
     if( unary ) continue;
     vec<Lit> ps1, ps2, ps3, ps4;
     ps1.push( ~Lit(xf.leqi(i+xf.omin)) );
@@ -476,7 +472,17 @@ void Solver::cancelUntil(int level) {
             if( phase_saving )
               phase[x]   = toLbool(assigns[x]);
             assigns[x] = toInt(l_Undef);
-            insertVarOrder(x); }
+            insertVarOrder(x);
+            domevent const &pevent = events[toInt(trail[c])];
+            if( noevent(pevent) ) continue;
+            cspvar_fixed& xf = cspvars[pevent.x._id];
+            switch( pevent.type ) {
+            case domevent::NEQ: ++xf.dsize; break;
+            case domevent::LEQ: xf.max = max(xf.max, pevent.d+1); break;
+            case domevent::GEQ: xf.min = min(xf.min, pevent.d-1); break;
+            default: break;
+            }
+        }
         qhead = trail_lim[level];
         trail.shrink(trail.size() - trail_lim[level]);
         trail_lim.shrink(trail_lim.size() - level);
@@ -819,17 +825,15 @@ void Solver::debugclause(Clause *from, cons *c)
   cspvars.copyTo(s1.cspvars);
   for(int i = 0; i != cspvars.size(); ++i) {
     cspvar x(i);
-    btptr p = s1.alloc_backtrackable(sizeof(cspvar_bt));
-    s1.cspvarbt.push(p);
-    cspvar_bt & xbt = s1.deref<cspvar_bt>(p);
-    xbt.min = cspvars[i].omin;
-    xbt.max = cspvars[i].omax;
-    xbt.dsize = xbt.max - xbt.min + 1;
-    if( xbt.min == xbt.max ) {
+    cspvar_fixed & xf = s1.cspvars[i];
+    xf.min = xf.omin;
+    xf.max = xf.omax;
+    xf.dsize = xf.max - xf.min + 1;
+    if( xf.min == xf.max ) {
       s1.uncheckedEnqueue_np(Lit(cspvars[i].firstbool+1), NO_REASON);
       s1.uncheckedEnqueue_np(Lit(cspvars[i].firstbool), NO_REASON);
     } else
-      x.setmax(s1, xbt.max, (Clause*)0L);
+      x.setmax(s1, xf.max, (Clause*)0L);
   }
 
   setvars.copyTo(s1.setvars);
@@ -964,10 +968,9 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
     domevent const &pevent = events[toInt(p)];
     if( noevent(pevent) ) return;
     cspvar_fixed& xf = cspvars[pevent.x._id];
-    cspvar_bt& xb = deref<cspvar_bt>(cspvarbt[pevent.x._id]);
     if( pevent.type == domevent::EQ ) {
-      xb.dsize = 1;
-      xb.min = xb.max = pevent.d;
+      xf.dsize = 1;
+      xf.min = xf.max = pevent.d;
       // propagate towards max
       if( value(xf.leqiUnsafe(pevent.d)) != l_True ) {
         uncheckedEnqueue_np( Lit(xf.leqiUnsafe(pevent.d)),
@@ -1002,25 +1005,25 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
     }
 
     if( pevent.type == domevent::NEQ ) {
-      --xb.dsize;
-      if( pevent.d == xb.min ) {
-        while( value(xf.eqiUnsafe(xb.min)) == l_False ) {
-          assert( value(xf.leqiUnsafe(xb.min)) != l_False &&
-                  (xb.min == xf.omin ||
-                   value(xf.leqiUnsafe(xb.min-1)) == l_False ));
-          uncheckedEnqueue_np( ~Lit( xf.leqiUnsafe(xb.min) ),
-                               xf.ps4[xb.min-xf.omin] );
-          ++xb.min;
+      --xf.dsize;
+      if( pevent.d == xf.min ) {
+        while( value(xf.eqiUnsafe(xf.min)) == l_False ) {
+          assert( value(xf.leqiUnsafe(xf.min)) != l_False &&
+                  (xf.min == xf.omin ||
+                   value(xf.leqiUnsafe(xf.min-1)) == l_False ));
+          uncheckedEnqueue_np( ~Lit( xf.leqiUnsafe(xf.min) ),
+                               xf.ps4[xf.min-xf.omin] );
+          ++xf.min;
         }
       }
-      if( pevent.d == xb.max ) {
-        while( value(xf.eqiUnsafe(xb.max)) == l_False ) {
-          assert( (xb.max == xf.omax ||
-                   value(xf.leqiUnsafe(xb.max)) == l_True) &&
-                  value(xf.leqiUnsafe(xb.max-1)) != l_False );
-          uncheckedEnqueue_np( Lit( xf.leqiUnsafe(xb.max-1) ),
-                               xf.ps4[xb.max-xf.omin] );
-          --xb.max;
+      if( pevent.d == xf.max ) {
+        while( value(xf.eqiUnsafe(xf.max)) == l_False ) {
+          assert( (xf.max == xf.omax ||
+                   value(xf.leqiUnsafe(xf.max)) == l_True) &&
+                  value(xf.leqiUnsafe(xf.max-1)) != l_False );
+          uncheckedEnqueue_np( Lit( xf.leqiUnsafe(xf.max-1) ),
+                               xf.ps4[xf.max-xf.omin] );
+          --xf.max;
         }
       }
     }
@@ -1029,7 +1032,7 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
       int geq = pevent.d-1;
       if( value(xf.eqiUnsafe(geq)) != l_False ) {
         uncheckedEnqueue_np( ~Lit( xf.eqiUnsafe(geq)), xf.ps2[geq-xf.omin] );
-        --xb.dsize;
+        --xf.dsize;
       }
       while(geq > xf.omin &&
             value( xf.leqiUnsafe(geq-1) ) != l_False ) {
@@ -1037,57 +1040,57 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
                              xf.ps1[geq-1-xf.omin] );
         if( value(xf.eqiUnsafe(geq-1)) != l_False ) {
           uncheckedEnqueue_np( ~Lit( xf.eqiUnsafe(geq-1)), xf.ps2[geq-1-xf.omin] );
-          --xb.dsize;
+          --xf.dsize;
         }
         --geq;
       }
-      xb.min = pevent.d;
-      while( value(xf.eqiUnsafe(xb.min)) == l_False ) {
-        assert( value(xf.leqiUnsafe(xb.min)) != l_False &&
-                value(xf.leqiUnsafe(xb.min-1)) == l_False );
-        uncheckedEnqueue_np( ~Lit( xf.leqiUnsafe(xb.min) ),
-                             xf.ps4[xb.min-xf.omin] );
-        ++xb.min;
+      xf.min = pevent.d;
+      while( value(xf.eqiUnsafe(xf.min)) == l_False ) {
+        assert( value(xf.leqiUnsafe(xf.min)) != l_False &&
+                value(xf.leqiUnsafe(xf.min-1)) == l_False );
+        uncheckedEnqueue_np( ~Lit( xf.leqiUnsafe(xf.min) ),
+                             xf.ps4[xf.min-xf.omin] );
+        ++xf.min;
       }
     }
     if( pevent.type == domevent::LEQ ) {
       int leq = pevent.d+1;
       if( leq <= xf.omax && value(xf.eqiUnsafe(leq)) != l_False ) {
         uncheckedEnqueue_np( ~Lit( xf.eqiUnsafe(leq)), xf.ps3[leq-xf.omin] );
-        --xb.dsize;
+        --xf.dsize;
       }
       while( leq < xf.omax &&
              value( xf.leqiUnsafe(leq) ) != l_True ) {
         uncheckedEnqueue_np( Lit( xf.leqiUnsafe(leq) ), xf.ps1[leq-1-xf.omin] );
         if( value(xf.eqiUnsafe(leq+1)) != l_False ) {
           uncheckedEnqueue_np( ~Lit( xf.eqiUnsafe(leq+1)), xf.ps3[leq+1-xf.omin] );
-          --xb.dsize;
+          --xf.dsize;
         }
         ++leq;
       }
-      xb.max = pevent.d;
-      while( value(xf.eqiUnsafe(xb.max)) == l_False ) {
-        assert( value(xf.leqiUnsafe(xb.max)) == l_True &&
-                value(xf.leqiUnsafe(xb.max-1)) != l_False );
-        uncheckedEnqueue_np( Lit( xf.leqiUnsafe(xb.max-1) ),
-                             xf.ps4[xb.max-xf.omin] );
-        --xb.max;
+      xf.max = pevent.d;
+      while( value(xf.eqiUnsafe(xf.max)) == l_False ) {
+        assert( value(xf.leqiUnsafe(xf.max)) == l_True &&
+                value(xf.leqiUnsafe(xf.max-1)) != l_False );
+        uncheckedEnqueue_np( Lit( xf.leqiUnsafe(xf.max-1) ),
+                             xf.ps4[xf.max-xf.omin] );
+        --xf.max;
       }
     }
 
-    if( xb.max == xb.min &&
-        value( xf.eqiUnsafe(xb.max) ) != l_True )
-      uncheckedEnqueue_np( Lit(xf.eqiUnsafe(xb.max)),
-                           xf.ps4[xb.max-xf.omin] );
+    if( xf.max == xf.min &&
+        value( xf.eqiUnsafe(xf.max) ) != l_True )
+      uncheckedEnqueue_np( Lit(xf.eqiUnsafe(xf.max)),
+                           xf.ps4[xf.max-xf.omin] );
 
 #ifdef INVARIANTS
     for(int i = xf.omin; i != xf.omax; ++i ) {
       if( value(xf.leqiUnsafe(i)) == l_False )
-        assert( xb.min > i );
+        assert( xf.min > i );
       if( value(xf.leqiUnsafe(i)) == l_True )
-        assert( xb.max <= i );
+        assert( xf.max <= i );
       if( value(xf.eqiUnsafe(i)) == l_False )
-        assert( xb.min != i && xb.max != i );
+        assert( xf.min != i && xf.max != i );
     }
 #endif
 }
@@ -1729,8 +1732,8 @@ bool Solver::solve(const vec<Lit>& assumps)
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
         cspmodel.growTo(cspvars.size());
         for(int i = 0; i != cspvars.size(); ++i) {
-          cspvar_bt& xb = deref<cspvar_bt>(cspvarbt[i]);
-          cspmodel[i] = std::make_pair(xb.min, xb.max);
+          cspvar_fixed& xf = cspvars[i];
+          cspmodel[i] = std::make_pair(xf.min, xf.max);
           if( trace ) {
             if( i ) cout << ", ";
             cout << cspvar_printer(*this, cspvar(i))
