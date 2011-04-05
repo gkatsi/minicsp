@@ -247,9 +247,6 @@ setvar Solver::newSetVar(int min, int max)
 {
   assert(max - min >= 0 );
 
-  bool unary = false;
-  if( max == min ) unary = true;
-
   setvar x(setvars.size());
 
   setvars.push();
@@ -1524,8 +1521,6 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
 
     starts++;
 
-    bool first = true;
-
     for (;;){
         Clause *confl;
         try {
@@ -1539,8 +1534,6 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             // CONFLICT
             conflicts++; conflictC++;
             if (decisionLevel() == 0) return l_False;
-
-            first = false;
 
             if( !learning ) {
               Lit flip = trail[ trail_lim[ decisionLevel() - 1 ] ];

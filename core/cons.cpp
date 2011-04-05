@@ -632,9 +632,8 @@ public:
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
-Clause *cons_leq_re::wake(Solver &s, Lit p)
+Clause *cons_leq_re::wake(Solver &s, Lit)
 {
-  domevent pevent = s.event(p);
   _reason.clear();
 
   if( s.value(_b) == l_True ) {
@@ -2153,11 +2152,10 @@ public:
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
-Clause *cons_min::wake(Solver &s, Lit p)
+Clause *cons_min::wake(Solver &s, Lit)
 {
   using std::min;
 
-  domevent pevent = s.event(p);
   _reason.clear();
 
   {
@@ -2233,11 +2231,10 @@ public:
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
-Clause *cons_max::wake(Solver &s, Lit p)
+Clause *cons_max::wake(Solver &s, Lit)
 {
   using std::max;
 
-  domevent pevent = s.event(p);
   _reason.clear();
 
   {
@@ -2737,8 +2734,6 @@ void cons_alldiff::explain_value(Solver &s, int q,
   if( sccsize == 1 ) {
     assert(!valhasfree[q-umin]);
     assert(revmatching[q-umin] >= 0);
-    size_t var = revmatching[q-umin];
-    cspvar v = _x[var];
     hallvals[q-umin] = true;
     explained[q-umin] = 2;
     scc = varcomp[ revmatching[q-umin] ];
