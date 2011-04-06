@@ -257,3 +257,17 @@ void post_cumulative(Solver& s, std::vector<cspvar> const& start,
                      std::vector<cspvar> const& dur,
                      std::vector<cspvar> const& req,
                      cspvar cap);
+
+
+/* Table constraints. Constraints defined in extension, either as a
+   set of allowed tuples (positive table) or a set of disallowed
+   tuples (negative table).
+ */
+
+// exception thrown for invalid tuplesets
+struct non_table{};
+
+void post_positive_table(Solver &s, std::vector<cspvar> const& x,
+                         std::vector< std::vector<int> > const& tuples);
+void post_negative_table(Solver &s, std::vector<cspvar> const& x,
+                         std::vector< std::vector<int> > const& tuples);

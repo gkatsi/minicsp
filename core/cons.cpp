@@ -3486,3 +3486,48 @@ void post_cumulative(Solver& s, vector<cspvar> const& start,
     }
   }
 }
+
+// Fahiem's one-variable-per-tuple encoding
+void post_positive_table(Solver &s, std::vector<cspvar> const& x,
+                         std::vector< std::vector<int> > const& tuples)
+{
+  using std::map;
+  vector< map<int, set<Var> > > valtuples(x.size());
+  for(size_t i = 0; i != tuples.size(); ++i) {
+    if(tuples[i].size() != x.size())
+      throw non_table();
+    Var is = s.newVar();
+    for(size_t j = 0; j != tuples[i].size(); ++j) {
+      vec<Lit> ps;
+      ps.push( ~Lit(is) );
+      ps.push( x[j].e_eq( s, tuples[i][j] ) );
+      s.addClause(ps);
+      valtuples[j][tuples[i][j]].insert(is);
+    }
+  }
+
+  for(size_t i = 0; i != x.size(); ++i) {
+    for(int j = x[i].min(s); j <= x[i].max(s); ++j) {
+      vec<Lit> ps;
+      ps.push( x[i].e_neq( s, j ) );
+      for(set<Var>::const_iterator si = valtuples[i][j].begin(),
+            siend = valtuples[i][j].end(); si != siend; ++si)
+        ps.push( Lit(*si) );
+      s.addClause(ps);
+    }
+  }
+}
+
+// Here we just post everything as a clause, better encodings later
+void post_negative_table(Solver &s, std::vector<cspvar> const& x,
+                         std::vector< std::vector<int> > const& tuples)
+{
+  for(size_t i = 0; i != tuples.size(); ++i) {
+    if(tuples[i].size() != x.size())
+      throw non_table();
+    vec<Lit> ps;
+    for(size_t j = 0; j != tuples[i].size(); ++j)
+      ps.push( x[j].r_eq( s, tuples[i][j] ) );
+    s.addClause(ps);
+  }
+}
