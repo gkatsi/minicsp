@@ -2588,8 +2588,10 @@ public:
     scc_wake_size_ptr = s.alloc_backtrackable(sizeof(size_t));
     s.deref<size_t>(scc_wake_size_ptr) = 0;
 
-    if( !find_initial_matching(s) )
+    if( !find_initial_matching(s) ) {
+      delete[] reasons;
       throw unsat();
+    }
   }
   ~cons_alldiff() { delete[] reasons; }
 
