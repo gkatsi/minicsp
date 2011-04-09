@@ -3169,7 +3169,7 @@ namespace regular {
         if( t.q0 == 0 || t.q1 == 0 ) continue;
         if( !X[i].indomain(solver, t.s) ) continue;
         if( j == 0 || t.q0 != aut.d[j-1].q0 ) {
-          while( l.state_trans.size() < (unsigned)t.q0 ) {
+          while( l.state_trans.size() < (unsigned)t.q0+i*ns ) {
             l.state_trans.push_back(l.d.size() );
             l.state_layer.push_back( i );
           }
@@ -3282,6 +3282,7 @@ namespace regular {
 
       for(int t = aut.state_trans[s]; t != aut.state_trans[s+1]; ++t) {
         transition const& tr = aut.d[t];
+        assert(tr.q0 == s);
         if( tr.q1 == 0 ) continue;
         if( r.find(tr.q1) == r.end() ) {
           r.insert(tr.q1);
@@ -3589,8 +3590,7 @@ namespace table {
              j = i->second.begin(),
              jend = i->second.end();
            j != jend; ++j)
-        ad.push_back(regular::transition( q0, j->first, j->second)),
-          cout << "d(" << q0 << ", " << j->first << ") = " << j->second << "\n";
+        ad.push_back(regular::transition( q0, j->first, j->second));
     }
 
     regular::automaton a(ad, q0, aF);
