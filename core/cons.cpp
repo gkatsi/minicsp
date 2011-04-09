@@ -14,6 +14,7 @@ using std::pair;
 using std::make_pair;
 using std::vector;
 using std::set;
+using std::map;
 
 // for temporary debugging
 using std::cout;
@@ -3487,35 +3488,160 @@ void post_cumulative(Solver& s, vector<cspvar> const& start,
   }
 }
 
-// Fahiem's one-variable-per-tuple encoding
-void post_positive_table(Solver &s, std::vector<cspvar> const& x,
-                         std::vector< std::vector<int> > const& tuples)
-{
-  using std::map;
-  vector< map<int, set<Var> > > valtuples(x.size());
-  for(size_t i = 0; i != tuples.size(); ++i) {
-    if(tuples[i].size() != x.size())
-      throw non_table();
-    Var is = s.newVar();
-    for(size_t j = 0; j != tuples[i].size(); ++j) {
-      vec<Lit> ps;
-      ps.push( ~Lit(is) );
-      ps.push( x[j].e_eq( s, tuples[i][j] ) );
-      s.addClause(ps);
-      valtuples[j][tuples[i][j]].insert(is);
+namespace table {
+  typedef map<int, int> state_trans;
+  typedef map< int, state_trans > transmap;
+
+  set<int> gather_sigma(Solver& s, vector<cspvar> const& x)
+  {
+    set<int> sigma;
+    for(size_t i = 0; i != x.size(); ++i) {
+      cspvar xi = x[i];
+      for(int j = xi.min(s); j <= xi.max(s); ++j)
+        if( xi.indomain(s, j) )
+          sigma.insert(j);
+    }
+    return sigma;
+  }
+
+  void add_det_word(vector<int> const& tuple, transmap& d,
+                    int& numstates,
+                    const int q0, const int accepting)
+  {
+    size_t i = 0;
+    int q = q0;
+    while(i < tuple.size()-1) {
+      state_trans& qtrans = d[q];
+      state_trans::iterator sti = qtrans.find(tuple[i]);
+      if(sti != qtrans.end() )
+        q = sti->second;
+      else {
+        q = numstates;
+        ++numstates;
+        qtrans[tuple[i]] = q;
+      }
+      ++i;
+    }
+    d[q][tuple[i]] = accepting;
+  }
+
+  void add_absorbing_state(transmap& d, set<int> const& sigma,
+                           const int absorbing)
+  {
+    for(transmap::iterator i = d.begin(), iend = d.end();
+        i != iend; ++i) {
+      state_trans& qtrans = i->second;
+      for(set<int>::const_iterator j = sigma.begin(), jend = sigma.end();
+          j != jend; ++j) {
+        state_trans::iterator sti = qtrans.find(*j);
+        if( sti == qtrans.end() )
+          qtrans[*j] = absorbing;
+      }
     }
   }
 
-  for(size_t i = 0; i != x.size(); ++i) {
-    for(int j = x[i].min(s); j <= x[i].max(s); ++j) {
-      vec<Lit> ps;
-      ps.push( x[i].e_neq( s, j ) );
-      for(set<Var>::const_iterator si = valtuples[i][j].begin(),
-            siend = valtuples[i][j].end(); si != siend; ++si)
-        ps.push( Lit(*si) );
-      s.addClause(ps);
+  void verify_automaton(vector< vector<int> > const& tuples,
+                        transmap& a,
+                        const int q0,
+                        set<int> F)
+  {
+    for(size_t i = 0; i != tuples.size(); ++i) {
+      vector<int> const & t = tuples[i];
+      int q = q0;
+      for(size_t j = 0; j != t.size(); ++j) {
+        assert( a[q].find(t[j]) != a[q].end() );
+        q = a[q][t[j]];
+      }
+      assert(F.find(q) != F.end());
     }
   }
+
+  regular::automaton table_to_dfa(vector< vector<int> > const& tuples,
+                                  set<int> const& sigma,
+                                  bool positive)
+  {
+    int q0 = 1;
+    set<int> aF;
+    vector<regular::transition> ad;
+
+    const int absorbing = 2;
+    const int accepting = 3;
+    int numstates = 4;
+
+    transmap d;
+    for(size_t i = 0; i != tuples.size(); ++i)
+      add_det_word(tuples[i], d, numstates, q0, accepting);
+    add_absorbing_state(d, sigma, absorbing);
+
+    if( positive )
+      aF.insert(accepting);
+    else
+      aF.insert(absorbing);
+
+    verify_automaton(tuples, d, q0, aF);
+
+    for( transmap::const_iterator i = d.begin(), iend = d.end();
+         i != iend; ++i) {
+      int q0 = i->first;
+      for( state_trans::const_iterator
+             j = i->second.begin(),
+             jend = i->second.end();
+           j != jend; ++j)
+        ad.push_back(regular::transition( q0, j->first, j->second)),
+          cout << "d(" << q0 << ", " << j->first << ") = " << j->second << "\n";
+    }
+
+    regular::automaton a(ad, q0, aF);
+    return a;
+  }
+
+  // Fahiem's one-variable-per-tuple encoding. I don't know why I called it ac4
+  void post_positive_table_ac4(Solver &s, std::vector<cspvar> const& x,
+                               std::vector< std::vector<int> > const& tuples)
+  {
+    vector< map<int, set<Var> > > valtuples(x.size());
+    for(size_t i = 0; i != tuples.size(); ++i) {
+      if(tuples[i].size() != x.size())
+        throw non_table();
+      Var is = s.newVar();
+      for(size_t j = 0; j != tuples[i].size(); ++j) {
+        vec<Lit> ps;
+        ps.push( ~Lit(is) );
+        ps.push( x[j].e_eq( s, tuples[i][j] ) );
+        s.addClause(ps);
+        valtuples[j][tuples[i][j]].insert(is);
+      }
+    }
+
+    for(size_t i = 0; i != x.size(); ++i) {
+      for(int j = x[i].min(s); j <= x[i].max(s); ++j) {
+        vec<Lit> ps;
+        ps.push( x[i].e_neq( s, j ) );
+        for(set<Var>::const_iterator si = valtuples[i][j].begin(),
+              siend = valtuples[i][j].end(); si != siend; ++si)
+          ps.push( Lit(*si) );
+        s.addClause(ps);
+      }
+    }
+  }
+
+  void post_positive_table_regular(Solver &s, std::vector<cspvar> const& x,
+                                   std::vector< std::vector<int> > const& tuples)
+  {
+    set<int> sigma = gather_sigma(s, x);
+    regular::automaton a = table_to_dfa(tuples, sigma, true);
+    post_regular(s, x, a);
+  }
+}
+
+
+void post_positive_table(Solver &s, std::vector<cspvar> const& x,
+                         std::vector< std::vector<int> > const& tuples)
+{
+  if( x.size() <= 3 )
+    table::post_positive_table_ac4(s, x, tuples);
+  else
+    table::post_positive_table_regular(s, x, tuples);
 }
 
 // Here we just post everything as a clause, better encodings later
