@@ -229,6 +229,98 @@ namespace {
     assert( x.setmax(s, 1, c) );
   }
   REGISTER_TEST(test12);
+
+  //--------------------------------------------------
+  // clause reduction tests
+  void reduce01()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 20);
+
+    vec<Lit> ps, ps0;
+    ps.push( x.r_eq(s, 5) );
+    ps.push( x.r_neq(s, 7) );
+    ps.push( x.r_geq(s, 3) );
+    ps.push( x.r_leq(s, 10) );
+
+    ps0.push( x.r_eq(s, 5) );
+
+    s.reduce_var(ps);
+
+    assert_clause_exact(s, ps, ps0);
+  }
+  REGISTER_TEST(reduce01);
+
+  void reduce02()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 20);
+
+    vec<Lit> ps, ps0;
+    ps.push( x.r_geq(s, 5) );
+    ps.push( x.r_leq(s, 10) );
+    ps.push( x.r_neq(s, 7) );
+    ps.push( x.r_neq(s, 3) );
+    ps.push( x.r_neq(s, 15) );
+    ps.push( x.r_leq(s, 15) );
+    ps.push( x.r_geq(s, 4) );
+
+    ps0.push( x.r_geq(s, 5) );
+    ps0.push( x.r_leq(s, 10) );
+    ps0.push( x.r_neq(s, 7) );
+
+    s.reduce_var(ps);
+
+    assert_clause_exact(s, ps, ps0);
+  }
+  REGISTER_TEST(reduce02);
+
+
+  void reduce03()
+  {
+    Solver s;
+    cspvar x = s.newCSPVar(1, 20);
+    cspvar y = s.newCSPVar(1, 20);
+    Var v1 = s.newVar(), v2 = s.newVar(), v3 = s.newVar();
+
+    vec<Lit> ps, ps0;
+
+    ps.push( Lit(v1) );
+
+    ps.push( x.r_geq(s, 5) );
+    ps.push( x.r_leq(s, 10) );
+    ps.push( x.r_neq(s, 7) );
+    ps.push( x.r_neq(s, 3) );
+    ps.push( x.r_neq(s, 15) );
+
+    ps.push( ~Lit(v2) );
+
+    ps.push( y.r_geq(s, 15) );
+    ps.push( y.r_leq(s, 19) );
+    ps.push( y.r_neq(s, 17) );
+    ps.push( y.r_neq(s, 13) );
+    ps.push( y.r_neq(s, 20) );
+
+    ps.push( ~Lit(v3) );
+
+    ps0.push( Lit(v1) );
+    ps0.push( x.r_geq(s, 5) );
+    ps0.push( x.r_leq(s, 10) );
+    ps0.push( x.r_neq(s, 7) );
+
+    ps0.push( ~Lit(v2) );
+
+    ps0.push( y.r_geq(s, 15) );
+    ps0.push( y.r_leq(s, 19) );
+    ps0.push( y.r_neq(s, 17) );
+
+    ps0.push( ~Lit(v3) );
+
+    s.reduce_var(ps);
+
+    assert_clause_exact(s, ps, ps0);
+  }
+  REGISTER_TEST(reduce03);
 }
 
 void dom_test()

@@ -11,6 +11,10 @@ void assert_clause_exact(Solver &s, Clause *to_test,
                          vec<Lit> const& expected);
 void assert_clause_contains(Solver &s, Clause *to_test,
                             vec<Lit> const& expected);
+void assert_clause_exact(Solver &s, vec<Lit> &to_test,
+                         vec<Lit> const& expected);
+void assert_clause_contains(Solver &s, vec<Lit> &to_test,
+                            vec<Lit> const& expected);
 
 // the number of solutions of the model posted to s is exactly ns
 void assert_num_solutions(Solver &s, int ns);

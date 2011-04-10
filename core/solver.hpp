@@ -213,6 +213,9 @@ public:
     Var setvarini(setvar x, int d);       // get the propositional var representing d in x
     cspvar setvarcard(setvar x);          // get the cspvar representing the cardinality of x
 
+    // functions that need to be tested, so cannot be private
+    void reduce_var(vec<Lit>& ps);        // ensure the domains of the cspvars
+                                          // in ps are described minimally
 protected:
 
     // Helper structures:
@@ -288,6 +291,12 @@ protected:
     vec<Lit>            analyze_stack;
     vec<Lit>            analyze_toclear;
     vec<Lit>            add_tmp;
+
+    std::vector<char> reduce_var_seen;
+    std::vector<int> reduce_var_min;
+    std::vector<int> reduce_var_max;
+    std::vector<char> reduce_var_asgn;
+    std::vector<cspvar> reduce_var_toclear;
 
     // Main internal methods:
     //

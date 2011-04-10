@@ -161,6 +161,11 @@ cspvar Solver::newCSPVar(int min, int max)
   xf.max = max;
   xf.dsize = max-min+1;
 
+  reduce_var_seen.push_back(false);
+  reduce_var_min.push_back(xf.omin);
+  reduce_var_max.push_back(xf.omax);
+  reduce_var_asgn.push_back(false);
+
   // the propositional encoding of the domain
   xf.firstbool = newVar();
   for(int i = 1; i != 2*xf.dsize; ++i)
@@ -685,6 +690,7 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
     }
     max_literals += out_learnt.size();
     out_learnt.shrink(i - j);
+    reduce_var(out_learnt);
     tot_literals += out_learnt.size();
 
     if( trace && debugclauses )
@@ -743,6 +749,92 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
     }
 
     return true;
+}
+
+
+// make sure a clause has no redundant information wrt to any one
+// variable: if it contains Xi != d, it cannot contain any other
+// literal of Xi. If it contains Xi <= d, it cannot containt Xi=d' or
+// Xi <= d' with d' < d. If it contains ~(Xi <= d), it cannot contain
+// Xi=d' or ~(Xi <= d') with d' > d.
+//
+// This assumes the clause is not contradictory, i.e., does not
+// contain both Xi != d and Xi != d' for d != d'
+//
+// This is guaranteed to not remove the UIP. Proof: it only removes
+// literals that are implied by other literals that are already in the
+// clause. If the UIP is removed, it means that it is implied by a
+// literal l. But since l implies the UIP, it must be in the same
+// decision level, contradiction.
+void Solver::reduce_var(vec<Lit>& ps)
+{
+  vector<char> & seen = reduce_var_seen;
+  vector<int> & varmin = reduce_var_min;
+  vector<int> & varmax = reduce_var_max;
+  vector<char> & varasgn = reduce_var_asgn;
+  vector<cspvar> & toclear = reduce_var_toclear;
+
+  // note here that literals are false, so the literal with event LEQ
+  // is false when the var is > d (>= d+1)
+  for(int i = 0; i != ps.size(); ++i) {
+    domevent de = events[toInt(ps[i])];
+    if( de.type != domevent::NONE )
+      if( !seen[de.x._id] ) {
+        seen[de.x._id] = true;
+        toclear.push_back(de.x);
+      }
+    switch( de.type ) {
+    case domevent::NONE:
+    case domevent::EQ:
+      break;
+    case domevent::NEQ:
+      varmin[ de.x._id ] = de.d;
+      varmax[ de.x._id ] = de.d;
+      varasgn[de.x._id ] = true;
+      break;
+    case domevent::GEQ:
+      varmax[de.x._id ] = min(varmax[de.x._id], de.d-1);
+      break;
+    case domevent::LEQ:
+      varmin[de.x._id ] = max(varmin[de.x._id], de.d+1);
+      break;
+    }
+  }
+
+  int i = 0, j = 0;
+  for(; i != ps.size(); ++i) {
+    domevent de = events[toInt(ps[i])];
+    switch( de.type ) {
+    case domevent::EQ:
+      if( de.d >= varmin[de.x._id] && de.d <= varmax[de.x._id] )
+        ps[j++] = ps[i];
+      break;
+    case domevent::NONE:
+      ps[j++] = ps[i];
+      break;
+    case domevent::NEQ:
+      ps[j++] = ps[i];
+      break;
+    case domevent::GEQ:
+      if( !varasgn[de.x._id] && de.d == varmax[de.x._id]+1 )
+        ps[j++] = ps[i];
+      break;
+    case domevent::LEQ:
+      if( !varasgn[de.x._id] && de.d == varmin[de.x._id]-1 )
+        ps[j++] = ps[i];
+      break;
+    }
+  }
+  ps.shrink(i-j);
+
+  for(size_t i = 0; i != toclear.size(); ++i) {
+    cspvar x = toclear[i];
+    varmin[ x._id ] = cspvars[x._id].omin;
+    varmax[ x._id ] = cspvars[x._id].omax;
+    varasgn[ x._id ] = false;
+    seen[ x._id] = false;
+  }
+  toclear.clear();
 }
 
 
