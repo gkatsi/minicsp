@@ -30,8 +30,6 @@
 #include "CSPParserCallback.hh"
 #include "cons.hpp"
 
-#define ShowNumericalIDS
-
 struct unsupported {};
 
 struct minicsp_rel {
@@ -80,17 +78,27 @@ class minicsp_callback : public CSPParserCallback
 
   vector<cspvar> ast2vararray(AST const& ast)
   {
+    return ast2vararray( dynamic_cast<ASTList const&>(*this) );
+  }
+
+  cspvar ast2var(AST const& ast)
+  {
+    if( ast.isVar() )
+      return vars[ ast.getVarName() ];
+    else {
+      int c = ast.getInteger();
+      if( constants.find(c) == constants.end() ) {
+        constants[c] = _solver.newCSPVar(c, c);
+      }
+      return constants[c];
+    }
+  }
+
+  vector<cspvar> ast2vararray(ASTList const& ast)
+  {
     vector<cspvar> v(ast.size());
     for(int i = 0; i != ast.size(); ++i) {
-      if( ast[i].isVar() )
-        v[i] = vars[ ast[i].getVarName() ];
-      else {
-        int c = ast[i].getInteger();
-        if( constants.find(c) == constants.end() ) {
-          constants[c] = _solver.newCSPVar(c, c);
-        }
-        v[i] = constants[c];
-      }
+      v[i] = ast2var(ast[i]);
     }
     return v;
   }
@@ -105,15 +113,88 @@ class minicsp_callback : public CSPParserCallback
       post_negative_table(_solver, current_scope, rel.tuples);
   }
 
+  cspvar post_expression(C_AST *ctree, vector<cspvar> const& vars, bool root)
+  {
+    cspvar rv;
+    switch( ctree->type ) {
+    case VAR: {
+      assert(!root);
+      C_AST_VarNode *vn = (C_AST_VarNode*)ctree;
+      rv = vars[vn->idVar];
+      break;
+    }
+    case F_EQ: {
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      if( fn->nbarg != 2 )
+        throw unsupported();
+      cspvar x1 = post_expression(fn->args[0], vars, false);
+      cspvar x2 = post_expression(fn->args[1], vars, false);
+      if( root )
+        post_eq(_solver, x1, x2, 0);
+      else {
+        rv = _solver.newCSPVar(0,1);
+        post_eq_re(_solver, x1, x2, 0, rv);
+      }
+      break;
+    }
+    case F_NE: {
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      if( fn->nbarg != 2 )
+        throw unsupported();
+      cspvar x1 = post_expression(fn->args[0], vars, false);
+      cspvar x2 = post_expression(fn->args[1], vars, false);
+      if( root )
+        post_neq(_solver, x1, x2, 0);
+      else {
+        rv = _solver.newCSPVar(0,1);
+        post_neq_re(_solver, x1, x2, 0, rv);
+      }
+      break;
+    }
+    case F_OR: {
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      if( root ) {
+        vec<Lit> ps;
+        for(int i = 0; i != fn->nbarg; ++i ) {
+          cspvar arg = post_expression(fn->args[i], vars, false);
+          ps.push( arg.r_eq(_solver, 0) );
+        }
+        _solver.addClause(ps);
+      } else {
+        vec<Lit> ps;
+        rv = _solver.newCSPVar(0,1);
+        ps.push( rv.e_eq(_solver, 0) );
+        for(int i = 0; i != fn->nbarg; ++i) {
+          cspvar arg = post_expression(fn->args[i], vars, false);
+
+          vec<Lit> ps1;
+          ps1.push( rv.r_eq(_solver, 0) );
+          ps1.push( arg.e_eq(_solver, 0) );
+          _solver.addClause(ps1);
+
+          ps.push( arg.r_eq(_solver, 0) );
+        }
+        _solver.addClause(ps);
+      }
+      break;
+    }
+    case F_AND:
+
+    // function stuff
+    case F_ABS:
+    case F_ADD:
+    case F_SUB:
+    default:
+      throw unsupported();
+    }
+    return rv;
+  }
+
   void post_expression(string const& reference,
                        ASTList const& args)
   {
-    cout << "intentional constraint ";
-    preds[reference].tree->infixExpression(cout);
-    cout << "\nparameters=";
-    args.postfixExpression(cout);
-    cout << endl;
-    throw unsupported();
+    C_AST *ctree = preds[reference].tree->makeCTree();
+    post_expression(ctree, ast2vararray(args), true );
   }
 
   void post_alldiff(string const& reference,
