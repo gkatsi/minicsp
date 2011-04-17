@@ -178,10 +178,41 @@ class minicsp_callback : public CSPParserCallback
       }
       break;
     }
-    case F_AND:
+    case F_AND: {
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      if( root ) {
+        for(int i = 0; i != fn->nbarg; ++i )
+          post_expression(fn->args[i], vars, true);
+      } else {
+        vec<Lit> ps;
+        rv = _solver.newCSPVar(0,1);
+        ps.push( rv.r_eq(_solver, 0) );
+        for(int i = 0; i != fn->nbarg; ++i) {
+          cspvar arg = post_expression(fn->args[i], vars, false);
+
+          vec<Lit> ps1;
+          ps1.push( rv.e_eq(_solver, 0) );
+          ps1.push( arg.r_eq(_solver, 0) );
+          _solver.addClause(ps1);
+
+          ps.push( arg.e_eq(_solver, 0) );
+        }
+        _solver.addClause(ps);
+      }
+      break;
+    }
 
     // function stuff
-    case F_ABS:
+    case F_ABS: {
+      assert(!root);
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      if( fn->nbarg != 1 )
+        throw unsupported();
+      cspvar arg = post_expression(fn->args[0], vars, false);
+      rv = _solver.newCSPVar(0, max(abs(arg.min(_solver)), abs(arg.max(_solver))));
+      post_abs(_solver, arg, rv, 0);
+      break;
+    }
     case F_ADD:
     case F_SUB:
     default:
