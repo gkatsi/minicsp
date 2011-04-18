@@ -81,13 +81,17 @@ int main(int argc, char *argv[])
   bool findall = cmdline::has_option(args, "--all");
 
   bool sat = false, next;
+  int ns = 0;
   do {
     next = s.solve();
     sat = sat || next;
     if( next ) {
-      cout << "solution\n";
+      ++ns;
+      cout << "solution " << ns << ": ";
+      cb.print_solution();
+      s.excludeLast();
     }
-    next = findall;
+    next = next && findall;
   } while(next);
 
   if( sat )

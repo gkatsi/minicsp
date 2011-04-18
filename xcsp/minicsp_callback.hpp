@@ -519,6 +519,15 @@ public:
   {
   }
 
+  void print_solution()
+  {
+    map<string, cspvar>::const_iterator i, b = vars.begin(), e = vars.end();
+    for(i = b; i != e; ++i) {
+      if( i != b ) cout << ", ";
+      cout << cspvar_printer(_solver, i->second) << "=" << _solver.cspModelValue(i->second);
+    }
+    cout << "\n";
+  }
 };
 
 } // namespace
