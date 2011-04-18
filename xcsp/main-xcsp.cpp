@@ -76,6 +76,7 @@ int main(int argc, char *argv[])
       return 1;
     }
   double parse_time = cpuTime() - cpu_time;
+  cout << parse_time " s to parse instance\n";
 
   bool findall = cmdline::has_option(args, "--all");
 

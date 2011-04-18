@@ -517,7 +517,6 @@ public:
    */
   virtual void endInstance()
   {
-    cout << "callback: </instance>" <<endl;
   }
 
 };
