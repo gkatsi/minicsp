@@ -515,29 +515,52 @@ class minicsp_callback : public CSPParserCallback
                  ASTList const& args)
   {
     const AST &sum=args[0];
-    const AST &op=args[1];
+    const ASTSymb &op=dynamic_cast<ASTSymb const&>(args[1]);
     const AST &rhs=args[2];
 
-    cout << "weighted sum global constraint:\n";
+    vector<cspvar> const& vars = current_scope;
 
-    cout << sum[0]["coef"].getInteger()
-         << "*" << sum[0]["var"].getVarName()
-         << showpos;
+    vector<int> w;
+    vector<cspvar> v;
 
-    for(int i=1;i<sum.size();++i)
-      cout << sum[i]["coef"].getInteger()
-           << "*" << sum[i]["var"].getVarName();
+    for(int i=0;i<sum.size();++i) {
+      w.push_back( sum[i]["coef"].getInteger() );
+      v.push_back( vars[ sum[i]["var"].getVarId() ] );
+    }
 
-    cout << noshowpos;
+    int c = 0;
 
-    op.infixExpression(cout);
+    if( rhs.isVar() ) {
+      w.push_back(-1);
+      v.push_back( vars[ rhs.getVarId() ] );
+    } else {
+      c = -rhs.getInteger();
+    }
 
-    if (rhs.isVar())
-      cout << rhs.getVarName();
-    else
-      cout << rhs.getInteger();
-
-    cout << endl;
+    switch(op.getType()) {
+    case SYMB_EQ:
+      post_lin_eq(_solver, v, w, c);
+      break;
+    case SYMB_NE:
+      post_lin_neq(_solver, v, w, c);
+      break;
+    case SYMB_GE:
+      for(int i = 0; i != sum.size(); ++i) w[i] = -w[i];
+      post_lin_leq(_solver, v, w, c);
+      break;
+    case SYMB_GT:
+      for(int i = 0; i != sum.size(); ++i) w[i] = -w[i];
+      post_lin_less(_solver, v, w, c);
+      break;
+    case SYMB_LE:
+      post_lin_leq(_solver, v, w, c);
+      break;
+    case SYMB_LT:
+      post_lin_less(_solver, v, w, c);
+      break;
+    default:
+      throw unsupported();
+    }
   }
 
   void post_cumulative(string const& reference,
@@ -627,43 +650,23 @@ class minicsp_callback : public CSPParserCallback
   void post_element(string const& reference,
                     ASTList const& args)
   {
-    const AST &index=args[0];
-    const AST &table=args[1];
-    const AST &value=args[2];
+    const AST &indexast=args[0];
+    const AST &arrayast=args[1];
+    const AST &valueast=args[2];
 
-    cout << "element global constraint:\n";
-
-    cout << "  index=";
-    if (index.isVar())
-      cout << index.getVarName();
-    else
-      cout << index.getInteger();
-
-    cout << "\n"
-         << "  table=[ ";
-
-    for(int i=0;i<table.size();++i)
-      if (table[i].isVar())
-        cout << table[i].getVarName() << ' ';
-      else
-        cout << table[i].getInteger() << ' ';
-
-    cout << "]\n"
-         << "  value=";
-
-    if (value.isVar())
-      cout << value.getVarName();
-    else
-      cout << value.getInteger();
-
-    cout << endl;
+    cspvar index = ast2var(indexast);
+    cspvar result = ast2var(valueast);
+    vector<cspvar> array = ast2vararray(arrayast);
+    // FIXME: find out if it is really 1-based indexing, as in the
+    // catalog
+    ::post_element(_solver, result, index, array, 1);
   }
 public:
   minicsp_callback(Solver& s) : _solver(s) {
     posters["global:alldifferent"] = &minicsp_callback::post_alldiff;
     // to be uncommented when there is an actual implementation there
-    //posters["global:element"] = &minicsp_callback::post_element;
-    //posters["global:weightedsum"] = &minicsp_callback::post_wsum;
+    posters["global:element"] = &minicsp_callback::post_element;
+    posters["global:weightedsum"] = &minicsp_callback::post_wsum;
     //posters["global:cumulative"] = &minicsp_callback::post_cumulative;
   }
 
