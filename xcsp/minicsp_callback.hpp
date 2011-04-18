@@ -151,6 +151,62 @@ class minicsp_callback : public CSPParserCallback
       }
       break;
     }
+    case F_GE: {
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      if( fn->nbarg != 2 )
+        throw unsupported();
+      cspvar x1 = post_expression(fn->args[0], vars, false);
+      cspvar x2 = post_expression(fn->args[1], vars, false);
+      if( root )
+        post_leq(_solver, x2, x1, 0);
+      else {
+        rv = _solver.newCSPVar(0,1);
+        post_geq_re(_solver, x1, x2, 0, rv);
+      }
+      break;
+    }
+    case F_GT: {
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      if( fn->nbarg != 2 )
+        throw unsupported();
+      cspvar x1 = post_expression(fn->args[0], vars, false);
+      cspvar x2 = post_expression(fn->args[1], vars, false);
+      if( root )
+        post_less(_solver, x2, x1, 0);
+      else {
+        rv = _solver.newCSPVar(0,1);
+        post_gt_re(_solver, x1, x2, 0, rv);
+      }
+      break;
+    }
+    case F_LE: {
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      if( fn->nbarg != 2 )
+        throw unsupported();
+      cspvar x1 = post_expression(fn->args[0], vars, false);
+      cspvar x2 = post_expression(fn->args[1], vars, false);
+      if( root )
+        post_leq(_solver, x1, x2, 0);
+      else {
+        rv = _solver.newCSPVar(0,1);
+        post_leq_re(_solver, x1, x2, 0, rv);
+      }
+      break;
+    }
+    case F_LT: {
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      if( fn->nbarg != 2 )
+        throw unsupported();
+      cspvar x1 = post_expression(fn->args[0], vars, false);
+      cspvar x2 = post_expression(fn->args[1], vars, false);
+      if( root )
+        post_less(_solver, x1, x2, 0);
+      else {
+        rv = _solver.newCSPVar(0,1);
+        post_less_re(_solver, x1, x2, 0, rv);
+      }
+      break;
+    }
     case F_OR: {
       C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
       if( root ) {
@@ -201,8 +257,117 @@ class minicsp_callback : public CSPParserCallback
       }
       break;
     }
+    case F_NOT: {
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      assert(fn->nbarg == 1);
+      if( root ) {
+        cspvar x = post_expression(fn->args[0], vars, true);
+        DO_OR_THROW(x.assign(_solver, 0, NO_REASON));
+      } else {
+        vec<Lit> ps;
+        rv = _solver.newCSPVar(0,1);
+        cspvar arg = post_expression(fn->args[0], vars, false);
+        vec<Lit> ps1, ps2;
+        ps1.push( rv.r_eq(_solver, 0) );
+        ps1.push( arg.e_neq(_solver, 0) );
+        ps2.push( rv.r_neq(_solver, 0) );
+        ps2.push( arg.e_eq(_solver, 0) );
+        _solver.addClause(ps1);
+        _solver.addClause(ps2);
+      }
+      break;
+    }
+    case F_IFF: {
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      assert(fn->nbarg == 2);
+      if( root ) {
+        cspvar arg1 = post_expression(fn->args[0], vars, false),
+          arg2 = post_expression(fn->args[1], vars, false);
+        vec<Lit> ps1, ps2;
+        ps1.push( arg1.r_eq(_solver, 0) );
+        ps1.push( arg2.e_eq(_solver, 0) );
+        ps2.push( arg1.r_neq(_solver, 0) );
+        ps2.push( arg2.e_neq(_solver, 0) );
+        _solver.addClause(ps1);
+        _solver.addClause(ps2);
+      } else {
+        vec<Lit> ps;
+        rv = _solver.newCSPVar(0,1);
+        cspvar arg1 = post_expression(fn->args[0], vars, false),
+          arg2 = post_expression(fn->args[1], vars, false);
+        vec<Lit> ps1, ps2, ps3, ps4;
+        ps1.push( rv.r_neq(_solver, 0) );
+        ps1.push( arg1.r_eq(_solver, 0) );
+        ps1.push( arg2.e_eq(_solver, 0) );
+        ps2.push( rv.r_neq(_solver, 0) );
+        ps2.push( arg1.r_neq(_solver, 0) );
+        ps2.push( arg2.e_neq(_solver, 0) );
+
+        ps3.push( rv.r_eq(_solver, 0) );
+        ps3.push( arg1.r_eq(_solver, 0) );
+        ps3.push( arg2.e_neq(_solver, 0) );
+        ps4.push( rv.r_eq(_solver, 0) );
+        ps4.push( arg1.r_neq(_solver, 0) );
+        ps4.push( arg2.e_eq(_solver, 0) );
+        _solver.addClause(ps1);
+        _solver.addClause(ps2);
+        _solver.addClause(ps3);
+        _solver.addClause(ps4);
+      }
+      break;
+    }
+
+    case F_XOR: {
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      assert(fn->nbarg == 2);
+      if( root ) {
+        cspvar arg1 = post_expression(fn->args[0], vars, false),
+          arg2 = post_expression(fn->args[1], vars, false);
+        vec<Lit> ps1, ps2;
+        ps1.push( arg1.r_eq(_solver, 0) );
+        ps1.push( arg2.e_neq(_solver, 0) );
+        ps2.push( arg1.r_neq(_solver, 0) );
+        ps2.push( arg2.e_eq(_solver, 0) );
+        _solver.addClause(ps1);
+        _solver.addClause(ps2);
+      } else {
+        vec<Lit> ps;
+        rv = _solver.newCSPVar(0,1);
+        cspvar arg1 = post_expression(fn->args[0], vars, false),
+          arg2 = post_expression(fn->args[1], vars, false);
+        vec<Lit> ps1, ps2, ps3, ps4;
+        ps1.push( rv.r_neq(_solver, 0) );
+        ps1.push( arg1.r_eq(_solver, 0) );
+        ps1.push( arg2.e_neq(_solver, 0) );
+        ps2.push( rv.r_neq(_solver, 0) );
+        ps2.push( arg1.r_neq(_solver, 0) );
+        ps2.push( arg2.e_eq(_solver, 0) );
+
+        ps3.push( rv.r_eq(_solver, 0) );
+        ps3.push( arg1.r_eq(_solver, 0) );
+        ps3.push( arg2.e_eq(_solver, 0) );
+        ps4.push( rv.r_eq(_solver, 0) );
+        ps4.push( arg1.r_neq(_solver, 0) );
+        ps4.push( arg2.e_neq(_solver, 0) );
+        _solver.addClause(ps1);
+        _solver.addClause(ps2);
+        _solver.addClause(ps3);
+        _solver.addClause(ps4);
+      }
+      break;
+    }
 
     // function stuff
+    case F_NEG: {
+      assert(!root);
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      if( fn->nbarg != 2 )
+        throw unsupported();
+      cspvar arg = post_expression(fn->args[0], vars, false);
+      rv = _solver.newCSPVar(-arg.max(_solver), -arg.min(_solver));
+      post_neg(_solver, arg, rv, 0);
+      break;
+    }
     case F_ABS: {
       assert(!root);
       C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
@@ -231,7 +396,102 @@ class minicsp_callback : public CSPParserCallback
       post_lin_eq(_solver, v, w, 0);
       break;
     }
-    case F_ADD:
+    case F_ADD: {
+      assert(!root);
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      int min = 0, max = 0;
+      vector<int> w;
+      vector<cspvar> v;
+      for(int q = 0; q != fn->nbarg; ++q) {
+        cspvar arg = post_expression(fn->args[q], vars, false);
+        w.push_back(-1);
+        v.push_back( arg );
+        min += arg.min(_solver);
+        max += arg.max(_solver);
+      }
+      rv = _solver.newCSPVar(min, max);
+      v.push_back(rv);
+      w.push_back(1);
+      post_lin_eq(_solver, v, w, 0);
+      break;
+    }
+    case F_MUL: {
+      assert(!root);
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      cspvar arg0 = post_expression(fn->args[0], vars, false);
+      for(int q = 1; q != fn->nbarg; ++q) {
+        cspvar arg1 = post_expression(fn->args[q], vars, false);
+        int minv = min( min( arg0.min(_solver)*arg1.min(_solver),
+                             arg0.min(_solver)*arg1.max(_solver)),
+                        min( arg0.max(_solver)*arg1.min(_solver),
+                             arg0.max(_solver)*arg1.max(_solver))),
+          maxv = max( max( arg0.min(_solver)*arg1.min(_solver),
+                           arg0.min(_solver)*arg1.max(_solver)),
+                      max( arg0.max(_solver)*arg1.min(_solver),
+                           arg0.max(_solver)*arg1.max(_solver)));
+        cspvar res = _solver.newCSPVar(minv, maxv);
+        post_mult(_solver, res, arg0, arg1);
+        arg0 = res;
+      }
+      rv = arg0;
+      break;
+    }
+
+    case F_MIN: {
+      assert(!root);
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      cspvar arg0 = post_expression(fn->args[0], vars, false);
+      for(int q = 1; q != fn->nbarg; ++q) {
+        cspvar arg1 = post_expression(fn->args[q], vars, false);
+        int minv = min( arg0.min(_solver), arg1.min(_solver) ),
+          maxv = min(arg0.max(_solver), arg1.max(_solver));
+        cspvar res = _solver.newCSPVar(minv, maxv);
+        post_min(_solver, res, arg0, arg1);
+        arg0 = res;
+      }
+      rv = arg0;
+      break;
+    }
+
+    case F_MAX: {
+      assert(!root);
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      cspvar arg0 = post_expression(fn->args[0], vars, false);
+      for(int q = 1; q != fn->nbarg; ++q) {
+        cspvar arg1 = post_expression(fn->args[q], vars, false);
+        int minv = max( arg0.min(_solver), arg1.min(_solver) ),
+          maxv = max(arg0.max(_solver), arg1.max(_solver));
+        cspvar res = _solver.newCSPVar(minv, maxv);
+        post_max(_solver, res, arg0, arg1);
+        arg0 = res;
+      }
+      rv = arg0;
+      break;
+    }
+
+    case F_IF: {
+      assert(!root);
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      assert( fn->nbarg == 3 );
+      cspvar argif = post_expression(fn->args[0], vars, false);
+      cspvar arg1 = post_expression(fn->args[1], vars, false);
+      cspvar arg2 = post_expression(fn->args[2], vars, false);
+      int minv = min(arg1.min(_solver), arg2.min(_solver)),
+        maxv = max(arg1.max(_solver), arg2.max(_solver));
+      rv = _solver.newCSPVar(minv, maxv);
+      post_eq_re(_solver, rv, arg1, 0, argif.e_eq(_solver, 1));
+      post_eq_re(_solver, rv, arg2, 0, argif.e_neq(_solver, 1));
+      break;
+    }
+
+      // all the unimplemented stuff goes here
+    case F_POW:
+    case F_MOD:
+    case F_DIV:
+    case CST_BOOL:
+    case CST_INT:
+    case LIST:
+    case DICT:
     default:
       throw unsupported();
     }
