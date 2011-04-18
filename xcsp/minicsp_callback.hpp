@@ -213,8 +213,25 @@ class minicsp_callback : public CSPParserCallback
       post_abs(_solver, arg, rv, 0);
       break;
     }
+    case F_SUB: {
+      assert(!root);
+      C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
+      if( fn->nbarg != 2 )
+        throw unsupported();
+      cspvar arg1 = post_expression(fn->args[0], vars, false);
+      cspvar arg2 = post_expression(fn->args[1], vars, false);
+      int min = arg1.min(_solver) - arg2.max(_solver);
+      int max = arg1.max(_solver) - arg2.min(_solver);
+      rv = _solver.newCSPVar(min, max);
+      vector<int> w(3);
+      vector<cspvar> v(3);
+      w[0] = 1;   v[0] = rv;
+      w[1] = -1;  v[1] = arg1;
+      w[2] = 1;   v[2] = arg2;
+      post_lin_eq(_solver, v, w, 0);
+      break;
+    }
     case F_ADD:
-    case F_SUB:
     default:
       throw unsupported();
     }
