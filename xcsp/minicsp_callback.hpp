@@ -46,6 +46,13 @@ namespace CSPXMLParser
 {
   using namespace std;
 
+  class FixedValuation : public VariableValuation {
+    vector<int> _vals;
+  public:
+    FixedValuation(vector<int> const& vals) : _vals(vals) {}
+    FunctionValue getVarValue(unsigned id) const { return _vals[id]; }
+  };
+
 // definition of the functions which are called by the parser when it
 // reads new information in the file. These functions are in charge of
 // creating the data structure that the solver needs to do his job
@@ -111,6 +118,26 @@ class minicsp_callback : public CSPParserCallback
       post_positive_table(_solver, current_scope, rel.tuples);
     else
       post_negative_table(_solver, current_scope, rel.tuples);
+  }
+
+  void post_expression_table(AST *tree, vector<cspvar> const& vars,
+                             size_t idx,
+                             vector<int> &curtuple,
+                             vector< vector<int> > & curtable)
+  {
+    if( idx == vars.size() ) {
+      if(tree->value(FixedValuation(curtuple)))
+        curtable.push_back(curtuple);
+      return;
+    }
+    for(int q = vars[idx].min(_solver); q <= vars[idx].max(_solver); ++q) {
+      if( vars[idx].indomain(_solver, q) ) {
+        curtuple[idx] = q;
+        post_expression_table(tree, vars, idx+1, curtuple, curtable);
+      }
+    }
+    if( idx == 0 )
+      post_positive_table(_solver, vars, curtable);
   }
 
   cspvar post_expression(C_AST *ctree, vector<cspvar> const& vars, bool root)
@@ -501,8 +528,19 @@ class minicsp_callback : public CSPParserCallback
   void post_expression(string const& reference,
                        ASTList const& args)
   {
-    C_AST *ctree = preds[reference].tree->makeCTree();
-    post_expression(ctree, ast2vararray(args), true );
+    bool table_expr = false;
+    if( current_scope.size() <= 2 )
+      table_expr = true;
+    if( !table_expr ) {
+      C_AST *ctree = preds[reference].tree->makeCTree();
+      post_expression(ctree, ast2vararray(args), true );
+    } else {
+      vector<cspvar> X = ast2vararray(args);
+      vector<int> curtuple(X.size());
+      vector< vector<int> > table;
+      post_expression_table(preds[reference].tree, X,
+                            0, curtuple, table);
+    }
   }
 
   void post_alldiff(string const& reference,
