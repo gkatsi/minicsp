@@ -388,7 +388,7 @@ class minicsp_callback : public CSPParserCallback
     case F_NEG: {
       assert(!root);
       C_AST_FxNode *fn = (C_AST_FxNode*)(ctree);
-      if( fn->nbarg != 2 )
+      if( fn->nbarg != 1 )
         throw unsupported();
       cspvar arg = post_expression(fn->args[0], vars, false);
       rv = _solver.newCSPVar(-arg.max(_solver), -arg.min(_solver));
