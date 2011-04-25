@@ -3640,10 +3640,7 @@ namespace table {
 void post_positive_table(Solver &s, std::vector<cspvar> const& x,
                          std::vector< std::vector<int> > const& tuples)
 {
-  if( x.size() <= 3 )
-    table::post_positive_table_ac4(s, x, tuples);
-  else
-    table::post_positive_table_regular(s, x, tuples);
+  table::post_positive_table_ac4(s, x, tuples);
 }
 
 // Here we just post everything as a clause, better encodings later
