@@ -1,19 +1,78 @@
-Directory overview:
-==================
+This is minicsp, a clause learning CSP solver. It is based on the
+ideas in:
 
-mtl/            Mini Template Library
-core/           A core version of the solver
-simp/           An extended solver with simplification capabilities
-README
-LICENSE
+Generalized Nogoods in CSPs. George Katsirelos and Fahiem Bacchus, The
+twentieth national conference on artificial intelligence, AAAI 2005
 
-To build (release version: without assertions, statically linked, etc):
-======================================================================
+and
 
-cd { core | simp }
-gmake rs
+Nogood Processing in CSPs, George Katsirelos, PhD Thesis, University
+of Toronto, 2008.
 
-Usage:
-======
+Directory Layout
+----------------
 
-TODO
+Minicsp is implemented on top of MiniSat and uses much of the same
+directory structure:
+
+mtl:   data structures written for minisat
+
+core: the solver, including all propagators. the executable produced
+      by this is not useful, as it can only read cnf files.
+
+fz: flatzinc frontend
+
+xcsp: XCSP frontend
+
+test: some unit tests for basic functionality
+
+examples: a few examples of how to use minicsp as a library
+
+Using minicsp
+-------------
+
+You have two options: either use it as a library or via the flatzinc
+or XCSP frontend.
+
+Note that you need boost to compile minicsp if you get it from
+bitbucket or download the plain tarball. If you downloaded the
+-complete tarball, the subset of boost that is necessary to compile
+minicsp is already included.
+
+To use as a library
+-------------------
+
+Use the files in the examples/ subdirectory as guides. A full list of
+constraints is in core/cons.hpp and core/setcons.hpp. You need to add
+core/ to your compiler's include path and link in the .o files in that
+directory.
+
+To use the frontends
+--------------------
+
+Simply invoke 'make' in the corresponding subdirectory (fz/ and xcsp/,
+respectively). Note that the flatzinc frontend requires (a relatively
+recent) bison and flex, while the XCSP frontend requires libxml.
+
+This will generate an executable minicsp-fz (resp. minicsp-xcsp) which
+you invoke as follows:
+
+./minicsp-fz instance.fzn
+
+and
+
+./minicsp-xcsp instance.xml
+
+Supported platforms
+-------------------
+
+minicsp was developed on linux (various versions of Fedora and
+Ubuntu). Using it on other platforms should not be hard, assuming you
+have a conforming C++ compiler. The only unixy feature used in the
+source is the use of signals to capture SIGINT, SIGHUP, SIGXCPU and
+SIGUSR1 to print solver statistics. You can safely remove that code.
+
+WARNING: gcc 4.5.x has a bug which causes it to miscompile minicsp
+(and minisat and other solvers based on it) at -O2 and above. Versions
+4.4.x and 4.6.x work fine. If you have to use gcc 4.5.x, using the
+option -fno-tree-pre might help you.
