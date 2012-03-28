@@ -26,6 +26,7 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #include "cons.hpp"
 
 using namespace std;
+using namespace minicsp;
 
 int main()
 {

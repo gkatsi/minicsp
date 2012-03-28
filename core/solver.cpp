@@ -45,6 +45,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 using namespace std;
 
+namespace minicsp {
+
 //=================================================================================================
 // Constructor/Destructor:
 
@@ -1996,3 +1998,5 @@ ostream& cons::printstate(Solver&, ostream& os) const
   os << "cons@" << this;
   return os;
 }
+
+} //namespace minicsp

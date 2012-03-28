@@ -26,6 +26,8 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
+namespace minicsp {
+
 /*************************************************************************************/
 #ifdef _MSC_VER
 #include <ctime>
@@ -135,3 +137,5 @@ void setup_signal_handlers(Solver *s)
   signal(SIGXCPU,SIGINT_handler);
   signal(SIGUSR1,SIGUSR_handler);
 }
+
+} //namespace minicsp

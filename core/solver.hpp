@@ -37,8 +37,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ******************************************************************************/
 
-#ifndef Solver_h
-#define Solver_h
+#ifndef __MINICSP_SOLVER_HPP
+#define __MINICSP_SOLVER_HPP
 
 #include <vector>
 #include <set>
@@ -50,6 +50,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "Alg.h"
 
 #include "solvertypes.hpp"
+
+namespace minicsp {
 
 //=================================================================================================
 // Solver -- the main class:
@@ -1201,6 +1203,8 @@ const char *undefined_literal::what() const throw()
   snprintf(exc, 2*l, s, _e.x.id(), opstring(_e.type), _e.d);
   return exc;
 }
+
+} // namespace minicsp
 
 //=================================================================================================
 #endif

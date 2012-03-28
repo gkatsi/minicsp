@@ -47,6 +47,8 @@ using std::cout;
 #define DEXEC if(0)
 #endif
 
+namespace minicsp {
+
 /* x == y + c     and        x == -y + c
 
    implemented as x = W*y + c, but with W == 1 or W == -1
@@ -3677,3 +3679,5 @@ void post_negative_table(Solver &s, std::vector<cspvar> const& x,
     s.addClause(ps);
   }
 }
+
+} // namespace minicsp

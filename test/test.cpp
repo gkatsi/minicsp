@@ -21,6 +21,8 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #include "test.hpp"
 #include "solver.hpp"
 
+using namespace minicsp;
+
 template<typename T>
 void assert_clause_exact0(Solver &s,
                           T& to_test, vec<Lit> const& expected)

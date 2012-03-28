@@ -18,8 +18,8 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 
 *************************************************************************/
 
-#ifndef __CMDLINE_HPP
-#define __CMDLINE_HPP
+#ifndef __MINICSP_CMDLINE_HPP
+#define __MINICSP_CMDLINE_HPP
 
 #include <boost/lexical_cast.hpp>
 #include <boost/utility.hpp>
@@ -27,6 +27,8 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #include <list>
 #include <string>
 #include <algorithm>
+
+namespace minicsp {
 
 class Solver;
 
@@ -84,5 +86,7 @@ namespace cmdline {
   void parse_solver_options(Solver &s, arglist& args);
 
 } // namespace cmdline
+
+} // namespace minicsp
 
 #endif

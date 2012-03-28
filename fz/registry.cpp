@@ -70,6 +70,8 @@ part of Gecode.
 
 using namespace std;
 
+namespace minicsp {
+
 namespace FlatZinc {
 
   Registry& registry(void) {
@@ -1286,3 +1288,5 @@ namespace FlatZinc {
     IntPoster __int_poster;
   }
 }
+
+} // namespace minicsp

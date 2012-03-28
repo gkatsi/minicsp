@@ -41,6 +41,8 @@
 #include <string>
 #include "ast.hpp"
 
+namespace minicsp {
+
 namespace FlatZinc {
 
   /// Abstract representation of a constraint
@@ -71,6 +73,8 @@ namespace FlatZinc {
   }
 
 }
+
+} //namespace minicsp
 
 #endif
 

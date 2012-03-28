@@ -48,6 +48,8 @@ part of the xcsp distribution
 #include "CSPParserCallback.hh"
 #include "cons.hpp"
 
+using namespace minicsp;
+
 struct unsupported {};
 
 struct minicsp_rel {

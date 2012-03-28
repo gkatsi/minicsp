@@ -23,6 +23,8 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+namespace minicsp {
+
 class Solver;
 
 double cpuTime(void);
@@ -30,6 +32,7 @@ uint64_t memUsed();
 void printStats(Solver& solver, const char *comment = 0L);
 void setup_signal_handlers(Solver *s);
 
+}
 
 #endif
 
