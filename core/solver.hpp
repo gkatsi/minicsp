@@ -199,6 +199,8 @@ public:
     bool      phase_saving;
     bool      allow_clause_dbg;   // set to 0 when the solver is cloned to avoid infinite recursion
 
+    uint64_t  conflict_lim;       // stop after this many conflicts
+
     BranchHeuristic varbranch;
     ValBranchHeuristic valbranch;
 

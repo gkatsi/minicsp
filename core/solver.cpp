@@ -69,6 +69,8 @@ Solver::Solver() :
   , phase_saving     (true)
   , allow_clause_dbg (true)
 
+  , conflict_lim     (-1)
+
     // branching heuristics
   , varbranch(VAR_VSIDS)
   , valbranch(VAL_LEX)
@@ -1811,7 +1813,7 @@ bool Solver::solve(const vec<Lit>& assumps)
     int lubymult = 1;
 
     // Search:
-    while (status == l_Undef){
+    while (status == l_Undef && conflict_lim > 0 && conflicts < conflict_lim){
         if (verbosity >= 1)
             reportf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", (int)conflicts, order_heap.size(), nClauses(), (int)clauses_literals, (int)nof_learnts, nLearnts(), (double)learnts_literals/nLearnts(), progress_estimate*100), fflush(stdout);
         if( !lubybits ) {
@@ -1864,7 +1866,9 @@ bool Solver::solve(const vec<Lit>& assumps)
 #ifndef NDEBUG
         verifyModel();
 #endif
-    }else{
+    } else if( conflict_lim > 0 && conflicts >= conflict_lim) {
+      ; // nothing
+    } else {
         assert(status == l_False);
         if (conflict.size() == 0)
             ok = false;
