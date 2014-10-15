@@ -58,6 +58,7 @@ of Gecode.
 
 %pure-parser
 %parse-param {void *parm}
+%lex-param {YYLEX_PARAM}
 %{
 #define YYPARSE_PARAM parm
 #define YYLEX_PARAM static_cast<ParserState*>(parm)->yyscanner
