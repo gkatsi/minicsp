@@ -130,6 +130,11 @@ const lbool l_Undef = toLbool( 0);
 //=================================================================================================
 // Clause -- a simple class for representing a clause:
 
+class Clause;
+
+template<class V>
+Clause* Clause_new(const V& ps, bool learnt = false,
+                   Lit effect = lit_Undef);
 
 class Clause {
     uint32_t size_etc;
@@ -155,8 +160,7 @@ public:
 
     // -- use this function instead:
     template<class V>
-    friend Clause* Clause_new(const V& ps, bool learnt = false,
-                              Lit effect = lit_Undef) {
+    friend Clause* Clause_new(const V& ps, bool learnt, Lit effect) {
         assert(sizeof(Lit)      == sizeof(uint32_t));
         assert(sizeof(float)    == sizeof(uint32_t));
         void* mem = malloc(sizeof(Clause) + sizeof(uint32_t)*(ps.size()));
