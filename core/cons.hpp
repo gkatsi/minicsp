@@ -18,8 +18,13 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 
 *************************************************************************/
 
+#ifndef __MINICSP_CONS_HPP
+#define __MINICSP_CONS_HPP
+
 #include "solver.hpp"
 #include <vector>
+
+namespace minicsp {
 
 /* Arithmetic relations */
 
@@ -284,3 +289,7 @@ void post_positive_table(Solver &s, std::vector<cspvar> const& x,
                          std::vector< std::vector<int> > const& tuples);
 void post_negative_table(Solver &s, std::vector<cspvar> const& x,
                          std::vector< std::vector<int> > const& tuples);
+
+} // namespace minicsp
+
+#endif

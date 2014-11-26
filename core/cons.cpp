@@ -47,6 +47,8 @@ using std::cout;
 #define DEXEC if(0)
 #endif
 
+namespace minicsp {
+
 /* x == y + c     and        x == -y + c
 
    implemented as x = W*y + c, but with W == 1 or W == -1
@@ -1743,15 +1745,15 @@ public:
     _rhs.setmin(s, lb, NO_REASON);
     _rhs.setmax(s, ub, NO_REASON);
 
-    _ubreason.growTo(n+1);
-    _lbreason.growTo(n+1);
-
     // wake on every assignment
     n = _svars.size();
     for(size_t i = 0; i != n; ++i)
       s.wake_on_lit(_svars[i].second, this);
     s.wake_on_lb(_rhs, this);
     s.wake_on_ub(_rhs, this);
+
+    _ubreason.growTo(n+1);
+    _lbreason.growTo(n+1);
   }
 
   Clause *wake(Solver& s, Lit p);
@@ -1804,9 +1806,9 @@ Clause *cons_pbvar::wake(Solver &s, Lit)
   if( _rhs.max(s) < ub )
     nonimpliedub = true;
 
-  _lbreason.shrink(n - lbi + 1);
+  _lbreason.shrink(_lbreason.size() - lbi);
   DO_OR_RETURN(_rhs.setminf(s, lb, _lbreason));
-  _ubreason.shrink(n - ubi + 1);
+  _ubreason.shrink(_ubreason.size() - ubi);
   DO_OR_RETURN(_rhs.setmaxf(s, ub, _ubreason));
 
   // check again, because rhs might have had holes!
@@ -3677,3 +3679,5 @@ void post_negative_table(Solver &s, std::vector<cspvar> const& x,
     s.addClause(ps);
   }
 }
+
+} // namespace minicsp

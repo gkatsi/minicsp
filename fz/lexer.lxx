@@ -118,7 +118,7 @@ int yy_input_proc(char* buf, int size, yyscan_t yyscanner);
 .                 { yyerror("Unknown character"); }
 %%
 int yy_input_proc(char* buf, int size, yyscan_t yyscanner) {
-  FlatZinc::ParserState* parm =
-    static_cast<FlatZinc::ParserState*>(yyget_extra(yyscanner));
+  minicsp::FlatZinc::ParserState* parm =
+    static_cast<minicsp::FlatZinc::ParserState*>(yyget_extra(yyscanner));
   return parm->fillBuffer(buf, size);
 }

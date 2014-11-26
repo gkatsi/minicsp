@@ -51,6 +51,8 @@
 #include "symboltable.hpp"
 #include "flatzinc.hpp"
 
+namespace minicsp {
+
 namespace FlatZinc {
 
   typedef std::pair<std::string,Option<std::vector<int>* > > intvartype;
@@ -148,6 +150,8 @@ namespace FlatZinc {
   };
 
 }
+
+} //namespace minicsp
 
 #endif
 

@@ -37,8 +37,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ******************************************************************************/
 
-#ifndef Solver_h
-#define Solver_h
+#ifndef __MINICSP_SOLVER_HPP
+#define __MINICSP_SOLVER_HPP
 
 #include <vector>
 #include <set>
@@ -50,6 +50,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "Alg.h"
 
 #include "solvertypes.hpp"
+
+namespace minicsp {
 
 //=================================================================================================
 // Solver -- the main class:
@@ -196,6 +198,8 @@ public:
     int       verbosity;          // Verbosity level. 0=silent, 1=some progress report                                         (default 0)
     bool      phase_saving;
     bool      allow_clause_dbg;   // set to 0 when the solver is cloned to avoid infinite recursion
+
+    uint64_t  conflict_lim;       // stop after this many conflicts
 
     BranchHeuristic varbranch;
     ValBranchHeuristic valbranch;
@@ -1201,6 +1205,8 @@ const char *undefined_literal::what() const throw()
   snprintf(exc, 2*l, s, _e.x.id(), opstring(_e.type), _e.d);
   return exc;
 }
+
+} // namespace minicsp
 
 //=================================================================================================
 #endif

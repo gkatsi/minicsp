@@ -89,6 +89,7 @@ void yyset_extra (void* user_defined ,void* yyscanner );
 
 extern int yydebug;
 
+using namespace minicsp;
 using namespace FlatZinc;
 
 void yyerror(void* parm, const char *str) {
@@ -275,6 +276,8 @@ AST::Node* arrayOutput(AST::Call* ann) {
  *
  */
 
+namespace minicsp {
+
 namespace FlatZinc {
 
   FlatZincModel* parse(const std::string& filename,
@@ -353,20 +356,22 @@ namespace FlatZinc {
 
 }
 
+} // namespace minicsp
+
 %}
 
 %union { int iValue; char* sValue; bool bValue; double dValue;
          std::vector<int>* setValue;
-         FlatZinc::AST::SetLit* setLit;
+         minicsp::FlatZinc::AST::SetLit* setLit;
          std::vector<double>* floatSetValue;
-         std::vector<FlatZinc::AST::SetLit>* setValueList;
-         FlatZinc::Option<FlatZinc::AST::SetLit* > oSet;
-         FlatZinc::VarSpec* varSpec;
-         FlatZinc::Option<FlatZinc::AST::Node*> oArg;
-         std::vector<FlatZinc::VarSpec*>* varSpecVec;
-         FlatZinc::Option<std::vector<FlatZinc::VarSpec*>* > oVarSpecVec;
-         FlatZinc::AST::Node* arg;
-         FlatZinc::AST::Array* argVec;
+         std::vector<minicsp::FlatZinc::AST::SetLit>* setValueList;
+         minicsp::FlatZinc::Option<minicsp::FlatZinc::AST::SetLit* > oSet;
+         minicsp::FlatZinc::VarSpec* varSpec;
+         minicsp::FlatZinc::Option<minicsp::FlatZinc::AST::Node*> oArg;
+         std::vector<minicsp::FlatZinc::VarSpec*>* varSpecVec;
+         minicsp::FlatZinc::Option<std::vector<minicsp::FlatZinc::VarSpec*>* > oVarSpecVec;
+         minicsp::FlatZinc::AST::Node* arg;
+         minicsp::FlatZinc::AST::Array* argVec;
        }
 
 %error-verbose
@@ -1139,7 +1144,7 @@ constraint_item :
         if (!pp->hadError) {
           try {
             pp->fg->postConstraint(c, $6);
-          } catch (FlatZinc::Error& e) {
+          } catch (minicsp::FlatZinc::Error& e) {
             yyerror(pp, e.toString().c_str());
           }
         }
@@ -1152,7 +1157,7 @@ solve_item :
         if (!pp->hadError) {
           try {
             pp->fg->solve($2);
-          } catch (FlatZinc::Error& e) {
+          } catch (minicsp::FlatZinc::Error& e) {
             yyerror(pp, e.toString().c_str());
           }
         } else {
@@ -1168,7 +1173,7 @@ solve_item :
               pp->fg->minimize($4,$2);
             else
               pp->fg->maximize($4,$2);
-          } catch (FlatZinc::Error& e) {
+          } catch (minicsp::FlatZinc::Error& e) {
             yyerror(pp, e.toString().c_str());
           }
         } else {

@@ -67,6 +67,8 @@ of Gecode.
 #include "ast.hpp"
 #include "varspec.hpp"
 
+namespace minicsp {
+
 typedef std::vector<cspvar> IntVarArray;
 typedef std::vector<cspvar> BoolVarArray;
 typedef std::vector<setvar> SetVarArray;
@@ -264,6 +266,8 @@ namespace FlatZinc {
                        FlatZincModel* fzs=NULL);
 
 }
+
+} // namespace minicsp
 
 #endif
 

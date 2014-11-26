@@ -22,6 +22,8 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #include "cmdline.hpp"
 #include <map>
 
+namespace minicsp {
+
 namespace cmdline {
   using namespace std;
   map<string, BranchHeuristic> varbranch;
@@ -79,4 +81,6 @@ namespace cmdline {
       s.valbranch = valbranch[has_valbranch.second];
     }
   }
-}
+} // namespace cmdline
+
+} //namespace minicsp

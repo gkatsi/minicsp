@@ -22,6 +22,8 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #include "setcons.hpp"
 #include "cons.hpp"
 
+namespace minicsp {
+
 void post_setdiff(Solver &s, setvar a, setvar b, setvar c)
 {
   vec<Lit> ps;
@@ -639,3 +641,5 @@ void post_setsuperseteq_re(Solver &s, setvar a, setvar b, cspvar r)
 {
   post_setsubseteq_re(s, b, a, r);
 }
+
+} //namespace minicsp

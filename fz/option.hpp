@@ -38,6 +38,8 @@
 #ifndef __FLATZINC_OPTION_HH__
 #define __FLATZINC_OPTION_HH__
 
+namespace minicsp {
+
 namespace FlatZinc {
 
   /// Optional value
@@ -64,6 +66,8 @@ namespace FlatZinc {
   };
 
 }
+
+} //namespace minicsp
 
 #endif
 

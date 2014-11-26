@@ -26,6 +26,7 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #include "test.hpp"
 
 using namespace std;
+using namespace minicsp;
 
 namespace {
   void alldiff01()

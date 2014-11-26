@@ -65,6 +65,8 @@ of Gecode.
 #include <set>
 using namespace std;
 
+namespace minicsp {
+
 namespace FlatZinc {
   inline
   set<int> setrange(int min, int max)
@@ -524,5 +526,7 @@ namespace FlatZinc {
   }
 
 }
+
+} //namespace minicsp
 
 // STATISTICS: flatzinc-any

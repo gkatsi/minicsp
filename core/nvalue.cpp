@@ -29,6 +29,8 @@ using std::max;
 using std::sort;
 using std::ostream;
 
+namespace minicsp {
+
 /* This is based on Beldiceanu's algorithm from CP 2001, but only for
    pruning N. His algorithm for pruning X ends up being quadratic in
    the worst case (needs to examine every clique for every variable)
@@ -432,3 +434,5 @@ void post_atmostnvalue_md(Solver &s, std::vector<cspvar> const& x, cspvar N)
     }
   post_independent_set(s, x.size(), eq_re, N);
 }
+
+} //namespace minicsp

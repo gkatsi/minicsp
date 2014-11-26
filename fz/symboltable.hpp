@@ -41,6 +41,8 @@
 #include <map>
 #include <vector>
 
+namespace minicsp {
+
 namespace FlatZinc {
 
   /// Symbol table mapping identifiers (strings) to values
@@ -73,6 +75,9 @@ namespace FlatZinc {
   }
 
 }
+
+} //namespace minicsp
+
 #endif
 
 // STATISTICS: flatzinc-any

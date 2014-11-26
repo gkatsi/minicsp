@@ -378,6 +378,26 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(pbvar04);
+
+  // test that pruning the rhs does not put any lit_undefs in the clause
+  void pbvar05()
+  {
+    Solver s;
+    vector<cspvar> x = s.newCSPVarArray(3, 0, 1);
+    vector<int> w(3);
+    for(int i = 0; i != 3; ++i) w[i] = 3;
+    w[1] = 0;
+    cspvar rhs = s.newCSPVar(0, 3);
+    post_pb(s, x, w, 0, rhs);
+
+    s.newDecisionLevel();
+    x[0].setmin(s, 1, NO_REASON);
+    assert( !s.propagate() );
+    assert(rhs.min(s) == 3);
+    assert(rhs.max(s) == 3);
+    s.cancelUntil(0);
+  }
+  REGISTER_TEST(pbvar05);
 }
 
 void pb_test()

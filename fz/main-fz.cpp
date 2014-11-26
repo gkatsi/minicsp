@@ -30,6 +30,7 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #include "utils.hpp"
 
 using namespace std;
+using namespace minicsp;
 
 int main(int argc, char *argv[])
 {

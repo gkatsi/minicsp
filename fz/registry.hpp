@@ -62,6 +62,8 @@ of Gecode.
 #include <string>
 #include <map>
 
+namespace minicsp {
+
 namespace FlatZinc {
 
   /// Map from constraint identifier to constraint posting functions
@@ -85,6 +87,8 @@ namespace FlatZinc {
 
   /// Return global registry object
   Registry& registry(void);
+
+}
 
 }
 

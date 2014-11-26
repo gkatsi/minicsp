@@ -27,6 +27,8 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <stdexcept>
 
+using namespace minicsp;
+
 void assert_clause_exact(Solver &s, Clause *to_test,
                          vec<Lit> const& expected);
 void assert_clause_contains(Solver &s, Clause *to_test,

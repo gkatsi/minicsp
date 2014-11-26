@@ -43,6 +43,8 @@
 #include <vector>
 #include <iostream>
 
+namespace minicsp {
+
 namespace FlatZinc {
 
   /// %Alias for a variable specification
@@ -157,6 +159,8 @@ namespace FlatZinc {
   };
 
 }
+
+} // namespace minicsp
 
 #endif
 

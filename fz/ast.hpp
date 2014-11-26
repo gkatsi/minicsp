@@ -45,6 +45,8 @@
 
 #define forceinline inline
 
+namespace minicsp {
+
 /**
  * \namespace Gecode::FlatZinc::AST
  * \brief Abstract syntax trees for the %FlatZinc interpreter
@@ -488,6 +490,8 @@ namespace FlatZinc { namespace AST {
   }
 
 }}
+
+} //namespace minicsp
 
 #endif
 

@@ -38,12 +38,14 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 ***************************************************************************/
 
 
-#ifndef SolverTypes_h
-#define SolverTypes_h
+#ifndef __MINICSP_SOLVERTYPES_HPP
+#define __MINICSP_SOLVERTYPES_HPP
 
 #include <cassert>
 #include <stdint.h>
 #include <iostream>
+
+namespace minicsp {
 
 class Solver;
 
@@ -795,5 +797,7 @@ public:
 
   void shrink(int i) { _n -= i; }
 };
+
+} // namespace minicsp
 
 #endif

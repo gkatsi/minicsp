@@ -21,6 +21,8 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __MINICSP_SETCONS_HPP__
 #define __MINICSP_SETCONS_HPP__
 
+namespace minicsp {
+
 /* A \ B = C */
 void post_setdiff(Solver &s, setvar a, setvar b, setvar c);
 
@@ -76,5 +78,6 @@ void post_setsubseteq_re(Solver &s, setvar a, setvar b, cspvar p);
 void post_setsuperseteq_re(Solver &s, setvar a, setvar b, Lit p);
 void post_setsuperseteq_re(Solver &s, setvar a, setvar b, cspvar p);
 
+} //namespace minicsp
 
 #endif
