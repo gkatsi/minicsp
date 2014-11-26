@@ -631,8 +631,8 @@ void post_less(Solver& s, cspvar v1, cspvar v2, int c)
   s.addConstraint(con);
 }
 
-
-/* (x <= y + c) <=> b*/
+/* (x <= y + c) <=> b and the half-implication cases */
+template<bool LI, bool RI>
 class cons_leq_re : public cons {
   cspvar _x, _y;
   int _c;
@@ -656,23 +656,24 @@ public:
   ostream& printstate(Solver& s, ostream& os) const;
 };
 
-Clause *cons_leq_re::wake(Solver &s, Lit)
+template<bool LI, bool RI>
+Clause *cons_leq_re<LI, RI>::wake(Solver &s, Lit)
 {
   _reason.clear();
 
-  if( s.value(_b) == l_True ) {
+  if( LI && s.value(_b) == l_True ) {
     _reason.push( ~_b );
     return leq::leq_propagate(s, _x, _y, _c, _reason);
-  } else if( s.value(_b) == l_False ) {
+  } else if( RI && s.value(_b) == l_False ) {
     _reason.push( _b );
     return leq::leq_propagate(s, _y, _x, -_c-1, _reason);
   }
 
-  if( _x.min(s) > _y.max(s) + _c ) {
+  if( LI && _x.min(s) > _y.max(s) + _c ) {
     pushifdef(_reason, _x.r_min(s));
     pushifdef(_reason, _y.r_max(s));
     DO_OR_RETURN(s.enqueueFill(~_b, _reason));
-  } else if( _x.max(s) <= _y.min(s) + _c ) {
+  } else if( RI && _x.max(s) <= _y.min(s) + _c ) {
     pushifdef(_reason, _x.r_max(s));
     pushifdef(_reason, _y.r_min(s));
     DO_OR_RETURN(s.enqueueFill(_b, _reason));
@@ -681,24 +682,31 @@ Clause *cons_leq_re::wake(Solver &s, Lit)
   return 0L;
 }
 
-void cons_leq_re::clone(Solver & other)
+template<bool LI, bool RI>
+void cons_leq_re<LI, RI>::clone(Solver & other)
 {
-  cons *con = new cons_leq_re(other, _x, _y, _c, _b);
+  cons *con = new cons_leq_re<LI, RI>(other, _x, _y, _c, _b);
   other.addConstraint(con);
 }
 
-ostream& cons_leq_re::print(Solver &s, ostream& os) const
+template<bool LI, bool RI>
+ostream& cons_leq_re<LI, RI>::print(Solver &s, ostream& os) const
 {
   os << "(" << cspvar_printer(s, _x) << " <= " << cspvar_printer(s, _y);
   if( _c > 0 )
     os << " + " << _c;
   else if( _c < 0 )
     os << " - " << -_c;
-  os << ") <=> " << lit_printer(s, _b);
+  os << ") ";
+  if( LI ) os << '<';
+  os << '=';
+  if( RI ) os << '>';
+  os << lit_printer(s, _b);
   return os;
 }
 
-ostream& cons_leq_re::printstate(Solver & s, ostream& os) const
+template<bool LI, bool RI>
+ostream& cons_leq_re<LI, RI>::printstate(Solver & s, ostream& os) const
 {
   print(s, os);
   os << " (with " << cspvar_printer(s, _x) << " in " << domain_as_set(s, _x)
@@ -708,26 +716,32 @@ ostream& cons_leq_re::printstate(Solver & s, ostream& os) const
   return os;
 }
 
-void post_leq_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
+template<bool LI, bool RI>
+void post_leq_re_common(Solver &s, cspvar x, cspvar y, int c, Lit b)
 {
-  if( s.value(b) == l_True ) {
+  if( LI && s.value(b) == l_True ) {
     post_leq(s, x, y, c);
     return;
-  } else if( s.value(b) == l_False ) {
+  } else if( RI && s.value(b) == l_False ) {
     post_less(s, y, x, -c);
     return;
   }
 
-  if( x.max(s) <= y.min(s) + c ) {
+  if( RI && x.max(s) <= y.min(s) + c ) {
     s.uncheckedEnqueue(b);
     return;
-  } else if( x.min(s) > y.max(s) + c ) {
+  } else if( LI && x.min(s) > y.max(s) + c ) {
     s.uncheckedEnqueue(~b);
     return;
   }
 
-  cons *con = new cons_leq_re(s, x, y, c, b);
+  cons *con = new cons_leq_re<LI, RI>(s, x, y, c, b);
   s.addConstraint(con);
+}
+
+void post_leq_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+    post_leq_re_common<true, true>(s, x, y, c, b);
 }
 
 void post_leq_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
@@ -769,6 +783,98 @@ void post_gt_re(Solver &s, cspvar x, cspvar y, int c, cspvar b)
 void post_gt_re(Solver &s, cspvar x, cspvar y, int c, Lit b)
 {
   post_leq_re(s, y, x, -c-1, b);
+}
+
+void post_leq_re_ri(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+    post_leq_re_common<false, true>(s, x, y, c, b);
+}
+
+void post_leq_re_ri(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  assert( b.min(s) >= 0 && b.max(s) <= 1 );
+  if( b.max(s) == 0 ) {
+    post_leq_re_ri(s, x, y, c, ~Lit(b.eqi(s, 0)));
+    return;
+  }
+
+  post_leq_re_ri(s, x, y, c, Lit(b.eqi(s, 1)));
+}
+
+void post_less_re_ri(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  post_leq_re_ri(s, x, y, c-1, b);
+}
+
+void post_less_re_ri(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+  post_leq_re_ri(s, x, y, c-1, b);
+}
+
+void post_geq_re_ri(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  post_leq_re_ri(s, y, x, -c, b);
+}
+
+void post_geq_re_ri(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+  post_leq_re_ri(s, y, x, -c, b);
+}
+
+void post_gt_re_ri(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  post_leq_re_ri(s, y, x, -c-1, b);
+}
+
+void post_gt_re_ri(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+  post_leq_re_ri(s, y, x, -c-1, b);
+}
+
+void post_leq_re_li(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+    post_leq_re_common<true, false>(s, x, y, c, b);
+}
+
+void post_leq_re_li(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  assert( b.min(s) >= 0 && b.max(s) <= 1 );
+  if( b.max(s) == 0 ) {
+    post_leq_re_li(s, x, y, c, ~Lit(b.eqi(s, 0)));
+    return;
+  }
+
+  post_leq_re_li(s, x, y, c, Lit(b.eqi(s, 1)));
+}
+
+void post_less_re_li(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  post_leq_re_li(s, x, y, c-1, b);
+}
+
+void post_less_re_li(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+  post_leq_re_li(s, x, y, c-1, b);
+}
+
+void post_geq_re_li(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  post_leq_re_li(s, y, x, -c, b);
+}
+
+void post_geq_re_li(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+  post_leq_re_li(s, y, x, -c, b);
+}
+
+void post_gt_re_li(Solver &s, cspvar x, cspvar y, int c, cspvar b)
+{
+  post_leq_re_li(s, y, x, -c-1, b);
+}
+
+void post_gt_re_li(Solver &s, cspvar x, cspvar y, int c, Lit b)
+{
+  post_leq_re_li(s, y, x, -c-1, b);
 }
 
 /* abs: |x| = y + c*/

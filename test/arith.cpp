@@ -869,6 +869,150 @@ namespace {
   }
   REGISTER_TEST(geq_recount);
 
+  // we mostly just check that we do not do more than necessary in
+  // these half implications
+  void leq_re_ri01()
+  {
+      Solver s;
+      cspvar x = s.newCSPVar(5, 10);
+      cspvar y = s.newCSPVar(2, 7);
+      cspvar b = s.newCSPVar(0, 1);
+
+      post_leq_re_ri(s, x, y, 0, b);
+      assert( !s.propagate() );
+      assert( b.min(s) == 0 );
+      assert( b.max(s) == 1 );
+
+      s.newDecisionLevel();
+      b.setmin(s, 1, NO_REASON);
+      assert( !s.propagate() );
+      assert( x.min(s) == 5 );
+      assert( x.max(s) == 10 );
+      assert( y.min(s) == 2 );
+      assert( y.max(s) == 7 );
+      s.cancelUntil(0);
+
+      s.newDecisionLevel();
+      x.setmin(s, 8, NO_REASON);
+      assert( !s.propagate() );
+      assert( b.min(s) == 0 );
+      assert( b.max(s) == 1 );
+      s.cancelUntil(0);
+
+      s.newDecisionLevel();
+      x.setmax(s, 6, NO_REASON);
+      y.setmin(s, 6, NO_REASON);
+      assert( !s.propagate() );
+      assert( b.min(s) == 1 );
+      s.cancelUntil(0);
+
+      s.newDecisionLevel();
+      b.setmax(s, 0, NO_REASON);
+      assert( !s.propagate() );
+      assert( x.min(s) == 5 );
+      assert( x.max(s) == 10 );
+      assert( y.min(s) == 2 );
+      assert( y.max(s) == 7 );
+      s.newDecisionLevel();
+      y.setmin(s, 5, NO_REASON);
+      assert( !s.propagate() );
+      assert( x.min(s) == 6 );
+      s.cancelUntil(1);
+      s.newDecisionLevel();
+      x.setmax(s, 6, NO_REASON);
+      assert( !s.propagate() );
+      assert( y.max(s) == 5 );
+      s.cancelUntil(1);
+      s.newDecisionLevel();
+      x.setmax(s, 6, NO_REASON);
+      y.setmin(s, 6, NO_REASON);
+      assert( s.propagate() );
+      s.cancelUntil(0);
+  }
+  REGISTER_TEST(leq_re_ri01);
+
+  void leq_re_ricount()
+  {
+      Solver s;
+      cspvar x = s.newCSPVar(-1, 1);
+      cspvar y = s.newCSPVar(-1, 1);
+      cspvar b = s.newCSPVar(0, 1);
+      post_leq_re_ri(s, x, y, 0, b);
+      assert_num_solutions(s, 12);
+  }
+  REGISTER_TEST(leq_re_ricount);
+
+  void leq_re_li01()
+  {
+      Solver s;
+      cspvar x = s.newCSPVar(5, 10);
+      cspvar y = s.newCSPVar(2, 7);
+      cspvar b = s.newCSPVar(0, 1);
+
+      post_leq_re_li(s, x, y, 0, b);
+      assert( !s.propagate() );
+      assert( b.min(s) == 0 );
+      assert( b.max(s) == 1 );
+
+      s.newDecisionLevel();
+      b.setmax(s, 0, NO_REASON);
+      assert( !s.propagate() );
+      assert( x.min(s) == 5 );
+      assert( x.max(s) == 10 );
+      assert( y.min(s) == 2 );
+      assert( y.max(s) == 7 );
+      s.cancelUntil(0);
+
+      s.newDecisionLevel();
+      x.setmax(s, 5, NO_REASON);
+      y.setmin(s, 7, NO_REASON);
+      assert( !s.propagate() );
+      assert( b.min(s) == 0 );
+      assert( b.max(s) == 1 );
+      s.cancelUntil(0);
+
+      s.newDecisionLevel();
+      x.setmin(s, 8, NO_REASON);
+      assert( !s.propagate() );
+      assert( b.max(s) == 0 );
+      s.cancelUntil(0);
+
+      s.newDecisionLevel();
+      b.setmin(s, 1, NO_REASON);
+      assert( !s.propagate() );
+      assert( x.min(s) == 5 );
+      assert( x.max(s) == 7 );
+      assert( y.min(s) == 5 );
+      assert( y.max(s) == 7 );
+      s.newDecisionLevel();
+      y.setmax(s, 5, NO_REASON);
+      assert( !s.propagate() );
+      assert( x.max(s) == 5 );
+      s.cancelUntil(1);
+      s.newDecisionLevel();
+      x.setmin(s, 6, NO_REASON);
+      assert( !s.propagate() );
+      assert( y.min(s) == 6 );
+      s.cancelUntil(1);
+      s.newDecisionLevel();
+      x.setmin(s, 7, NO_REASON);
+      y.setmax(s, 6, NO_REASON);
+      assert( s.propagate() );
+      s.cancelUntil(0);
+  }
+  REGISTER_TEST(leq_re_li01);
+
+  void leq_re_licount()
+  {
+      Solver s;
+      cspvar x = s.newCSPVar(-1, 1);
+      cspvar y = s.newCSPVar(-1, 1);
+      cspvar b = s.newCSPVar(0, 1);
+      post_leq_re_li(s, x, y, 0, b);
+      assert_num_solutions(s, 15);
+  }
+  REGISTER_TEST(leq_re_licount);
+
   void max01()
   {
     Solver s;

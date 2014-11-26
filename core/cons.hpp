@@ -63,6 +63,34 @@ void post_geq_re(Solver &s, cspvar x, cspvar y, int c, Lit b);
 void post_gt_re(Solver &s, cspvar x, cspvar y, int c, cspvar b);
 void post_gt_re(Solver &s, cspvar x, cspvar y, int c, Lit b);
 
+/* right implication version of the above */
+/* v1 <= v2 + c => b */
+void post_leq_re_ri(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_leq_re_ri(Solver &s, cspvar x, cspvar y, int c, Lit b);
+/* v1 < v2 + c => b */
+void post_less_re_ri(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_less_re_ri(Solver &s, cspvar x, cspvar y, int c, Lit b);
+/* v1 >= v2 + c => b */
+void post_geq_re_ri(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_geq_re_ri(Solver &s, cspvar x, cspvar y, int c, Lit b);
+/* v1 > v2 + c => b */
+void post_gt_re_ri(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_gt_re_ri(Solver &s, cspvar x, cspvar y, int c, Lit b);
+
+/* left implication versions */
+/* v1 <= v2 + c <= b */
+void post_leq_re_li(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_leq_re_li(Solver &s, cspvar x, cspvar y, int c, Lit b);
+/* v1 < v2 + c <= b */
+void post_less_re_li(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_less_re_li(Solver &s, cspvar x, cspvar y, int c, Lit b);
+/* v1 >= v2 + c <= b */
+void post_geq_re_li(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_geq_re_li(Solver &s, cspvar x, cspvar y, int c, Lit b);
+/* v1 > v2 + c <= b */
+void post_gt_re_li(Solver &s, cspvar x, cspvar y, int c, cspvar b);
+void post_gt_re_li(Solver &s, cspvar x, cspvar y, int c, Lit b);
+
 /* |x| = y + c */
 void post_abs(Solver& s, cspvar v1, cspvar v2, int c);
 

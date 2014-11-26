@@ -114,6 +114,6 @@ void test_container::run()
   for(size_t i = 0; i != tests.size(); ++i) {
     cout << tests[i].first << "..." << flush;
     (*tests[i].second)();
-    cout << "OK\n";
+    cout << "OK" << endl;
   }
 }
