@@ -1,7 +1,7 @@
 /*************************************************************************
 minicsp
 
-Copyright 2010--2011 George Katsirelos
+Copyright 2010--2014 George Katsirelos
 
 Minicsp is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -317,6 +317,16 @@ void post_positive_table(Solver &s, std::vector<cspvar> const& x,
                          std::vector< std::vector<int> > const& tuples);
 void post_negative_table(Solver &s, std::vector<cspvar> const& x,
                          std::vector< std::vector<int> > const& tuples);
+
+/* lex ordering constraints: given two vectors x,y of equal length, it
+   holds if the string x is lexicographically leq (resp, less) than
+   the string y. Declaratively lex_leq(x,y) <=> x[0] <= y[0] && (x[0]
+   == y[0] -> lex_leq(x[1:n], y[1:n])). lex_less(x,y) <=> lex_leq(x,y)
+   && x != y. */
+void post_lex_leq(Solver &s, std::vector<cspvar> const& x,
+                  std::vector<cspvar> const& y);
+void post_lex_less(Solver &s, std::vector<cspvar> const& x,
+                   std::vector<cspvar> const& y);
 
 } // namespace minicsp
 

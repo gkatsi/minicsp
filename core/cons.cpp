@@ -1,7 +1,7 @@
 /*************************************************************************
 minicsp
 
-Copyright 2010--2011 George Katsirelos
+Copyright 2010--2014 George Katsirelos
 
 Minicsp is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -3784,6 +3784,70 @@ void post_negative_table(Solver &s, std::vector<cspvar> const& x,
       ps.push( x[j].r_eq( s, tuples[i][j] ) );
     s.addClause(ps);
   }
+}
+
+void post_lex_common(Solver &s, std::vector<cspvar> const& x,
+                     std::vector<cspvar> const& y,
+                     std::vector<Var> const& b,
+                     std::vector<Var> const& c)
+{
+    /* we post the decomposition
+     * bi -> xi <= yi
+     * ci <-> xi < yi
+     * bi /\ -ci -> b(i+1)
+     * b0
+     *
+     * Note that the first constraint is a one-way implication. If it
+     * is equivalence we would need a third Boolean var to get the
+     * same effect.
+     */
+
+    using std::size_t;
+    size_t n = x.size();
+    vec<Lit> ps;
+    for(size_t i = 0; i != n; ++i) {
+        post_leq_re_li(s, x[i], y[i], 0, Lit(b[i]));
+        post_leq_re(s, x[i], y[i], -1, Lit(c[i]));
+
+        if( i < n-1 ) {
+            ps.clear();
+            ps.push(~Lit(b[i]));
+            ps.push(Lit(c[i]));
+            ps.push(Lit(b[i+1]));
+            s.addClause(ps);
+        }
+    }
+    s.enqueue(Lit(b[0]));
+}
+
+void post_lex_leq(Solver &s, std::vector<cspvar> const& x,
+                  std::vector<cspvar> const& y)
+{
+    assert(x.size() == y.size());
+    std::size_t n = x.size();
+    std::vector<Var> b(n), c(n);
+    for(size_t i = 0; i != n; ++i) {
+        b[i] = s.newVar();
+        c[i] = s.newVar();
+    }
+    post_lex_common(s, x, y, b, c);
+}
+
+void post_lex_less(Solver &s, std::vector<cspvar> const& x,
+                   std::vector<cspvar> const& y)
+{
+    assert(x.size() == y.size());
+    size_t n = x.size();
+    std::vector<Var> b(n), c(n);
+    for(size_t i = 0; i != n; ++i) {
+        b[i] = s.newVar();
+        c[i] = s.newVar();
+    }
+    post_lex_common(s, x, y, b, c);
+    vec<Lit> ps;
+    ps.push(~Lit(b[n-1]));
+    ps.push(Lit(c[n-1]));
+    s.addClause(ps);
 }
 
 } // namespace minicsp

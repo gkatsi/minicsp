@@ -1,7 +1,7 @@
 /*************************************************************************
 minicsp
 
-Copyright 2010--2011 George Katsirelos
+Copyright 2010--2014 George Katsirelos
 
 Minicsp is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -29,6 +29,7 @@ void regular_test();
 void alldiff_test();
 void nvalue_test();
 void set_test();
+void lex_test();
 
 int main()
 {
@@ -43,5 +44,6 @@ int main()
   alldiff_test();
   nvalue_test();
   set_test();
+  lex_test();
   return 0;
 }
