@@ -1798,7 +1798,7 @@ bool Solver::solve(const vec<Lit>& assumps)
     assumps.copyTo(assumptions);
 
     double  nof_conflicts = restart_first;
-    double  nof_learnts   = nClauses() * learntsize_factor;
+    double  nof_learnts   = std::max(100.0, nClauses() * learntsize_factor);
     lbool   status        = l_Undef;
 
     if (verbosity >= 1){
