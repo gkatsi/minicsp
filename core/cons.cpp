@@ -3293,11 +3293,13 @@ namespace regular {
       else
         l.layer_states.push_back(ns*i+1);
       l.layer_trans.push_back(l.d.size());
+      int prevq = -1;
+      transition prevt(-1,-1,-1);
       for(size_t j = 0; j != aut.d.size(); ++j) {
         transition const& t = aut.d[j];
         if( t.q0 == 0 || t.q1 == 0 ) continue;
         if( !X[i].indomain(solver, t.s) ) continue;
-        if( j == 0 || t.q0 != aut.d[j-1].q0 ) {
+        if( prevq < 0 || t.q0 != prevt.q0 ) {
           while( l.state_trans.size() < (unsigned)t.q0+i*ns ) {
             l.state_trans.push_back(l.d.size() );
             l.state_layer.push_back( i );
