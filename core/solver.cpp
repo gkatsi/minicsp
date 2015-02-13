@@ -573,10 +573,8 @@ Lit Solver::pickBranchLitVSIDS(int polarity_mode, double random_var_freq)
     case polarity_rnd:   sign = irand(random_seed, 2); break;
     default: assert(false); }
 
-    if( next != var_Undef && phase_saving && phase[next] != l_Undef ) {
-      sign = (phase[next] == l_True);
-      phase[next] = l_Undef;
-    }
+    if( next != var_Undef && phase_saving && phase[next] != l_Undef )
+      sign = (phase[next] == l_False);
 
     return next == var_Undef ? lit_Undef : Lit(next, sign);
 }
