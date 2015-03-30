@@ -105,7 +105,11 @@ int main(int argc, char *argv[])
       ++ns;
       cout << "solution " << ns << ": ";
       cb.print_solution();
-      s.excludeLast();
+      try {
+        s.excludeLast();
+      } catch (unsat& e) {
+        next = false;
+      }
     }
     next = next && findall;
   } while(next);
