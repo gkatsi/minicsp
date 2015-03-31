@@ -105,10 +105,12 @@ int main(int argc, char *argv[])
       ++ns;
       cout << "solution " << ns << ": ";
       cb.print_solution();
-      try {
-        s.excludeLast();
-      } catch (unsat& e) {
-        next = false;
+      if ( findall ) {
+        try {
+          s.excludeLast();
+        } catch (unsat& e) {
+          next = false;
+        }
       }
     }
     next = next && findall;
