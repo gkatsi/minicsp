@@ -66,11 +66,16 @@ and
 Supported platforms
 -------------------
 
-minicsp was developed on linux (various versions of Fedora and
-Ubuntu). Using it on other platforms should not be hard, assuming you
-have a conforming C++ compiler. The only unixy feature used in the
-source is the use of signals to capture SIGINT, SIGHUP, SIGXCPU and
-SIGUSR1 to print solver statistics. You can safely remove that code.
+minicsp was developed and tested on linux (various versions of Fedora and
+Ubuntu). Additionally, the necessary project files to compile the flatzinc
+frontend using Visual Studio 2013 are provided.
+
+The included Visual Studio project files need the following environment variables
+to be defined on Windows:
+BOOST_DIR: Path to Boost libraries
+LIBXML_INCLUDE: Path to the include directory in your Libxml2 installation
+ICONV_INCLUDE: Path to include directory in your iconv installation. This library 
+is required to make libxml2 work properly.
 
 WARNING: gcc 4.5.x has a bug which causes it to miscompile minicsp
 (and minisat and other solvers based on it) at -O2 and above. Versions
