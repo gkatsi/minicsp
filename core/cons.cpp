@@ -3192,9 +3192,8 @@ Clause* cons_alldiff::propagate(Solver &s)
 
   assert(nmatched == n);
 
-  if (!_gac) {
+  if( !_gac )
     return 0L;
-  }
 
   size_t index = 0;
   for( unsigned scc = 0; scc != touch_ccs_size; ++scc ) {
