@@ -25,21 +25,21 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <unistd.h>
+
+#ifdef _MSC_VER
+#include <ctime>
+#endif
 
 namespace minicsp {
 
 /*************************************************************************************/
 #ifdef _MSC_VER
-#include <time.h>
-
 double cpuTime(void) {
     return (double)clock() / CLOCKS_PER_SEC; }
 #else
-
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <unistd.h>
-
 double cpuTime(void) {
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
