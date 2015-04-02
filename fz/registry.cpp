@@ -67,6 +67,7 @@ part of Gecode.
 #include "setcons.hpp"
 #include <vector>
 #include <set>
+#include <algorithm>
 
 using namespace std;
 

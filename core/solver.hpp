@@ -44,6 +44,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <set>
 #include <cstdio>
 #include <cstring>
+#include <string>
 
 #include "Vec.h"
 #include "Heap.h"
@@ -52,6 +53,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "solvertypes.hpp"
 
 namespace minicsp {
+
+#ifdef _MSC_VER
+#define snprintf _snprintf_s
+#endif
 
 //=================================================================================================
 // Solver -- the main class:
@@ -496,8 +501,11 @@ inline bool     Solver::okay          ()      const   { return ok; }
 //=================================================================================================
 // Debug + etc:
 
-
+#ifdef _MSC_VER
+#define reportf(format, ...) ( fflush(stdout), fprintf(stdout, format, ## __VA_ARGS__), fflush(stdout) )
+#else
 #define reportf(format, args...) ( fflush(stdout), fprintf(stdout, format, ## args), fflush(stdout) )
+#endif
 
 static inline void logLit(FILE* f, Lit l)
 {
@@ -1169,8 +1177,12 @@ struct push_temp_p {
   ~push_temp_p() { if(_p != lit_Undef ) _ps.pop(); }
 };
 
+#ifdef _MSC_VER
+#define PUSH_TEMP(x, y) push_temp_p BOOST_PP_CAT(pp, __LINE__)(x, y)
+#else
 #define PUSH_TEMP(x, y) push_temp_p BOOST_PP_CAT(pp, __LINE__) \
   __attribute__((unused)) (x,y)
+#endif
 
 //==================================================
 // a trick to avoid branching
@@ -1191,7 +1203,11 @@ const char *unassigned_var::what() const throw()
 {
   const char s[] = "expected var x%d to be assigned";
   static const int l = strlen(s);
+#if _MSC_VER
+  static char exc[2*_countof(s)+1];
+#else
   static char exc[2*strlen(s)+1];
+#endif
   snprintf(exc, 2*l, s, _x.id());
   return exc;
 }
@@ -1201,7 +1217,11 @@ const char *undefined_literal::what() const throw()
 {
   const char s[] = "literal x%d %s %d is undefined";
   static const int l = strlen(s);
+#if _MSC_VER
+  static char exc[2*_countof(s)+1];
+#else
   static char exc[2*strlen(s)+1];
+#endif
   snprintf(exc, 2*l, s, _e.x.id(), opstring(_e.type), _e.d);
   return exc;
 }

@@ -181,7 +181,9 @@ class cons_eq : public cons {
   vec<Lit> _reason; // cache to avoid the cost of allocation
 
   void requires() {
+#ifndef _MSC_VER
     int w[ (W==1)+(W==-1)-1 ] __attribute__ ((__unused__));
+#endif
   }
 public:
   cons_eq(Solver &s,
@@ -1086,7 +1088,7 @@ cons_lin_le<N>::cons_lin_le(Solver &s,
 template<size_t N>
 Clause *cons_lin_le<N>::wake(Solver &s, Lit)
 {
-  int pspos[n];
+  int *pspos = new int[n];
 
   int lb = _c;
   size_t nl = 0;
@@ -1106,6 +1108,7 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
     Clause *r = Clause_new(_ps);
     _ps.growTo(n, lit_Undef);
     s.addInactiveClause(r);
+    delete[] pspos;
     return r;
   }
 
@@ -1146,6 +1149,7 @@ Clause *cons_lin_le<N>::wake(Solver &s, Lit)
   }
   _ps.growTo(n, lit_Undef);
 
+  delete[] pspos;
   return 0L;
 }
 
@@ -3134,8 +3138,8 @@ Clause* cons_alldiff::propagate(Solver &s)
   bool *scc_splitpoint = s.deref_array<bool>(scc_splitpoint_ptr);
 
   // the start index of those sccs that have been touched
-  unsigned touch_ccs[n];
-  bool touch_ccs_in[n];
+  unsigned *touch_ccs = new unsigned[n];
+  bool *touch_ccs_in = new bool[n];
   unsigned touch_ccs_size = 0;
 
   for(size_t i = 0; i != n; ++i) touch_ccs_in[i] = false;
@@ -3174,6 +3178,8 @@ Clause* cons_alldiff::propagate(Solver &s)
   scc_wake_size = 0;
 
   if( valid && !_gac ) {
+    delete[] touch_ccs;
+    delete[] touch_ccs_in;
     return 0L;
   }
 
@@ -3185,13 +3191,18 @@ Clause* cons_alldiff::propagate(Solver &s)
     matching = matching0;
     revmatching = revmatching0;
     nmatched = n;
+    delete[] touch_ccs;
+    delete[] touch_ccs_in;
     return r;
   }
 
   assert(nmatched == n);
 
-  if( !_gac )
+  if (!_gac) {
+    delete[] touch_ccs;
+    delete[] touch_ccs_in;
     return 0L;
+  }
 
   size_t index = 0;
   for( unsigned scc = 0; scc != touch_ccs_size; ++scc ) {
@@ -3210,6 +3221,9 @@ Clause* cons_alldiff::propagate(Solver &s)
   tarjan_clear();
 
   assert(nmatched == n);
+
+  delete[] touch_ccs;
+  delete[] touch_ccs_in;
 
   return 0L;
 }

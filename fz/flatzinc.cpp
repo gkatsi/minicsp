@@ -63,6 +63,7 @@ of Gecode.
 #include <vector>
 #include <string>
 #include <set>
+#include <algorithm>
 using namespace std;
 
 namespace minicsp {
