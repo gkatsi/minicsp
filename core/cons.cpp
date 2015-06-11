@@ -1014,6 +1014,7 @@ class cons_lin_le : public cons {
 
   vec<Lit> _ps;
   size_t n;
+  vector<int> pspos;
   pair<int, cspvar> _vars[0];
 
   // computes the minimum contribution of var x with coeff w:
@@ -1088,7 +1089,8 @@ cons_lin_le<N>::cons_lin_le(Solver &s,
 template<size_t N>
 Clause *cons_lin_le<N>::wake(Solver &s, Lit)
 {
-  vector<int> pspos(n);
+  pspos.clear();
+  pspos.resize(n);
 
   int lb = _c;
   size_t nl = 0;
