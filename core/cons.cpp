@@ -3310,8 +3310,10 @@ namespace regular {
           }
           l.state_trans.push_back( l.d.size() );
           l.state_layer.push_back( i );
+          prevq = t.q0;
         }
         l.d.push_back( transition(t.q0+i*ns, t.s, t.q1+(i+1)*ns) );
+        prevt = t;
       }
     }
     // the last layer has all the states but no transitions
