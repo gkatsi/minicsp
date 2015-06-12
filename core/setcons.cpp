@@ -21,6 +21,7 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #include "solver.hpp"
 #include "setcons.hpp"
 #include "cons.hpp"
+#include <algorithm>
 
 namespace minicsp {
 

@@ -25,21 +25,21 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <unistd.h>
+
+#ifdef _MSC_VER
+#include <ctime>
+#endif
 
 namespace minicsp {
 
 /*************************************************************************************/
 #ifdef _MSC_VER
-#include <ctime>
-
 double cpuTime(void) {
     return (double)clock() / CLOCKS_PER_SEC; }
 #else
-
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <unistd.h>
-
 double cpuTime(void) {
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
@@ -111,6 +111,7 @@ void printStats(Solver& solver, const char *comment)
 
 static Solver* global_solver;
 static double previous_cputime;
+#ifndef _MSC_VER
 static void SIGINT_handler(int signum) {
     double curtime = cpuTime();
     if( curtime - previous_cputime < 2 ) {
@@ -127,15 +128,18 @@ static void SIGUSR_handler(int signum) {
     reportf("\n"); reportf("*** SIGUSR1 received ***\n");
     printStats(*global_solver);
 }
+#endif
 
 void setup_signal_handlers(Solver *s)
 {
   global_solver = s;
   previous_cputime = -5;
+#ifndef _MSC_VER
   signal(SIGINT,SIGINT_handler);
   signal(SIGHUP,SIGINT_handler);
   signal(SIGXCPU,SIGINT_handler);
   signal(SIGUSR1,SIGUSR_handler);
+#endif
 }
 
 } //namespace minicsp

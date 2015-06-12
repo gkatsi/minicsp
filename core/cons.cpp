@@ -181,7 +181,9 @@ class cons_eq : public cons {
   vec<Lit> _reason; // cache to avoid the cost of allocation
 
   void requires() {
+#ifndef _MSC_VER
     int w[ (W==1)+(W==-1)-1 ] __attribute__ ((__unused__));
+#endif
   }
 public:
   cons_eq(Solver &s,
@@ -1012,6 +1014,7 @@ class cons_lin_le : public cons {
 
   vec<Lit> _ps;
   size_t n;
+  vector<int> pspos;
   pair<int, cspvar> _vars[0];
 
   // computes the minimum contribution of var x with coeff w:
@@ -1086,7 +1089,8 @@ cons_lin_le<N>::cons_lin_le(Solver &s,
 template<size_t N>
 Clause *cons_lin_le<N>::wake(Solver &s, Lit)
 {
-  int pspos[n];
+  pspos.clear();
+  pspos.resize(n);
 
   int lb = _c;
   size_t nl = 0;
@@ -3134,8 +3138,8 @@ Clause* cons_alldiff::propagate(Solver &s)
   bool *scc_splitpoint = s.deref_array<bool>(scc_splitpoint_ptr);
 
   // the start index of those sccs that have been touched
-  unsigned touch_ccs[n];
-  bool touch_ccs_in[n];
+  vector<unsigned> touch_ccs(n);
+  vector<bool> touch_ccs_in(n);
   unsigned touch_ccs_size = 0;
 
   for(size_t i = 0; i != n; ++i) touch_ccs_in[i] = false;
@@ -3306,8 +3310,10 @@ namespace regular {
           }
           l.state_trans.push_back( l.d.size() );
           l.state_layer.push_back( i );
+          prevq = t.q0;
         }
         l.d.push_back( transition(t.q0+i*ns, t.s, t.q1+(i+1)*ns) );
+        prevt = t;
       }
     }
     // the last layer has all the states but no transitions
@@ -3447,19 +3453,25 @@ void post_regular(Solver &s, vector< cspvar > const& vars,
   if( r.find(*l.F.begin()) == r.end() )
     throw unsat();
 
-  vector<Var> sv(l.state_trans.size(), var_Undef);
-  vector<Var> tv(l.d.size(), var_Undef);
+  vector<Var> sv(l.state_trans.size(), var_Undef); // State variables
+  vector<Var> tv(l.d.size(), var_Undef); // Transition variables
 
   vec<Lit> ps, ps2;
 
   ensure_var(s, sv[l.q0]);
-  ps.push( Lit(sv[l.q0]) );
+  ps.push( Lit(sv[l.q0]) ); // Must start in the initial state
   s.addClause(ps);
 
   ps.clear();
   ensure_var(s, sv[*l.F.begin()]);
-  ps.push( Lit(sv[*l.F.begin()]) );
+  ps.push( Lit(sv[*l.F.begin()]) ); // Must end in the accepting state
   s.addClause(ps);
+
+  typedef map< int, vector<int> > incoming_map_t;
+  incoming_map_t imap; // Map each state to a vector of states
+                       // with outgoing edges to it
+  typedef map< pair<int, int>, vector<int> > trans_map_t;
+  trans_map_t tmap; // Map each V=d to the vector of transitions
 
   for( set<size_t>::iterator si = r.begin(), siend = r.end();
        si != siend; ++si) {
@@ -3472,33 +3484,80 @@ void post_regular(Solver &s, vector< cspvar > const& vars,
     ps2.clear();
     ps2.push( ~Lit( sv[st] ) );
     for(int i = l.state_trans[st]; i != l.state_trans[st+1]; ++i) {
-      transition tr = l.d[i];
-      if( tr.q1 == 0 ) continue;
+      transition tr = l.d[i]; // All outgoing transitions from `st'
+
+      if( tr.q1 == 0 ) continue; // continue if there is no path to an accepting state
       assert( tr.q0 == st );
       ensure_var(s, tv[i]);
       ensure_var(s, sv[tr.q1]);
 
+      imap[tr.q1].push_back(tv[i]);
+      tmap[make_pair(layer, tr.s)].push_back(tv[i]);
+
       ps.clear();
       ps.push( ~Lit( tv[i] ) );
       ps.push( Lit( sv[tr.q0] ) );
-      s.addClause(ps);
+      s.addClause(ps); // Transition from q0 to q1 implies that state is in the
+                       // next state (3b in [Bacchus, CP07])
 
       ps.clear();
       ps.push( ~Lit( tv[i] ) );
       ps.push( Lit( sv[tr.q1] ) );
-      s.addClause(ps);
-
+      s.addClause(ps); // Transition from q0 to q1 implies that state was in the
+                       // previous step (3a in [Bacchus, CP07])
       ps.clear();
       ps.push( ~Lit( tv[i] ) );
-      ps.push( Lit( vars[layer].eqi(s, tr.s) ) );
+      ps.push( Lit( vars[layer].eqi(s, tr.s) ) ); // Transition happened means
+                                                  // corresponding variable took that
+                                                  // value (3c in [Bacchus, CP07])
       s.addClause(ps);
 
       ps2.push( Lit( tv[i] ) );
     }
-    s.addClause(ps2);
+    s.addClause(ps2); // At least one outgoing transition is true
+                      // (4a in [Bacchus, CP07])
+    ps2.clear();
   }
 
-  if( !gac ) return;
+  if( !gac ) return; // FIXME: Is this required?
+
+  // For each state, at least one incoming transition must be true
+  // (4b in [Bacchus, CP07])
+  for (incoming_map_t::const_iterator mi = imap.begin(), miend = imap.end();
+       mi != miend; ++mi) {
+    int q1 = mi->first;
+    const vector<int> &incoming = mi->second;
+
+    ps2.push(~Lit(sv[q1]));
+    for (vector<int>::const_iterator vi = incoming.begin(), viend = incoming.end();
+         vi != viend; ++vi) {
+      Var tv = *vi;
+      ps2.push(Lit(tv));
+    }
+
+    s.addClause(ps2);
+    ps2.clear();
+  }
+
+  // For each V=d, at least one supporting transition must be enabled
+  // (5 in [Bacchus, CP07])
+  for (trans_map_t::const_iterator mi = tmap.begin(), miend = tmap.end();
+       mi != miend; ++mi) {
+    const cspvar &var = vars[mi->first.first];
+    int val = mi->first.second;
+    const vector<int> &transitions = mi->second;
+
+    ps2.push(~Lit(var.eqi(s, val)));
+
+    for (vector<int>::const_iterator ti = transitions.begin(), tiend = transitions.end();
+         ti != tiend; ++ti) {
+      Var tv = *ti;
+      ps2.push(Lit(tv));
+    }
+
+    s.addClause(ps2);
+    ps2.clear();
+  }
 }
 
 namespace cumulative {
