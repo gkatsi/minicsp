@@ -58,7 +58,7 @@ namespace {
     automaton a(d, 1, f);
 
     vector<cspvar> X = s.newCSPVarArray(5, 0, 3);
-    post_regular(s, X, a, false);
+    post_regular(s, X, a, true);
 
     // symbol not in the language, fail
     s.newDecisionLevel();
@@ -141,7 +141,7 @@ namespace {
     automaton a(d, 1, f);
 
     vector<cspvar> X = s.newCSPVarArray(5, 0, 3);
-    post_regular(s, X, a, false);
+    post_regular(s, X, a, true);
 
     // symbol not in the language, fail
     s.newDecisionLevel();
