@@ -3519,7 +3519,7 @@ void post_regular(Solver &s, vector< cspvar > const& vars,
     ps2.clear();
   }
 
-  if( !gac ) return; // FIXME: Is this required?
+  if( !gac ) return;
 
   // For each state, at least one incoming transition must be true
   // (4b in [Bacchus, CP07])
