@@ -3541,22 +3541,23 @@ void post_regular(Solver &s, vector< cspvar > const& vars,
 
   // For each V=d, at least one supporting transition must be enabled
   // (5 in [Bacchus, CP07])
-  for (trans_map_t::const_iterator mi = tmap.begin(), miend = tmap.end();
-       mi != miend; ++mi) {
-    const cspvar &var = vars[mi->first.first];
-    int val = mi->first.second;
-    const vector<int> &transitions = mi->second;
+  for(int i = 0; i != int(vars.size()); ++i) {
+      cspvar var = vars[i];
+      for(int val = var.min(s); val <= var.max(s); ++val) {
+          if( !var.indomain(s, val) ) continue;
+          const vector<int> &transitions = tmap[make_pair(i, val)];
 
-    ps2.push(~Lit(var.eqi(s, val)));
+          ps2.push(~Lit(var.eqi(s, val)));
 
-    for (vector<int>::const_iterator ti = transitions.begin(), tiend = transitions.end();
-         ti != tiend; ++ti) {
-      Var tv = *ti;
-      ps2.push(Lit(tv));
-    }
+          for (vector<int>::const_iterator ti = transitions.begin(), tiend = transitions.end();
+               ti != tiend; ++ti) {
+              Var tv = *ti;
+              ps2.push(Lit(tv));
+          }
 
-    s.addClause(ps2);
-    ps2.clear();
+          s.addClause(ps2);
+          ps2.clear();
+      }
   }
 }
 

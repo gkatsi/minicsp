@@ -58,7 +58,7 @@ namespace {
     automaton a(d, 1, f);
 
     vector<cspvar> X = s.newCSPVarArray(5, 0, 3);
-    post_regular(s, X, a, true);
+    post_regular(s, X, a, false);
 
     // symbol not in the language, fail
     s.newDecisionLevel();
@@ -141,7 +141,7 @@ namespace {
     automaton a(d, 1, f);
 
     vector<cspvar> X = s.newCSPVarArray(5, 0, 3);
-    post_regular(s, X, a, true);
+    post_regular(s, X, a, false);
 
     // symbol not in the language, fail
     s.newDecisionLevel();
@@ -193,6 +193,56 @@ namespace {
     s.cancelUntil(0);
   }
   REGISTER_TEST(regular02);
+
+  // some values unsupported at the root
+  void regular03()
+  {
+      Solver s;
+      int da[][3] = {
+          {1, 1, 2},
+          {1, 2, 5},
+          {1, 0, 1},
+          {2, 1, 2},
+          {2, 2, 3},
+          {2, 0, 2},
+          {3, 1, 4},
+          {3, 2, 3},
+          {3, 0, 3},
+          {4, 1, 4},
+          {4, 2, 0},
+          {4, 0, 4},
+          {5, 1, 6},
+          {5, 2, 5},
+          {5, 0, 5},
+          {6, 1, 6},
+          {6, 2, 7},
+          {6, 0, 6},
+          {7, 1, 0},
+          {7, 2, 7},
+          {7, 0, 7},
+          {-1, -1, -1}
+      };
+
+      vector<transition> d;
+      set<int> f;
+      buildd(da, d);
+      for(int i = 1; i <= 7; ++i)
+          f.insert(i);
+      automaton a(d, 1, f);
+
+      vector<cspvar> X = s.newCSPVarArray(8, 0, 2);
+      X[0].assign(s, 1, NO_REASON);
+      X[4].assign(s, 1, NO_REASON);
+      X[6].assign(s, 2, NO_REASON);
+      post_regular(s, X, a, true);
+      assert(!s.propagate());
+
+      for(int i = 1; i <= 3; ++i)
+          assert( !X[i].indomain(s, 2) );
+      assert(X[5].indomain(s, 2));
+      assert(X[6].indomain(s, 2));
+  }
+  REGISTER_TEST(regular03);
 }
 
 void regular_test()
