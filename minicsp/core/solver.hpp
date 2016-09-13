@@ -46,9 +46,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <cstring>
 #include <string>
 
-#include "Vec.h"
-#include "Heap.h"
-#include "Alg.h"
+#include "minicsp/mtl/Vec.h"
+#include "minicsp/mtl/Heap.h"
+#include "minicsp/mtl/Alg.h"
 
 #include "solvertypes.hpp"
 

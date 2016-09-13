@@ -2,7 +2,7 @@ MTL       = ../mtl
 CORE      = ../core
 CHDRS     = $(wildcard *.hpp) $(wildcard $(MTL)/*.h)
 EXEC      = minicsp
-CFLAGS    = -I$(MTL) -Wall -ffloat-store
+CFLAGS    = -I../.. -Wall -ffloat-store
 LFLAGS    = -lz
 
 include ../mtl/template.mk

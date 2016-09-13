@@ -19,7 +19,7 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************/
 
 #include "test.hpp"
-#include "solver.hpp"
+#include "minicsp/core/solver.hpp"
 
 using namespace minicsp;
 

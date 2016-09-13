@@ -1,7 +1,7 @@
 MTL       = ../mtl
 CORE      = ../core
 CHDRS     = $(wildcard *.hpp) $(wildcard $(MTL)/*.h)
-CFLAGS    = -I$(MTL) -I$(CORE) -Wall -ffloat-store
+CFLAGS    = -I.. -Wall -ffloat-store
 LFLAGS    = -lz
 
 COREOBJS  = $(CORE)/solver.o $(CORE)/cons.o $(CORE)/cmdline.o \

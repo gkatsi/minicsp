@@ -58,7 +58,7 @@ of Gecode.
 #ifndef __GECODE_FLATZINC_HH__
 #define __GECODE_FLATZINC_HH__
 
-#include "solver.hpp"
+#include "minicsp/core/solver.hpp"
 #include <iostream>
 
 #include <map>

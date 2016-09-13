@@ -45,6 +45,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <stdint.h>
 #include <iostream>
 
+#include "minicsp/mtl/Alg.h"
+#include "minicsp/mtl/Vec.h"
+
 namespace minicsp {
 
 class Solver;

@@ -19,10 +19,10 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************/
 
 #include <iostream>
-#include "solver.hpp"
-#include "cons.hpp"
-#include "cmdline.hpp"
-#include "utils.hpp"
+#include "minicsp/core/solver.hpp"
+#include "minicsp/core/cons.hpp"
+#include "minicsp/core/cmdline.hpp"
+#include "minicsp/core/utils.hpp"
 
 using namespace std;
 using namespace minicsp;

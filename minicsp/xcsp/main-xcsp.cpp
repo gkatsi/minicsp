@@ -46,9 +46,9 @@ part of the xcsp distribution
 #include <string>
 #include <iomanip>
 
-#include "solver.hpp"
-#include "cmdline.hpp"
-#include "utils.hpp"
+#include "minicsp/core/solver.hpp"
+#include "minicsp/core/cmdline.hpp"
+#include "minicsp/core/utils.hpp"
 
 #include "XMLParser_libxml2.hh"
 #include "minicsp_callback.hpp"

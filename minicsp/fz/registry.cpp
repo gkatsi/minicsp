@@ -61,10 +61,10 @@ part of Gecode.
 
 
 #include "registry.hpp"
-#include "solver.hpp"
+#include "minicsp/core/solver.hpp"
 #include "flatzinc.hpp"
-#include "cons.hpp"
-#include "setcons.hpp"
+#include "minicsp/core/cons.hpp"
+#include "minicsp/core/setcons.hpp"
 #include <vector>
 #include <set>
 #include <algorithm>

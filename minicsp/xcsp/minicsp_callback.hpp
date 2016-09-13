@@ -46,7 +46,7 @@ part of the xcsp distribution
 #include <vector>
 #include <map>
 #include "CSPParserCallback.hh"
-#include "cons.hpp"
+#include "minicsp/core/cons.hpp"
 
 using namespace minicsp;
 

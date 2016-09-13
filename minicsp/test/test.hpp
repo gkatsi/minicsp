@@ -21,7 +21,7 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __MINICSP_TEST
 #define __MINICSP_TEST
 
-#include "solver.hpp"
+#include "minicsp/core/solver.hpp"
 #include <vector>
 #include <map>
 #include <string>

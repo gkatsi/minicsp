@@ -20,8 +20,8 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <iostream>
 
-#include "solver.hpp"
-#include "cons.hpp"
+#include "minicsp/core/solver.hpp"
+#include "minicsp/core/cons.hpp"
 #include "test.hpp"
 
 using namespace std;

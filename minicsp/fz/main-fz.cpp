@@ -25,9 +25,9 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 #include <iomanip>
 
 #include "flatzinc.hpp"
-#include "solver.hpp"
-#include "cmdline.hpp"
-#include "utils.hpp"
+#include "minicsp/core/solver.hpp"
+#include "minicsp/core/cmdline.hpp"
+#include "minicsp/core/utils.hpp"
 
 using namespace std;
 using namespace minicsp;
