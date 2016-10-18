@@ -640,6 +640,18 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
     int pathC = 0;
     Lit p     = lit_Undef;
 
+    // if a propagator is not monotone (i.e., it may happen f(D1)
+    // \subset f(D2) even though D2 \subset D1), it may fail with a
+    // clause that contains no literals at the current decision level,
+    // leaving poor analyze all confused.
+    int maxlvl = 0;
+    for (int i = 0; i != confl->size(); ++i) {
+        Lit l = (*confl)[i];
+        if (level[var(l)] > maxlvl)
+            maxlvl = level[var(l)];
+    }
+    cancelUntil(maxlvl);
+
     // Generate conflict clause:
     //
     out_learnt.push();      // (leave room for the asserting literal)
