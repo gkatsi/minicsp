@@ -643,7 +643,8 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
     // if a propagator is not monotone (i.e., it may happen f(D1)
     // \subset f(D2) even though D2 \subset D1), it may fail with a
     // clause that contains no literals at the current decision level,
-    // leaving poor analyze all confused.
+    // leaving poor analyze all confused. This may even mean that the
+    // conflict clause is empty.
     int maxlvl = 0;
     for (int i = 0; i != confl->size(); ++i) {
         Lit l = (*confl)[i];
@@ -651,6 +652,10 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
             maxlvl = level[var(l)];
     }
     cancelUntil(maxlvl);
+    if (maxlvl == 0) {
+        out_btlevel = 0;
+        return;
+    }
 
     // Generate conflict clause:
     //
@@ -1675,6 +1680,8 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             learnt_clause.clear();
             analyze(confl, learnt_clause, backtrack_level);
             cancelUntil(backtrack_level);
+            if (learnt_clause.size() == 0)
+                return l_False;
             assert(value(learnt_clause[0]) == l_Undef);
 
             if (learnt_clause.size() == 1){
