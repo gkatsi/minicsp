@@ -175,6 +175,9 @@ public:
     int     nCSPVars   ()      const;        // The number of CSP variables
     int     nConstraints()     const;        // The number of original constraints
 
+    // Only useful during solving
+    int      decisionLevel    ()      const; // Gives the current decisionlevel.
+
     // Extra results: (read-only member variable)
     //
     vec<lbool> model;                   // If problem is satisfiable, this vector contains the model (if any).
@@ -370,7 +373,6 @@ protected:
 
     // Misc:
     //
-    int      decisionLevel    ()      const; // Gives the current decisionlevel.
     uint32_t abstractLevel    (Var x) const; // Used to represent an abstraction of sets of decision levels.
     double   progressEstimate ()      const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
 
