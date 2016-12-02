@@ -402,6 +402,8 @@ public:
     // Returns a random integer 0 <= x < size. Seed must never be 0.
     static inline int irand(double& seed, int size) {
         return (int)(drand(seed) * size); }
+
+    void    setrandomseed(double s) { random_seed = s; }
 };
 
 
