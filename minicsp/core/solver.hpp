@@ -45,6 +45,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <functional>
 
 #include "minicsp/mtl/Vec.h"
 #include "minicsp/mtl/Heap.h"
@@ -73,7 +74,7 @@ class btptr {
  * the corresponding value branching heuristic.
  */
 enum BranchHeuristic {
-    VAR_VSIDS, VAR_LEX, VAR_DOM, VAR_DOMWDEG
+    VAR_VSIDS, VAR_LEX, VAR_DOM, VAR_DOMWDEG, VAR_USER
 };
 
 enum ValBranchHeuristic {
@@ -177,6 +178,9 @@ public:
 
     // Only useful during solving
     int      decisionLevel    ()      const; // Gives the current decisionlevel.
+
+    // user branching heuristics
+    std::function<void(std::vector<Lit>&)> user_brancher;
 
     // Extra results: (read-only member variable)
     //
@@ -329,6 +333,8 @@ protected:
     std::vector<int> reduce_var_max;
     std::vector<char> reduce_var_asgn;
     std::vector<cspvar> reduce_var_toclear;
+
+    std::vector<Lit> user_candidates;
 
     // Main internal methods:
     //

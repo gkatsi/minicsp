@@ -614,6 +614,16 @@ Lit Solver::pickBranchLit(int polarity_mode, double random_var_freq)
   case VAR_DOM:
   case VAR_DOMWDEG:
     assert(0);
+  case VAR_USER: {
+      assert(user_brancher);
+      user_candidates.clear();
+      user_brancher(user_candidates);
+      if (user_candidates.empty())
+          return lit_Undef;
+      return *std::max_element(
+          begin(user_candidates), end(user_candidates),
+          [&](Lit a, Lit b) { return activity[var(a)] < activity[var(b)]; });
+  } break;
   }
   assert(0);
 }
