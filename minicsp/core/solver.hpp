@@ -180,7 +180,8 @@ public:
     int      decisionLevel    ()      const; // Gives the current decisionlevel.
 
     // user branching heuristics
-    std::function<void(std::vector<Lit>&)> user_brancher;
+    std::function<void(std::vector<Lit>&)> user_brancher; // if user sets varbranch == VAR_USER, this must be non-empty and generate a set of candidates
+    lbool currentVarPhase(Var x) const; // give out info to user branchers
 
     // Extra results: (read-only member variable)
     //

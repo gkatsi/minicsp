@@ -628,6 +628,8 @@ Lit Solver::pickBranchLit(int polarity_mode, double random_var_freq)
   assert(0);
 }
 
+lbool Solver::currentVarPhase(Var x) const { return phase[x]; }
+
 /*_________________________________________________________________________________________________
 |
 |  analyze : (confl : Clause*) (out_learnt : vec<Lit>&) (out_btlevel : int&)  ->  [void]
