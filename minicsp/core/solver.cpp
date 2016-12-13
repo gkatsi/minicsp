@@ -68,6 +68,7 @@ Solver::Solver() :
   , polarity_mode    (polarity_false)
   , verbosity        (0)
   , phase_saving     (true)
+  , solution_phase_saving(false)
   , allow_clause_dbg (true)
 
   , conflict_lim     (-1)
@@ -1923,6 +1924,11 @@ bool Solver::solve(const vec<Lit>& assumps)
             if( l == l_True )
               lb.insert(j);
           }
+        }
+
+        if( solution_phase_saving ) {
+            for(int i = 0; i != nVars(); ++i)
+                phase[i] = toLbool(assigns[i]);
         }
 #ifndef NDEBUG
         verifyModel();

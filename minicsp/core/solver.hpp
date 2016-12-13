@@ -209,7 +209,8 @@ public:
     bool      expensive_ccmin;    // Controls conflict clause minimization.                                                    (default TRUE)
     int       polarity_mode;      // Controls which polarity the decision heuristic chooses. See enum below for allowed modes. (default polarity_false)
     int       verbosity;          // Verbosity level. 0=silent, 1=some progress report                                         (default 0)
-    bool      phase_saving;
+    bool      phase_saving;          // standard phase saving: remember last seen polarity in the trail and use it for decisions
+    bool      solution_phase_saving; // solution phase saving (for opt problems): remember polarity in last solution and use that
     bool      allow_clause_dbg;   // set to 0 when the solver is cloned to avoid infinite recursion
 
     uint64_t  conflict_lim;       // stop after this many conflicts
