@@ -394,6 +394,7 @@ protected:
 
 public:
     std::vector<int> debug_solution;
+    std::vector<lbool> debug_solution_lits;
     void check_debug_solution(Lit p, Clause *from);
 
     // Static helpers:
@@ -596,6 +597,10 @@ std::ostream& operator<<(std::ostream& os, lit_printer lp)
 {
   Solver &s(lp._s);
   Lit l = lp._p;
+  if (l == lit_Undef) {
+    os << "lit_Undef";
+    return os;
+  }
   domevent pe = s.event(l);
   if( noevent(pe) )
     os << (sign(l) ? "-" : "") << var_printer(s, var(l));

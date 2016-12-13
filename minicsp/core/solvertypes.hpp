@@ -493,7 +493,7 @@ struct domevent
   event_type type;
   int d;
 
-  domevent() :  x(0), type(NONE), d(0) {}
+  domevent() :  x(-1), type(NONE), d(-1) {}
   domevent(cspvar px, event_type ptype, int pd) :
      x(px), type(ptype), d(pd) {}
 };

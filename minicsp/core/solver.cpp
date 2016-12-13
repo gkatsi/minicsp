@@ -1011,23 +1011,50 @@ void Solver::debugclause(Clause *from, cons *c)
 void Solver::check_debug_solution(Lit p, Clause *from)
 {
 #ifdef INVARIANTS
+    assert(!active_constraint || from);
+    // decisions are allowed to be wrong
+    if (from == NO_REASON && decisionLevel() > 0)
+        return;
+
+    if (!debug_solution_lits.empty() &&
+        (p == lit_Undef ||
+         sign(p) != (debug_solution_lits[var(p)] == l_False))) {
+        // p disagrees with stored solution
+        bool consistent{true};
+        for(int i = 0; i != nVars(); ++i) {
+            if (i != var(p) && value(i) != l_Undef &&
+                value(i) != debug_solution_lits[i]) {
+                consistent = false;
+                break;
+            }
+        }
+        if (!consistent)
+            cout << "p = " << lit_printer(*this, p)
+                 << " is inconsistent, rest of assignment consistent = "
+                 << consistent << " reason = " << from
+                 << " dlvl = " << decisionLevel() << endl;
+        assert(!consistent);
+    }
     if( debug_solution.empty() ) return;
-    domevent pe = events[toInt(p)];
-    switch(pe.type) {
-    case domevent::NEQ:
-      if( pe.d != debug_solution[pe.x._id] ) return;
-      break;
-    case domevent::EQ:
-      if( pe.d == debug_solution[pe.x._id] ) return;
-      break;
-    case domevent::LEQ:
-      if( pe.d >= debug_solution[pe.x._id] ) return;
-      break;
-    case domevent::GEQ:
-      if( pe.d <= debug_solution[pe.x._id] ) return;
-      break;
-    case domevent::NONE:
-      return;
+    domevent pe;
+    if( p != lit_Undef ) {
+        pe = events[toInt(p)];
+        switch(pe.type) {
+        case domevent::NEQ:
+            if( pe.d != debug_solution[pe.x._id] ) return;
+            break;
+        case domevent::EQ:
+            if( pe.d == debug_solution[pe.x._id] ) return;
+            break;
+        case domevent::LEQ:
+            if( pe.d >= debug_solution[pe.x._id] ) return;
+            break;
+        case domevent::GEQ:
+            if( pe.d <= debug_solution[pe.x._id] ) return;
+            break;
+        case domevent::NONE:
+            return;
+        }
     }
     cout << "\t\tinconsistent with x"
          << pe.x._id << " == " << debug_solution[pe.x._id] << "\n";
@@ -1041,7 +1068,7 @@ void Solver::check_debug_solution(Lit p, Clause *from)
         return;
       }
     }
-    assert( from == NO_REASON && decisionLevel() > 0);
+    assert(false);
 #endif
 }
 
@@ -1679,6 +1706,7 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
         }
         if (confl != NULL){
             // CONFLICT
+            check_debug_solution(lit_Undef, confl);
             conflicts++; conflictC++;
             if (decisionLevel() == 0) return l_False;
 
