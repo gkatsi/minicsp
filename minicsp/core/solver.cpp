@@ -1703,13 +1703,19 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
         } catch( unsat ) {
           assert(decisionLevel() == 0);
           ++conflicts;
+          if (trace)
+              cout << "UNSAT after exception\n";
           return l_False;
         }
         if (confl != NULL){
             // CONFLICT
             check_debug_solution(lit_Undef, confl);
             conflicts++; conflictC++;
-            if (decisionLevel() == 0) return l_False;
+            if (decisionLevel() == 0) {
+                if (trace)
+                    cout << "UNSAT after conflict at dlvl 0\n";
+                return l_False;
+            }
 
             if( !learning ) {
               Lit flip = trail[ trail_lim[ decisionLevel() - 1 ] ];
@@ -1721,8 +1727,11 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             learnt_clause.clear();
             analyze(confl, learnt_clause, backtrack_level);
             cancelUntil(backtrack_level);
-            if (learnt_clause.size() == 0)
+            if (learnt_clause.size() == 0) {
+                if (trace)
+                    cout << "UNSAT with empty explanation clause\n";
                 return l_False;
+            }
             assert(value(learnt_clause[0]) == l_Undef);
 
             if (learnt_clause.size() == 1){
@@ -1773,6 +1782,8 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             if (restarting &&
                 nof_conflicts >= 0 && conflictC >= nof_conflicts){
                 // Reached bound on number of conflicts:
+                if (trace)
+                    cout << "Restarting\n";
                 progress_estimate = progressEstimate();
                 cancelUntil(0);
                 return l_Undef; }
@@ -1811,9 +1822,12 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                 decisions++;
                 next = pickBranchLit(polarity_mode, random_var_freq);
 
-                if (next == lit_Undef)
+                if (next == lit_Undef) {
                     // Model found:
+                    if (trace)
+                        cout << "Solution found\n";
                     return l_True;
+                }
             }
 
             if( trace ) {
