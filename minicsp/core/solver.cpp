@@ -143,7 +143,7 @@ Var Solver::newVar(bool sign, bool dvar)
     wakes_on_lit.push();
     sched_on_lit.push();
 
-    reason    .push(NULL);
+    reason    .push({});
     assigns   .push(toInt(l_Undef));
     level     .push(-1);
     activity  .push(0);
@@ -648,7 +648,7 @@ lbool Solver::currentVarPhase(Var x) const { return phase[x]; }
 |  Effect:
 |    Will undo part of the trail, upto but not beyond the assumption of the current decision level.
 |________________________________________________________________________________________________@*/
-void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
+void Solver::analyze(Clause* inconfl, vec<Lit>& out_learnt, int& out_btlevel)
 {
     int pathC = 0;
     Lit p     = lit_Undef;
@@ -659,8 +659,8 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
     // leaving poor analyze all confused. This may even mean that the
     // conflict clause is empty.
     int maxlvl = 0;
-    for (int i = 0; i != confl->size(); ++i) {
-        Lit l = (*confl)[i];
+    for (int i = 0; i != inconfl->size(); ++i) {
+        Lit l = (*inconfl)[i];
         if (level[var(l)] > maxlvl)
             maxlvl = level[var(l)];
     }
@@ -678,40 +678,57 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
 
     if( trace && debugclauses )
       cout << "cnfl analysis starting with "
-           << print(*this, confl) << "\n";
+           << print(*this, inconfl) << "\n";
+
+    explanation_ptr confl{inconfl};
 
     do{
-        assert(confl != NULL);          // (otherwise should be UIP)
-        Clause& c = *confl;
+        assert(!confl.null());          // (otherwise should be UIP)
+        auto resolve_with = [&](auto &expl) {
+          if (trace && debugclauses)
+              cout << "resolving on " << lit_printer(*this, p) << " with "
+                   << print(*this, &expl) << "\n";
 
-        if( trace && debugclauses )
-          cout << "resolving with "
-               << print(*this, confl) << "\n";
+          for (Lit q : expl) {
+            if (p == q)
+              continue;
 
-        if (c.learnt())
+            if (!seen[var(q)] && level[var(q)] > 0) {
+              varBumpActivity(var(q));
+              seen[var(q)] = 1;
+              if (level[var(q)] >= decisionLevel())
+                pathC++;
+              else {
+                out_learnt.push(q);
+                if (level[var(q)] > out_btlevel)
+                  out_btlevel = level[var(q)];
+              }
+            }
+          }
+        };
+
+        if (confl.has<Clause>()) {
+          auto &c = *confl.get<Clause>();
+
+          if (c.learnt())
             claBumpActivity(c);
 
-        for (int j = 0; j < c.size(); j++){
-            Lit q = c[j];
-            if( p == q ) continue;
+          resolve_with(c);
+        } else {
+            auto *e = confl.get<explainer>();
+            auto &explbuffer = analyze_explbuffer;
+            explbuffer.clear();
+            e->explain(*this, p, explbuffer);
+            assert(explbuffer[0] == p);
 
-            if (!seen[var(q)] && level[var(q)] > 0){
-                varBumpActivity(var(q));
-                seen[var(q)] = 1;
-                if (level[var(q)] >= decisionLevel())
-                    pathC++;
-                else{
-                    out_learnt.push(q);
-                    if (level[var(q)] > out_btlevel)
-                        out_btlevel = level[var(q)];
-                }
-            }
+            resolve_with(explbuffer);
         }
 
         // Select next clause to look at:
         while (!seen[var(trail[index--])]);
         p     = trail[index+1];
         confl = reason[var(p)];
+        reason[var(p)].reset();
         seen[var(p)] = 0;
         pathC--;
 
@@ -732,12 +749,12 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
 
         out_learnt.copyTo(analyze_toclear);
         for (i = j = 1; i < out_learnt.size(); i++)
-            if (reason[var(out_learnt[i])] == NULL || !litRedundant(out_learnt[i], abstract_level))
+            if (reason[var(out_learnt[i])].null() || !litRedundant(out_learnt[i], abstract_level))
                 out_learnt[j++] = out_learnt[i];
     }else{
         out_learnt.copyTo(analyze_toclear);
         for (i = j = 1; i < out_learnt.size(); i++){
-            Clause& c = *reason[var(out_learnt[i])];
+            Clause& c = *explicit_reason(~out_learnt[i]);
             for (int k = 1; k < c.size(); k++)
                 if (!seen[var(c[k])] && level[var(c[k])] > 0){
                     out_learnt[j++] = out_learnt[i];
@@ -783,14 +800,15 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
     analyze_stack.clear(); analyze_stack.push(p);
     int top = analyze_toclear.size();
     while (analyze_stack.size() > 0){
-        assert(reason[var(analyze_stack.last())] != NULL);
-        Clause& c = *reason[var(analyze_stack.last())]; analyze_stack.pop();
+        assert(reason[var(analyze_stack.last())]);
+        Clause& c = *explicit_reason(~analyze_stack.last());
+        analyze_stack.pop();
 
         for (int i = 0; i < c.size(); i++){
             if( c[i] == p ) continue;
             Lit p  = c[i];
             if (!seen[var(p)] && level[var(p)] > 0){
-                if (reason[var(p)] != NULL && (abstractLevel(var(p)) & abstract_levels) != 0){
+                if (!reason[var(p)].null() && (abstractLevel(var(p)) & abstract_levels) != 0){
                     seen[var(p)] = 1;
                     analyze_stack.push(p);
                     analyze_toclear.push(p);
@@ -807,6 +825,26 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
     return true;
 }
 
+// If a literal has an explicit Clause * as its reason, return
+// this. Otherwise, make it explicit and return it
+Clause *Solver::explicit_reason(Lit p) {
+  auto& r = reason[var(p)];
+  if (r.null())
+      return nullptr;
+  if (r.has<Clause>())
+    return r.get<Clause>();
+
+  auto *e = r.get<explainer>();
+  auto &explbuffer = analyze_explbuffer;
+  explbuffer.clear();
+  e->explain(*this, p, explbuffer);
+  assert(explbuffer[0] == p);
+
+  auto *cl = Clause_new(explbuffer);
+  r.set(cl);
+  addInactiveClause(cl);
+  return cl;
+}
 
 // make sure a clause has no redundant information wrt to any one
 // variable: if it contains Xi != d, it cannot contain any other
@@ -916,11 +954,11 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
     for (int i = trail.size()-1; i >= trail_lim[0]; i--){
         Var x = var(trail[i]);
         if (seen[x]){
-            if (reason[x] == NULL){
+            if (reason[x].null()){
                 assert(level[x] > 0);
                 out_conflict.push(~trail[i]);
             }else{
-                Clause& c = *reason[x];
+                Clause& c = *explicit_reason(trail[i]);
                 for (int j = 1; j < c.size(); j++)
                     if (level[var(c[j])] > 0)
                         seen[var(c[j])] = 1;
@@ -950,7 +988,7 @@ void Solver::debugclause(Clause *from, cons *c)
   s1.watches.growTo(2*nv);
   s1.wakes_on_lit.growTo(nv);
   s1.sched_on_lit.growTo(nv);
-  s1.reason.growTo(nv, NULL);
+  s1.reason.growTo(nv);
   s1.assigns.growTo(nv, toInt(l_Undef));
   s1.level.growTo(nv, -1);
   s1.activity.growTo(nv, 0);
@@ -1009,12 +1047,16 @@ void Solver::debugclause(Clause *from, cons *c)
   assert(confl);
 }
 
-void Solver::check_debug_solution(Lit p, Clause *from)
+void Solver::check_debug_solution(Lit p, explanation_ptr from)
 {
 #ifdef INVARIANTS
-    assert(!active_constraint || from);
+    assert(!active_constraint || !learning || from);
     // decisions are allowed to be wrong
-    if (from == NO_REASON && decisionLevel() > 0)
+    if (learning && from == NO_REASON && decisionLevel() > 0)
+        return;
+    // when not learning, a decision is the first literal at the current dlvl
+    if (!learning && decisionLevel() > 0
+        && trail.size() == trail_lim[decisionLevel()-1])
         return;
 
     if (!debug_solution_lits.empty() &&
@@ -1029,7 +1071,7 @@ void Solver::check_debug_solution(Lit p, Clause *from)
                 break;
             }
         }
-        if (!consistent)
+        if (consistent)
             cout << "p = " << lit_printer(*this, p)
                  << " is inconsistent, rest of assignment consistent = "
                  << consistent << " reason = " << from
@@ -1073,11 +1115,13 @@ void Solver::check_debug_solution(Lit p, Clause *from)
 #endif
 }
 
-void Solver::uncheckedEnqueue_np(Lit p, Clause *from)
+void Solver::uncheckedEnqueue_np(Lit p, explanation_ptr from)
 {
     assert(value(p) == l_Undef);
     assigns [var(p)] = toInt(lbool(!sign(p)));  // <<== abstract but not uttermost effecient
     level   [var(p)] = decisionLevel();
+    if (reason[var(p)] && reason[var(p)].has<explainer>())
+        reason[var(p)].get<explainer>()->release();
     reason  [var(p)] = from;
     trail.push(p);
 
@@ -1107,25 +1151,24 @@ void Solver::uncheckedEnqueue_np(Lit p, Clause *from)
    unit propagation and does not bring the clauses ps1...ps4 into the
    cache.
  */
-void Solver::uncheckedEnqueue(Lit p, Clause* from)
+void Solver::uncheckedEnqueue_common(Lit p, explanation_ptr from)
 {
-    if(trace) {
-      domevent const &pevent = events[toInt(p)];
-      if( !noevent(pevent) ) {
-        cout << domevent_printer(*this, pevent) << " forced by ";
-        if( active_constraint )
-          cout << cons_state_printer(*this, *active_constraint);
+    if (trace) {
+        domevent const& pevent = events[toInt(p)];
+        if (!noevent(pevent))
+            cout << domevent_printer(*this, pevent);
         else
-          cout << " clause " << print(*this, from);
-      } else {
-        if( active_constraint )
-          cout << lit_printer(*this, p) << " forced by "
-               << cons_state_printer(*this, *active_constraint);
-        else
-          cout << lit_printer(*this, p) << " forced by clause "
-               << print(*this, from);
-      }
-      cout << " at level " << decisionLevel() << "\n";
+            cout << lit_printer(*this, p);
+        cout << " forced by ";
+        if (active_constraint)
+            cout << cons_state_printer(*this, *active_constraint);
+        if (from) {
+            if (from.has<Clause>())
+                cout << " clause " << print(*this, from.get<Clause>());
+            else
+                cout << " " << *from.get<explainer>();
+        }
+        cout << " at level " << decisionLevel() << "\n";
     }
 
     check_debug_solution(p, from);
@@ -1265,6 +1308,17 @@ void Solver::uncheckedEnqueue(Lit p, Clause* from)
         assert( xf.min != i && xf.max != i );
     }
 #endif
+}
+
+void Solver::uncheckedEnqueue(Lit p, Clause* from)
+{
+    uncheckedEnqueue_common(p, explanation_ptr(from));
+}
+
+void Solver::uncheckedEnqueueDeferred(Lit p, explainer *from)
+{
+    uncheckedEnqueue_common(p, explanation_ptr(from));
+    from->use();
 }
 
 Clause *Solver::enqueueFill(Lit p, vec<Lit>& ps)
@@ -1755,8 +1809,11 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                      << domain_as_set(*this, x);
               }
               cout << "\n";
+              auto latest_clause = reason[var(learnt_clause[0])];
+              assert(latest_clause.has<Clause>());
+              auto *cl = latest_clause.get<Clause>();
               cout << "Conflict clause " << conflicts
-                   << ": " << print(*this, reason[var(learnt_clause[0])])
+                   << ": " << print(*this, cl)
                    << "\n";
             }
 
@@ -1765,6 +1822,13 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
 
         }else{
             // NO CONFLICT
+
+            // Simplify the set of problem clauses:
+            if (decisionLevel() == 0 && !simplify())
+                return l_False;
+
+            if ( decisionLevel() == 0 || inactive.size() > 10*nAssigns() )
+              gcInactive();
 
             /* Increase decision level. We must now call
                newDecisionLevel() immediately after propagate() in
@@ -1788,12 +1852,6 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                 cancelUntil(0);
                 return l_Undef; }
 
-            // Simplify the set of problem clauses:
-            if (decisionLevel() == 0 && !simplify())
-                return l_False;
-
-            if ( decisionLevel() == 0 || inactive.size() > 10*nAssigns() )
-              gcInactive();
 
             if (*nof_learnts >= 0 && learnts.size()-nAssigns() >= *nof_learnts) {
                 // Reduce the set of learnt clauses:
@@ -2060,11 +2118,6 @@ Clause* cons::propagate(Solver&)
 {
   assert(0);
   return 0L;
-}
-
-void cons::explain(Solver&, Lit, vec<Lit>&)
-{
-  assert(0);
 }
 
 void cons::clone(Solver &other)

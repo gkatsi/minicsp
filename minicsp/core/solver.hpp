@@ -227,10 +227,18 @@ public:
 
 public:
     // Interface to propagators
+    //
+    // Note below that both clauses and explainers are owned by the
+    // constraint. It can hand over responsibility for clauses to the
+    // solver via addInactiveClause(), but not for explainers
     void     debugclause      (Clause *from, cons *c);                                 // check whether clause *from causes a failure given constraint c
-    void     uncheckedEnqueue (Lit p, Clause* from = NULL);                            // Enqueue a literal. Assumes value of literal is undefined.
-    bool     enqueue          (Lit p, Clause* from = NULL);                            // Test if fact 'p' contradicts current state, enqueue otherwise.
+    void     uncheckedEnqueue (Lit p, Clause* from = nullptr);                         // Enqueue a literal. Assumes value of literal is undefined.
+    void     uncheckedEnqueueDeferred (Lit p, explainer* from);                        // as above, but with a deferred explanation
+    bool     enqueue          (Lit p, Clause* from = nullptr);                         // Test if fact 'p' contradicts current state, enqueue otherwise.
+    bool     enqueueDeferred  (Lit p, explainer* from = nullptr);                      // As above, but with a deferred explanation
     Clause*  enqueueFill      (Lit p, vec<Lit>& ps);                                   // Create an inactive clause that includes p and ps and force p
+
+
     Clause*  propagate        ();                                                      // Perform unit and constraint propagation.
                                                                                        // Returns conflicting clause or NULL
 
@@ -293,7 +301,7 @@ protected:
     vec<char>           decision_var;     // Declares if a variable is eligible for selection in the decision heuristic.
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
-    vec<Clause*>        reason;           // 'reason[var]' is the clause that implied the variables current value, or 'NULL' if none.
+    vec<explanation_ptr> reason;          // 'reason[var]' is the clause that implied the variables current value, or 'NULL' if none.
     vec<int>            level;            // 'level[var]' contains the level at which the assignment was made.
     vec<lbool>          phase;            // backjumped over as this polarity
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
@@ -328,6 +336,7 @@ protected:
     vec<char>           seen;
     vec<Lit>            analyze_stack;
     vec<Lit>            analyze_toclear;
+    vec<Lit>            analyze_explbuffer;
     vec<Lit>            add_tmp;
 
     std::vector<char> reduce_var_seen;
@@ -352,9 +361,12 @@ protected:
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.
     void     gcInactive       ();                                                      // Collect inactive and unlocked clauses
     void     removeSatisfied  (vec<Clause*>& cs);                                      // Shrink 'cs' to contain only non-satisfied clauses.
-    void     uncheckedEnqueue_np(Lit p, Clause *from);                                 // uncheckedEnqueue with no CSP propagation
+    void     uncheckedEnqueue_common(Lit p, explanation_ptr from);                     // common stuff done by both uE(Lit, Clause*) and uE(Lit, explainer*)
+    void     uncheckedEnqueue_np(Lit p, explanation_ptr from);                         // uncheckedEnqueue with no CSP propagation
     Clause*  propagate_inner  ();                                                      // Perform unit propagation, wake propagators,
                                                                                        // schedule propagators. Returns conflicting clause or NULL
+    Clause*  explicit_reason  (Lit p);                                                 // If a literal has a Clause as reason, return that. Otherwise, use the explainer to create
+                                                                                       // a clause, change the reason to that new clause and return that.
 
     // Constraint queue
     //
@@ -396,7 +408,7 @@ protected:
 public:
     std::vector<int> debug_solution;
     std::vector<lbool> debug_solution_lits;
-    void check_debug_solution(Lit p, Clause *from);
+    void check_debug_solution(Lit p, explanation_ptr from);
 
     // Static helpers:
     //
@@ -476,8 +488,27 @@ inline void Solver::claBumpActivity (Clause& c) {
                 learnts[i]->activity() *= 1e-20;
             cla_inc *= 1e-20; } }
 
-inline bool     Solver::enqueue         (Lit p, Clause* from)   { return value(p) != l_Undef ? value(p) != l_False : (uncheckedEnqueue(p, from), true); }
-inline bool     Solver::locked          (const Clause& c) const { return reason[var(c[0])] == &c && value(c[0]) == l_True; }
+inline bool Solver::enqueue(Lit p, Clause* from)
+{
+    return value(p) != l_Undef ? value(p) != l_False
+                               : (uncheckedEnqueue(p, from), true);
+}
+
+inline bool Solver::enqueueDeferred(Lit p, explainer* from)
+{
+    if (value(p) != l_Undef)
+        return value(p) != l_False;
+    uncheckedEnqueueDeferred(p, from);
+    return true;
+}
+
+inline bool Solver::locked(const Clause &c) const {
+    auto c0r = reason[var(c[0])];
+    if (!c0r.has<Clause>())
+        return false;
+    auto *cl = c0r.get<Clause>();
+    return cl == &c && value(c[0]) == l_True;
+}
 
 inline void     Solver::newDecisionLevel()  {
   trail_lim.push(trail.size());

@@ -44,6 +44,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <cassert>
 #include <stdint.h>
 #include <iostream>
+#include <algorithm>
+#include <memory>
 
 #include "minicsp/mtl/Alg.h"
 #include "minicsp/mtl/Vec.h"
@@ -130,6 +132,137 @@ const lbool l_True  = toLbool( 1);
 const lbool l_False = toLbool(-1);
 const lbool l_Undef = toLbool( 0);
 
+// ======================================================================
+// Pointer variant
+//
+// Store one of a set of pointers, using the free bits at the bottom
+// to store the discriminator
+
+namespace tagged_pointer_detail {
+
+template <typename T> inline constexpr int tagged_free_bits()
+{
+    int x = alignof(T*);
+    int bit{0};
+    while(x>>=1)
+      ++bit;
+    return bit;
+}
+
+// tagged pointer: store a pointer to T and a tag of N bits. The tag
+// can be accessed either as an integer (::tag()), or as a set of bits
+// (::[g,s,res]et_bit()). It requires that the alignment requirements
+// for T are strict enough to leave N bits free at the bottom
+template <typename T, int N> struct tagged_pointer_N {
+  static_assert(N <= tagged_free_bits<T>());
+  // mask: all pointers satisfy p & ~mask == 0, if N is set to honor
+  // the alignment of T
+  static constexpr uintptr_t mask = ~uintptr_t(0) << N;
+  uintptr_t p{0};
+
+  void set(T *pointer, std::size_t tag = 0) {
+    assert((tag & mask) == 0);
+    auto pdata = reinterpret_cast<std::size_t>(pointer);
+    assert((pdata & ~mask) == 0);
+    p = pdata | tag;
+  }
+  T *get() { return reinterpret_cast<T *>(p & mask); }
+  const std::size_t tag() { return p & ~mask; }
+  template <int Bit> bool get_bit() {
+    static_assert(Bit <= N);
+    return p & ~(1u << (Bit - 1));
+  }
+  template <int Bit> void set_bit() {
+    static_assert(Bit <= N);
+    p |= (1u << (Bit - 1));
+  }
+  template <int Bit> void reset_bit() {
+    static_assert(Bit <= N);
+    p &= ~(1u << (Bit - 1));
+  }
+
+};
+
+template <typename T>
+using tagged_pointer = tagged_pointer_N<T, tagged_free_bits<T>()>;
+
+template <typename... Types> inline constexpr int tagged_free_bits_variant() {
+  return std::min({tagged_free_bits<Types>()...});
+}
+
+template <typename T, typename... Types> inline constexpr int contained() {
+  std::initializer_list<bool> b{false, std::is_same<T, Types>::value...};
+  return std::max(b);
+}
+
+template <typename T, typename... Types> inline constexpr int indexof() {
+  bool b[sizeof...(Types)]{std::is_same<T, Types>::value...};
+  for (std::size_t i = 0; i != sizeof...(Types); ++i)
+    if (b[i] == true)
+      return i;
+  return sizeof...(Types) + 1;
+}
+
+template <typename... Types> inline constexpr bool has_duplicates_inner() {
+  return false;
+}
+template <typename T1, typename... Types>
+inline constexpr bool has_duplicates_inner(T1 *, Types *... targs) {
+  return contained<T1, Types...>() || has_duplicates_inner(targs...);
+}
+
+template <typename T1, typename... Types>
+inline constexpr bool has_duplicates() {
+  // we have to create actual (dummy) arguments, because we cannot
+  // overload functions on the template arguments
+  return has_duplicates_inner(static_cast<T1 *>(nullptr),
+                              static_cast<Types *>(nullptr)...);
+}
+
+} //namespace tagged_pointer_detail
+
+template <typename... Types> struct pointer_variant {
+  static constexpr int freebits =
+      tagged_pointer_detail::tagged_free_bits_variant<Types...>();
+  static constexpr int maxtypes = 1 << (freebits - 1);
+  static_assert(maxtypes > sizeof...(Types));
+  static_assert(!tagged_pointer_detail::has_duplicates<Types...>());
+
+  // default constructor etc
+  pointer_variant() = default;
+  pointer_variant(pointer_variant<Types...> const &o) = default;
+  template <typename T> pointer_variant(T *p) { set(p); }
+
+  template <typename T> void set(T *p) {
+    static_assert(tagged_pointer_detail::contained<T, Types...>());
+    data.set(p, 1+ tagged_pointer_detail::indexof<T, Types...>());
+  }
+  void reset() { data.set(nullptr, 0); }
+  template <typename T> T *get() {
+    static_assert(tagged_pointer_detail::contained<T, Types...>());
+    if (has<T>())
+      return static_cast<T *>(data.get());
+    else
+      return nullptr;
+  }
+
+  operator bool() { return !null(); }
+
+  // note we use 1 + index, because 0 is reserved for no type. Reduces
+  // the number of usable types by 1, but allows has() to return the
+  // right thing even for default constructed instances and to
+  // differentiate between (T1*)nullptr and (T2*)nullptr
+  template <typename T> bool has() {
+    static_assert(tagged_pointer_detail::contained<T, Types...>());
+    return (data.tag() == 1 + tagged_pointer_detail::indexof<T, Types...>());
+  }
+
+  bool empty() { return data.tag() == 0; }
+  bool null() { return empty() || data.get() == nullptr; }
+
+  tagged_pointer_detail::tagged_pointer_N<void, freebits> data;
+};
+
 //=================================================================================================
 // Clause -- a simple class for representing a clause:
 
@@ -188,7 +321,11 @@ public:
 
     Lit          subsumes    (const Clause& other) const;
     void         strengthen  (Lit p);
+
+    Lit const *begin() { return static_cast<Lit const*>(*this); }
+    Lit const *end() { return begin() + size(); }
 };
+
 
 #define INVALID_CLAUSE ((Clause*)0x4)
 #define NO_REASON ((Clause*)0L)
@@ -367,6 +504,56 @@ struct consqueue
   consqueue(cons *pc, int pp) : next(-1), prev(-1), c(pc), priority(pp) {}
 };
 
+/* A class for handling deferred explanations. Constraints subclass
+   this and store any hints required to generate the actual
+   explanation, or derive from both cons and explainer and use no
+   other hints. In the former case, the explainer derived class will
+   need to have a way to access the constraint that caused the
+   pruning, for example by storing a pointer to it.
+
+   Note that the constraint owns explainers. However, the solver will
+   only use an explainer once for each literal (by calling explain())
+   and the constraint is allowed to use this information to get rid of
+   the explainer or reuse it. If an explainer's explain() is not
+   called, release() will be called. At the time that the explainer is
+   used as the reason, use() is called. In other words, #calls to
+   use() = #calls to explain + #calls to release() and when that
+   equilibrium is reached, the solver contains no more references to
+   the explainer.
+*/
+class explainer
+{
+public:
+    virtual ~explainer() {}
+
+    /* The function actually called by the solver to generate the
+       explanation. It makes c contain a clause that could be used as
+       the reason for forcing p (this means that c includes p) */
+    virtual void explain(Solver& s, Lit p, vec<Lit>& c) = 0;
+
+    /* Called by the solver when it uses this explainer as the reason
+       for pruning during propagation */
+    virtual void use() = 0;
+    /* Called by the solver when this explainer is no longer useful for
+       a literal (meaning release may be called as many times as this
+       object was used as the reason for a literal) */
+    virtual void release() = 0;
+
+    /* printer */
+    virtual std::ostream& print(std::ostream& os)
+    {
+        return (os << "explainer at @" << this);
+    }
+};
+
+inline std::ostream& operator<<(std::ostream& os, explainer& e)
+{
+    return e.print(os);
+}
+
+using explanation_ptr = pointer_variant<Clause, explainer>;
+
+/* The class from which all propagators derive */
 class cons
 {
   friend class Solver;
@@ -376,7 +563,7 @@ class cons
   cons() : cqidx(-1), priority(0) {}
   virtual ~cons() {}
 
-  /* propagate, setting a clause or itself as reason for each
+  /* propagate, setting a clause or an explainer as reason for each
    * pruning. In case of failure, return a clause that describes the
    * reason.
    *
@@ -388,10 +575,6 @@ class cons
   virtual Clause *wake_advised(Solver&, Lit, void *);
   virtual Clause *wake(Solver&, Lit);
   virtual Clause *propagate(Solver&);
-  /* if this constraint forced a literal and set itself as reason, add
-   * to c all literals that explain this pruning.
-   */
-  virtual void explain(Solver&, Lit p, vec<Lit>& c);
 
   /* Clone this constraint and post it to othersolver. Useful for
    * debugging clauses */

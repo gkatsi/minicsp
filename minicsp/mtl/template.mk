@@ -18,7 +18,7 @@ EXEC      ?= $(notdir $(shell pwd))
 LIB       ?= $(EXEC)
 
 CXX       ?= g++
-CFLAGS    ?= -Wall
+CFLAGS    ?= -Wall -std=c++14
 LFLAGS    ?= -Wall
 
 COPTIMIZE ?= -O3 --param inline-unit-growth=60
