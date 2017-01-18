@@ -718,6 +718,9 @@ void Solver::analyze(Clause* inconfl, vec<Lit>& out_learnt, int& out_btlevel)
             auto *e = confl.get<explainer>();
             auto &explbuffer = analyze_explbuffer;
             explbuffer.clear();
+            if (trace && debugclauses)
+                cout << "generating deferred clause from " << *e << " for "
+                     << lit_printer(*this, p) << "\n";
             e->explain(*this, p, explbuffer);
             assert(explbuffer[0] == p);
 
@@ -839,6 +842,15 @@ Clause *Solver::explicit_reason(Lit p) {
   explbuffer.clear();
   e->explain(*this, p, explbuffer);
   assert(explbuffer[0] == p);
+
+  if (trace && debugclauses)
+      cout << "generated deferred clause " << print(*this, &explbuffer)
+           << " from " << *e << " for " << lit_printer(*this, p) << "\n";
+
+  if (debugclauses)
+      for(Lit q : explbuffer)
+          assert(q == p
+              || (value(q) == l_False && level[var(q)] <= level[var(p)]));
 
   auto *cl = Clause_new(explbuffer);
   r.set(cl);
