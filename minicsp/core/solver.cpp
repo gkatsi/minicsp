@@ -1784,6 +1784,15 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             }
 
             if( !learning ) {
+              if (!clause_callbacks.empty()) {
+                  // we learn no clause, only implicitly the set of
+                  // all decisions
+                  learnt_clause.clear();
+                  for (int i = 1; i <= decisionLevel(); ++i)
+                      learnt_clause.push(~trail[trail_lim[i - 1]]);
+                  for(auto & f : clause_callbacks)
+                      f(learnt_clause);
+              }
               Lit flip = trail[ trail_lim[ decisionLevel() - 1 ] ];
               cancelUntil( decisionLevel() - 1 );
               uncheckedEnqueue(~flip, 0L);
@@ -1793,6 +1802,11 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             learnt_clause.clear();
             analyze(confl, learnt_clause, backtrack_level);
             cancelUntil(backtrack_level);
+
+            if (!clause_callbacks.empty())
+                for (auto& f : clause_callbacks)
+                    f(learnt_clause);
+
             if (learnt_clause.size() == 0) {
                 if (trace)
                     cout << "UNSAT with empty explanation clause\n";

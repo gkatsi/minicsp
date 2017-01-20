@@ -183,6 +183,15 @@ public:
     std::function<void(std::vector<Lit>&)> user_brancher; // if user sets varbranch == VAR_USER, this must be non-empty and generate a set of candidates
     lbool currentVarPhase(Var x) const; // give out info to user branchers
 
+    // user callback to be notified of every learned clause
+    // XXX: the great vec<> vs std::vector<> divide. ugh.
+    using clause_callback_t = std::function<void(vec<Lit> const&)>;
+
+    void use_clause_callback(clause_callback_t cb)
+    {
+        clause_callbacks.push_back(cb);
+    }
+
     // Extra results: (read-only member variable)
     //
     vec<lbool> model;                   // If problem is satisfiable, this vector contains the model (if any).
@@ -324,6 +333,8 @@ protected:
     void*               current_space;       // All backtrackable data are pointers into this
 
     cons*               active_constraint;   // the constraint currently propagating.
+
+    std::vector<clause_callback_t> clause_callbacks; // all clause callbacks
 
     // names. for tracing output etc
     std::vector<std::string>  varnames;
