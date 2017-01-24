@@ -178,6 +178,7 @@ public:
 
     // Only useful during solving
     int      decisionLevel    ()      const; // Gives the current decisionlevel.
+    Lit      decisionAtLevel(int lvl) const; // current decision at given level
 
     // user branching heuristics
     std::function<void(std::vector<Lit>&)> user_brancher; // if user sets varbranch == VAR_USER, this must be non-empty and generate a set of candidates
@@ -536,6 +537,18 @@ inline void     Solver::newDecisionLevel()  {
 }
 
 inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
+
+inline Lit      Solver::decisionAtLevel(int lvl) const
+{
+    assert(lvl >= 1 && lvl <= decisionLevel());
+    auto pos = trail_lim[lvl - 1];
+    if (lvl < decisionLevel() && pos == trail_lim[lvl])
+        return lit_Undef;
+    if (lvl == decisionLevel() && pos == trail.size())
+        return lit_Undef;
+    return trail[pos];
+}
+
 inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level[x] & 31); }
 inline lbool    Solver::value         (Var x) const   { return toLbool(assigns[x]); }
 inline lbool    Solver::value         (Lit p) const   { return toLbool(assigns[var(p)]) ^ sign(p); }
