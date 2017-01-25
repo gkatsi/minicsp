@@ -1788,8 +1788,9 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                   // we learn no clause, only implicitly the set of
                   // all decisions
                   learnt_clause.clear();
-                  for (int i = 1; i <= decisionLevel(); ++i)
-                      learnt_clause.push(~trail[trail_lim[i - 1]]);
+                  learnt_clause.push(~decisionAtLevel(decisionLevel()));
+                  for (int i = 1; i < decisionLevel(); ++i)
+                      learnt_clause.push(~decisionAtLevel(i));
                   for(auto & f : clause_callbacks)
                       f(learnt_clause);
               }
