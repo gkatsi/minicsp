@@ -184,9 +184,10 @@ public:
     std::function<void(std::vector<Lit>&)> user_brancher; // if user sets varbranch == VAR_USER, this must be non-empty and generate a set of candidates
     lbool currentVarPhase(Var x) const; // give out info to user branchers
 
-    // user callback to be notified of every learned clause
+    // user callback to be notified of every learned clause. gets the
+    // clause and the backtrack level
     // XXX: the great vec<> vs std::vector<> divide. ugh.
-    using clause_callback_t = std::function<void(vec<Lit> const&)>;
+    using clause_callback_t = std::function<void(vec<Lit> const&, int)>;
 
     void use_clause_callback(clause_callback_t cb)
     {

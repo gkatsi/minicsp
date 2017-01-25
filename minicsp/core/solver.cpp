@@ -1791,8 +1791,8 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                   learnt_clause.push(~decisionAtLevel(decisionLevel()));
                   for (int i = 1; i < decisionLevel(); ++i)
                       learnt_clause.push(~decisionAtLevel(i));
-                  for(auto & f : clause_callbacks)
-                      f(learnt_clause);
+                  for (auto& f : clause_callbacks)
+                      f(learnt_clause, decisionLevel() - 1);
               }
               Lit flip = trail[ trail_lim[ decisionLevel() - 1 ] ];
               cancelUntil( decisionLevel() - 1 );
@@ -1802,11 +1802,12 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
 
             learnt_clause.clear();
             analyze(confl, learnt_clause, backtrack_level);
-            cancelUntil(backtrack_level);
 
             if (!clause_callbacks.empty())
                 for (auto& f : clause_callbacks)
-                    f(learnt_clause);
+                    f(learnt_clause, backtrack_level);
+
+            cancelUntil(backtrack_level);
 
             if (learnt_clause.size() == 0) {
                 if (trace)
