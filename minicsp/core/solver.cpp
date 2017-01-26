@@ -1803,9 +1803,8 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             learnt_clause.clear();
             analyze(confl, learnt_clause, backtrack_level);
 
-            if (!clause_callbacks.empty())
-                for (auto& f : clause_callbacks)
-                    f(learnt_clause, backtrack_level);
+            for (auto& f : clause_callbacks)
+                f(learnt_clause, backtrack_level);
 
             cancelUntil(backtrack_level);
 
@@ -1930,6 +1929,8 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             // enqueue 'next'
             assert(value(next) == l_Undef);
             uncheckedEnqueue(next);
+            for (auto& f : decision_callbacks)
+                f();
         }
     }
 }

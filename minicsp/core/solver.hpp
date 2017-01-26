@@ -194,6 +194,13 @@ public:
         clause_callbacks.push_back(cb);
     }
 
+    using decision_callback_t = std::function<void()>;
+
+    void use_decision_callback(decision_callback_t cb)
+    {
+        decision_callbacks.push_back(cb);
+    }
+
     // Extra results: (read-only member variable)
     //
     vec<lbool> model;                   // If problem is satisfiable, this vector contains the model (if any).
@@ -337,6 +344,7 @@ protected:
     cons*               active_constraint;   // the constraint currently propagating.
 
     std::vector<clause_callback_t> clause_callbacks; // all clause callbacks
+    std::vector<decision_callback_t> decision_callbacks; // all decision callbacks
 
     // names. for tracing output etc
     std::vector<std::string>  varnames;
