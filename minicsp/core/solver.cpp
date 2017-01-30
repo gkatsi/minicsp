@@ -1064,7 +1064,7 @@ void Solver::check_debug_solution(Lit p, explanation_ptr from)
 #ifdef INVARIANTS
     assert(!active_constraint || !learning || from);
     // decisions are allowed to be wrong
-    if (learning && from == NO_REASON && decisionLevel() > 0)
+    if (learning && from.null() && decisionLevel() > 0)
         return;
     // when not learning, a decision is the first literal at the current dlvl
     if (!learning && decisionLevel() > 0
@@ -1138,12 +1138,13 @@ void Solver::uncheckedEnqueue_np(Lit p, explanation_ptr from)
     trail.push(p);
 
 #ifdef INVARIANTS
-    if( from ) {
+    if (from && from.has<Clause>()) {
+      Clause& c = *from.get<Clause>();
       bool foundp = false;
-      for(int i = 0; i != from->size(); ++i) {
-        assert((*from)[i] != lit_Undef);
-        if( (*from)[i] != p )
-          assert( value((*from)[i]) == l_False );
+      for(int i = 0; i != c.size(); ++i) {
+        assert(c[i] != lit_Undef);
+        if( c[i] != p )
+          assert( value(c[i]) == l_False );
         else
           foundp = true;
       }
@@ -1187,8 +1188,8 @@ void Solver::uncheckedEnqueue_common(Lit p, explanation_ptr from)
     uncheckedEnqueue_np(p, from);
 
 #ifdef INVARIANTS
-    if( debugclauses && active_constraint )
-      debugclause(from, active_constraint);
+    if (debugclauses && active_constraint && from.has<Clause>())
+        debugclause(from.get<Clause>(), active_constraint);
 #endif
 
     // update csp var and propagate, if applicable

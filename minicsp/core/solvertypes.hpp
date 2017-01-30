@@ -328,7 +328,7 @@ public:
 
 
 #define INVALID_CLAUSE ((Clause*)0x4)
-#define NO_REASON ((Clause*)0L)
+#define NO_REASON ((Clause*)nullptr)
 
 /*_________________________________________________________________________________________________
 |
