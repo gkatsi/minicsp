@@ -1346,6 +1346,14 @@ Clause *Solver::enqueueFill(Lit p, vec<Lit>& ps)
   return 0L;
 }
 
+void Solver::nonMonotoneEnqueue(Lit p, Clause *from)
+{
+    assert(value(p) == l_Undef);
+    assert((*from)[0] == p);
+    newDecisionLevel();
+    uncheckedEnqueue(~p, NO_REASON);
+}
+
 /*************************************************************************
 
   Queue handling

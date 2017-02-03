@@ -180,6 +180,9 @@ public:
     int      decisionLevel    ()      const; // Gives the current decisionlevel.
     Lit      decisionAtLevel(int lvl) const; // current decision at given level
 
+    int      varLevel  (Var x) const; // the level where x was assigned. Assumes (but does not assert) value(x) != l_Undef
+    int      varLevel  (Lit l) const; // shortcut for varLevel(var(l))
+
     // user branching heuristics
     std::function<void(std::vector<Lit>&)> user_brancher; // if user sets varbranch == VAR_USER, this must be non-empty and generate a set of candidates
     lbool currentVarPhase(Var x) const; // give out info to user branchers
@@ -256,6 +259,23 @@ public:
     bool     enqueueDeferred  (Lit p, explainer* from = nullptr);                      // As above, but with a deferred explanation
     Clause*  enqueueFill      (Lit p, vec<Lit>& ps);                                   // Create an inactive clause that includes p and ps and force p
 
+    // A somewhat brittle interface: a non-monotone propagator can
+    // discover during pruning that it can in fact backprune a literal
+    // (i.e., prune it to a decision level earlier than the current
+    // one). It can signal this using the following function. The
+    // propagator then has to immediately return the clause 'from' to
+    // the propagator, as if it is a conflict. It is not safe to do
+    // anything else after calling this.
+    //
+    // There is no 'deferred' version of this, as the solver would
+    // turn around and immediately ask for an explicit explanation
+    // anyway.
+    //
+    // XXX: An alternate, safer interface: have the propagator return
+    // a variant<OK, Fail(Clause), Backprune(Lit, Clause)> or
+    // something to that effect. But that would require changing all
+    // propagators (a fairly mechanical but extensive change).
+    void     nonMonotoneEnqueue(Lit p, Clause *from);
 
     Clause*  propagate        ();                                                      // Perform unit and constraint propagation.
                                                                                        // Returns conflicting clause or NULL
@@ -557,6 +577,9 @@ inline Lit      Solver::decisionAtLevel(int lvl) const
         return lit_Undef;
     return trail[pos];
 }
+
+inline int Solver::varLevel(Var x) const { return level[x]; }
+inline int Solver::varLevel(Lit l) const { return level[var(l)]; }
 
 inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level[x] & 31); }
 inline lbool    Solver::value         (Var x) const   { return toLbool(assigns[x]); }
