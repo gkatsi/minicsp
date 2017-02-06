@@ -860,12 +860,12 @@ namespace CSPXMLParser
         return &parametersInfo;
       }
 
-    private:
+    public:
       VariableInfo parametersInfo; // information collected about the
                                    // formal parameters
 
       // this class may alter parametersInfo
-      friend class XMLParser<Callback,ASTFactory,XMLString,XMLLibraryAttributeList>::ParametersTagAction;
+      friend class ParametersTagAction;
     };
 
 

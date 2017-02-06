@@ -41,7 +41,7 @@ part of the xcsp distribution
 ******************************************************************************/
 
 #ifndef _MINICSP_CALLBACK_H_
-#define _MINICSP_CALLBACK_H
+#define _MINICSP_CALLBACK_H_
 
 #include <vector>
 #include <map>
