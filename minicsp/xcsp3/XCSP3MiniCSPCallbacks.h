@@ -146,24 +146,54 @@ namespace XCSP3Core {
 
         virtual void buildConstraintNotAllEqual(string id, vector<XVariable *> &list) override;
 
+        // ---------------------------- ORDERED ------------------------------------------
+
         virtual void buildConstraintOrdered(string id, vector<XVariable *> &list, OrderType order) override {
             vector<cspvar> vars = xvars2cspvars(list);
-            for (int i = 0 ; i < vars.size() - 1 ; i++) {
-                if (order == LE)
-                    post_leq(solver,vars[i],vars[i+1],0);
-                if (order == LT)
-                    post_less(solver,vars[i],vars[i+1],0);
-                if (order == GE)
-                    post_leq(solver,vars[i+1],vars[i],0);
-                if (order == GT)
-                    post_less(solver,vars[i+1],vars[i],0);
+            for(int i = 0 ; i < vars.size() - 1 ; i++) {
+                if(order == LE)
+                    post_leq(solver, vars[i], vars[i + 1], 0);
+                if(order == LT)
+                    post_less(solver, vars[i], vars[i + 1], 0);
+                if(order == GE)
+                    post_leq(solver, vars[i + 1], vars[i], 0);
+                if(order == GT)
+                    post_less(solver, vars[i + 1], vars[i], 0);
             }
-
         }
 
-        virtual void buildConstraintLex(string id, vector<vector<XVariable *>> &lists, OrderType order) override;
 
-        virtual void buildConstraintLexMatrix(string id, vector<vector<XVariable *>> &matrix, OrderType order) override;
+        virtual void buildConstraintLex(string id, vector<vector<XVariable *>> &lists, OrderType order) override {
+            vector<cspvar> vars1, vars2;
+            for(int i = 0 ; i < lists.size() - 1 ; i++) {
+                vars1 = xvars2cspvars(lists[i]);
+                vars1 = xvars2cspvars(lists[i + 1]);
+                if(order == LE)
+                    post_lex_leq(solver, vars1, vars2, 0);
+                if(order == LT)
+                    post_lex_less(solver, vars1, vars2, 0);
+                if(order == GE)
+                    post_lex_leq(solver, vars2, vars1, 0);
+                if(order == GT)
+                    post_lex_less(solver, vars2, vars1, 0);
+            }
+        }
+
+
+        virtual void buildConstraintLexMatrix(string id, vector<vector<XVariable *>> &matrix, OrderType order) override {
+            vector<cspvar> vars1, vars2;
+            // lines
+            buildConstraintLex(id,maxtrix,order);
+
+            //columns
+            vector<vector<XVariable *>> tmatrix(matrix[0].size);
+            for(int i = 0;i < tmatrix.size();i++) {
+                tmatrix[i].reserve(matrix.size());
+                for(int j = 0; j < matrix.size();j++)
+                    tmatrix[i][j] = matrix[j][i];
+            }
+            buildConstraintLex(id,tmaxtrix,order);
+        }
 
 
         // ---------------------------- SUM ------------------------------------------
