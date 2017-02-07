@@ -60,6 +60,8 @@ namespace XCSP3Core {
         }
 
 
+        ~XCSP3MiniCSPCallbacks() {}
+
         void print_solution() {
             // TODO
             throw unsupported();
@@ -84,14 +86,14 @@ namespace XCSP3Core {
         }
 
 
-        virtual void buildVariableInteger(string id, int minValue, int maxValue) override {
+        void buildVariableInteger(string id, int minValue, int maxValue) override {
             cspvar x = solver.newCSPVar(minValue, maxValue);
             solver.setCSPVarName(x, id);
             tocspvars[id] = x;
         }
 
 
-        virtual void buildVariableInteger(string id, vector<int> &values) override {
+        void buildVariableInteger(string id, vector<int> &values) override {
             cspvar x = solver.newCSPVar(values[0], values.back());
             int v = values[0];
             for(int i = 1 ; i < values.back() ; i++) {
@@ -105,7 +107,7 @@ namespace XCSP3Core {
 
         // ---------------------------- EXTENSION ------------------------------------------
 
-        virtual void buildConstraintExtension(string id, vector<XVariable *> list, vector<vector<int>> &tuples, bool support, bool hasStar) override {
+        void buildConstraintExtension(string id, vector<XVariable *> list, vector<vector<int>> &tuples, bool support, bool hasStar) override {
             if(hasStar)
                 throw unsupported();
             previousTuples = &tuples;
@@ -116,28 +118,30 @@ namespace XCSP3Core {
         }
 
 
-        virtual void buildConstraintExtension(string id, XVariable *variable, vector<int> &tuple, bool support, bool hasStar) override {
-            vector<XVariable *> list{variable};
-            vector<vector<int>> &tuples{tuple};
+        void buildConstraintExtension(string id, XVariable *variable, vector<int> &tuple, bool support, bool hasStar) override {
+            vector<XVariable *> list;
+            list.push_back(variable);
+            vector<vector<int>> tuples;
+            tuples.push_back(tuple);
             buildConstraintExtension(id, list, tuples, support, hasStar);
         }
 
 
-        virtual void buildConstraintExtensionAs(string id, vector<XVariable *> list, bool support, bool hasStar) override {
+        void buildConstraintExtensionAs(string id, vector<XVariable *> list, bool support, bool hasStar) override {
             buildConstraintExtension(id, list, *previousTuples, support, hasStar);
         }
 
 
         // ---------------------------- INTENSION + PRIMITIVES ------------------------------------------
 
-        virtual void buildConstraintIntension(string id, string expr) override;
+//        void buildConstraintIntension(string id, string expr) override;
 
-        virtual void buildConstraintPrimitive(string id, OrderType op, XVariable *x, int k, XVariable *y) override;
+//        void buildConstraintPrimitive(string id, OrderType op, XVariable *x, int k, XVariable *y) override;
 
 
         // ---------------------------- LANGUAGES ------------------------------------------
 
-        virtual void buildConstraintRegular(string id, vector<XVariable *> &list, string st, string final, vector<XTransition> &transitions) override {
+        void buildConstraintRegular(string id, vector<XVariable *> &list, string st, string final, vector<XTransition> &transitions) override {
             // TODO CHECK
             throw unsupported();
 
@@ -161,28 +165,24 @@ namespace XCSP3Core {
             post_regular(solver, xvars2cspvars(list), aut);
         }
 
-        virtual void buildConstraintMDD(string id, vector<XVariable *> &list, vector<XTransition> &transitions) override;
-
-
         // ---------------------------- ALLDIFF ALLEQUAL ------------------------------------------
 
-        virtual void buildConstraintAlldifferent(string id, vector<XVariable *> &list) override {
+        void buildConstraintAlldifferent(string id, vector<XVariable *> &list) override {
+            printf("DD\n");
+            std::cout << list[0]->id << std::endl;
             post_alldiff(solver, xvars2cspvars(list));
         }
 
 
-        virtual void buildConstraintAllEqual(string id, vector<XVariable *> &list) override {
+        void buildConstraintAllEqual(string id, vector<XVariable *> &list) override {
             vector<cspvar> vars = xvars2cspvars(list);
             for(int i = 0 ; i < vars.size() - 1 ; i++)
                 post_eq(solver, vars[i], vars[i + 1], 0);
         }
 
-
-        virtual void buildConstraintNotAllEqual(string id, vector<XVariable *> &list) override;
-
         // ---------------------------- ORDERED ------------------------------------------
 
-        virtual void buildConstraintOrdered(string id, vector<XVariable *> &list, OrderType order) override {
+        void buildConstraintOrdered(string id, vector<XVariable *> &list, OrderType order) override {
             vector<cspvar> vars = xvars2cspvars(list);
             for(int i = 0 ; i < vars.size() - 1 ; i++) {
                 if(order == LE)
@@ -197,7 +197,7 @@ namespace XCSP3Core {
         }
 
 
-        virtual void buildConstraintLex(string id, vector<vector<XVariable *>> &lists, OrderType order) override {
+        void buildConstraintLex(string id, vector<vector<XVariable *>> &lists, OrderType order) override {
             vector<cspvar> vars1, vars2;
             for(int i = 0 ; i < lists.size() - 1 ; i++) {
                 vars1 = xvars2cspvars(lists[i]);
@@ -214,7 +214,7 @@ namespace XCSP3Core {
         }
 
 
-        virtual void buildConstraintLexMatrix(string id, vector<vector<XVariable *>> &matrix, OrderType order) override {
+        void buildConstraintLexMatrix(string id, vector<vector<XVariable *>> &matrix, OrderType order) override {
             vector<cspvar> vars1, vars2;
             // lines
             buildConstraintLex(id, matrix, order);
@@ -260,7 +260,7 @@ namespace XCSP3Core {
         }
 
 
-        virtual void buildConstraintSum(string id, vector<XVariable *> &list, vector<int> &coeffs, XCondition &xc) override {
+        void buildConstraintSum(string id, vector<XVariable *> &list, vector<int> &coeffs, XCondition &xc) override {
             vector<cspvar> variables = xvars2cspvars(list);
             if(xc.operandType == VARIABLE) {
                 xc.operandType = INTEGER;
@@ -282,76 +282,32 @@ namespace XCSP3Core {
         }
 
 
-        virtual void buildConstraintSum(string id, vector<XVariable *> &list, XCondition &xc) override {
+        void buildConstraintSum(string id, vector<XVariable *> &list, XCondition &xc) override {
             vector<int> coeffs;
             coeffs.assign(list.size(), 1);
             buildConstraintSum(id, list, coeffs, xc);
         }
 
 
-        virtual void buildConstraintAtMost(string id, vector<XVariable *> &list, int value, int k) override;
-
-        virtual void buildConstraintAtLeast(string id, vector<XVariable *> &list, int value, int k) override;
-
-        virtual void buildConstraintExactlyK(string id, vector<XVariable *> &list, int value, int k) override;
-
-        virtual void buildConstraintAmong(string id, vector<XVariable *> &list, vector<int> &values, int k) override;
-
-        virtual void buildConstraintExactlyVariable(string id, vector<XVariable *> &list, int value, XVariable *x) override;
-
-        virtual void buildConstraintCount(string id, vector<XVariable *> &list, vector<int> &values, XCondition &xc) override;
-
-        virtual void buildConstraintCount(string id, vector<XVariable *> &list, vector<XVariable *> &values, XCondition &xc) override;
-
-        virtual void buildConstraintNValues(string id, vector<XVariable *> &list, vector<int> &except, XCondition &xc) override;
-
-
-        virtual void buildConstraintNValues(string id, vector<XVariable *> &list, XCondition &xc) override {
+        void buildConstraintNValues(string id, vector<XVariable *> &list, XCondition &xc) override {
             if(xc.op != LE)
                 throw unsupported();
             vector<cspvar> vars = xvars2cspvars(list);
             cspvar n;
             if(xc.operandType == INTEGER)
-                    n = constant(xc.val);
+                n = constant(xc.val);
             else if(xc.operandType == VARIABLE)
                 n = tocspvars[xc.var];
             else throw unsupported();
-
-            post_atmostnvalue(solver, vars, n);
+            throw unsupported(); //TODO
+            //post_atmostnvalue(solver, vars, n);
         }
 
-
-        virtual void buildConstraintCardinality(string id, vector<XVariable *> &list, vector<int> values, vector<int> &occurs, bool closed) override;
-
-        virtual void buildConstraintCardinality(string id, vector<XVariable *> &list, vector<int> values, vector<XVariable *> &occurs,
-                                                bool closed) override;
-
-        virtual void buildConstraintCardinality(string id, vector<XVariable *> &list, vector<int> values, vector<XInterval> &occurs,
-                                                bool closed) override;
-
-        virtual void buildConstraintCardinality(string id, vector<XVariable *> &list, vector<XVariable *> values, vector<int> &occurs,
-                                                bool closed) override;
-
-        virtual void buildConstraintCardinality(string id, vector<XVariable *> &list, vector<XVariable *> values, vector<XVariable *> &occurs,
-                                                bool closed) override;
-
-        virtual void buildConstraintCardinality(string id, vector<XVariable *> &list, vector<XVariable *> values, vector<XInterval> &occurs,
-                                                bool closed) override;
-
-        virtual void buildConstraintMinimum(string id, vector<XVariable *> &list, XCondition &xc) override;
-
-        virtual void buildConstraintMinimum(string id, vector<XVariable *> &list, XVariable *index, int startIndex, RankType rank,
-                                            XCondition &xc) override;
-
-        virtual void buildConstraintMaximum(string id, vector<XVariable *> &list, XCondition &xc) override;
-
-        virtual void buildConstraintMaximum(string id, vector<XVariable *> &list, XVariable *index, int startIndex, RankType rank,
-                                            XCondition &xc) override;
 
 
         // ---------------------------- ELEMENT ------------------------------------------
 
-        virtual void
+        void
         buildConstraintElement(string id, vector<XVariable *> &list, int startIndex, XVariable *index, RankType rank, int value) override {
             if(rank != ANY)
                 throw unsupported();
@@ -359,7 +315,7 @@ namespace XCSP3Core {
         }
 
 
-        virtual void
+        void
         buildConstraintElement(string id, vector<XVariable *> &list, int startIndex, XVariable *index, RankType rank, XVariable *value) override {
             if(rank != ANY)
                 throw unsupported();
@@ -367,54 +323,10 @@ namespace XCSP3Core {
         }
 
 
-        virtual void buildConstraintChannel(string id, vector<XVariable *> &list, int startIndex) override;
-
-        virtual void buildConstraintChannel(string id, vector<XVariable *> &list1, int startIndex1, vector<XVariable *> &list2,
-                                            int startIndex2) override;
-
-        virtual void buildConstraintChannel(string id, vector<XVariable *> &list, int startIndex, XVariable *value) override;
-
-        virtual void buildConstraintStretch(string id, vector<XVariable *> &list, vector<int> &values, vector<XInterval> &widths) override;
-
-        virtual void buildConstraintStretch(string id, vector<XVariable *> &list, vector<int> &values, vector<XInterval> &widths,
-                                            vector<vector<int>> &patterns) override;
-
-        virtual void buildConstraintNoOverlap(string id, vector<XVariable *> &origins, vector<int> &lengths, bool zeroIgnored) override;
-
-        virtual void buildConstraintNoOverlap(string id, vector<XVariable *> &origins, vector<XVariable *> &lengths, bool zeroIgnored) override;
-
-        virtual void
-        buildConstraintNoOverlap(string id, vector<vector<XVariable *>> &origins, vector<vector<int>> &lengths, bool zeroIgnored) override;
-
-        virtual void
-        buildConstraintNoOverlap(string id, vector<vector<XVariable *>> &origins, vector<vector<XVariable *>> &lengths, bool zeroIgnored) override;
-
-        virtual void buildConstraintInstantiation(string id, vector<XVariable *> &list, vector<int> &values) override;
-
-        virtual void buildObjectiveMinimizeExpression(string expr) override;
-
-        virtual void buildObjectiveMaximizeExpression(string expr) override;
-
-
-        virtual void buildObjectiveMinimizeVariable(XVariable *x) override;
-
-
-        virtual void buildObjectiveMaximizeVariable(XVariable *x) override;
-
-
-        virtual void buildObjectiveMinimize(ExpressionObjective type, vector<XVariable *> &list, vector<int> &coefs) override;
-
-
-        virtual void buildObjectiveMaximize(ExpressionObjective type, vector<XVariable *> &list, vector<int> &coefs) override;
-
-
-        virtual void buildObjectiveMinimize(ExpressionObjective type, vector<XVariable *> &list) override;
-
-
-        virtual void buildObjectiveMaximize(ExpressionObjective type, vector<XVariable *> &list) override;
-
-
     };
+
+
+
 
 
 }
