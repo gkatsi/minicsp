@@ -49,9 +49,15 @@ namespace XCSP3Core {
     class XCSP3MiniCSPCallbacks : public XCSP3CoreCallbacks {
         Solver &solver;
         map<string, cspvar> tocspvars;
+        map<int, cspvar> constants;
+
         vector<vector<int>> *previousTuples;
+
     public:
-        XCSP3MiniCSPCallbacks(Solver &s) : XCSP3CoreCallbacks(), solver(s) {}
+        XCSP3MiniCSPCallbacks(Solver &s) : XCSP3CoreCallbacks(), solver(s) {
+            recognizeSpecialCountCases = false;
+            recognizeNValuesCases = false;
+        }
 
 
         void print_solution() {
@@ -68,6 +74,15 @@ namespace XCSP3Core {
                 v[i] = tocspvars[xvars[i]->id];
             }
             return v;
+        }
+
+
+        cspvar constant(int c) {
+            if(constants.find(c) == constants.end())
+                constants[c] = solver.newCSPVar(c, c);
+
+            return constants[c];
+
         }
 
 
@@ -169,13 +184,13 @@ namespace XCSP3Core {
                 vars1 = xvars2cspvars(lists[i]);
                 vars1 = xvars2cspvars(lists[i + 1]);
                 if(order == LE)
-                    post_lex_leq(solver, vars1, vars2, 0);
+                    post_lex_leq(solver, vars1, vars2);
                 if(order == LT)
-                    post_lex_less(solver, vars1, vars2, 0);
+                    post_lex_less(solver, vars1, vars2);
                 if(order == GE)
-                    post_lex_leq(solver, vars2, vars1, 0);
+                    post_lex_leq(solver, vars2, vars1);
                 if(order == GT)
-                    post_lex_less(solver, vars2, vars1, 0);
+                    post_lex_less(solver, vars2, vars1);
             }
         }
 
@@ -183,16 +198,16 @@ namespace XCSP3Core {
         virtual void buildConstraintLexMatrix(string id, vector<vector<XVariable *>> &matrix, OrderType order) override {
             vector<cspvar> vars1, vars2;
             // lines
-            buildConstraintLex(id,maxtrix,order);
+            buildConstraintLex(id, matrix, order);
 
             //columns
-            vector<vector<XVariable *>> tmatrix(matrix[0].size);
-            for(int i = 0;i < tmatrix.size();i++) {
+            vector<vector<XVariable *>> tmatrix(matrix[0].size());
+            for(int i = 0 ; i < tmatrix.size() ; i++) {
                 tmatrix[i].reserve(matrix.size());
-                for(int j = 0; j < matrix.size();j++)
+                for(int j = 0 ; j < matrix.size() ; j++)
                     tmatrix[i][j] = matrix[j][i];
             }
-            buildConstraintLex(id,tmaxtrix,order);
+            buildConstraintLex(id, tmatrix, order);
         }
 
 
@@ -300,15 +315,24 @@ namespace XCSP3Core {
         virtual void buildConstraintMaximum(string id, vector<XVariable *> &list, XVariable *index, int startIndex, RankType rank,
                                             XCondition &xc) override;
 
-        virtual void buildConstraintElement(string id, vector<XVariable *> &list, int value) override;
 
-        virtual void buildConstraintElement(string id, vector<XVariable *> &list, XVariable *value) override;
-
-        virtual void
-        buildConstraintElement(string id, vector<XVariable *> &list, int startIndex, XVariable *index, RankType rank, int value) override;
+        // ---------------------------- ELEMENT ------------------------------------------
 
         virtual void
-        buildConstraintElement(string id, vector<XVariable *> &list, int startIndex, XVariable *index, RankType rank, XVariable *value) override;
+        buildConstraintElement(string id, vector<XVariable *> &list, int startIndex, XVariable *index, RankType rank, int value) override {
+            if(rank != ANY)
+                throw unsupported();
+            post_element(solver, constant(value), tocspvars[index->id], xvars2cspvars(list), startIndex);
+        }
+
+
+        virtual void
+        buildConstraintElement(string id, vector<XVariable *> &list, int startIndex, XVariable *index, RankType rank, XVariable *value) override {
+            if(rank != ANY)
+                throw unsupported();
+            post_element(solver, tocspvars[value->id], tocspvars[index->id], xvars2cspvars(list), startIndex);
+        }
+
 
         virtual void buildConstraintChannel(string id, vector<XVariable *> &list, int startIndex) override;
 
