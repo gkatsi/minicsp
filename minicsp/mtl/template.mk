@@ -19,7 +19,7 @@ LIB       ?= $(EXEC)
 
 CXX       ?= g++
 CFLAGS    ?= -Wall -std=c++14
-LFLAGS    ?= -Wall
+LFLAGS    ?= -Wall -L../lib
 
 COPTIMIZE ?= -O3 --param inline-unit-growth=60
 
