@@ -13,7 +13,7 @@ find_package(ZLIB REQUIRED)
 set(main "minicsp/xcsp/main-xcsp.cpp")
 
 # Basic Library
-file(GLOB lib_srcs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} minicsp/mtl/*.cpp minicsp/core/*.cpp minicsp/xcsp/*.cpp)
+file(GLOB lib_srcs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} minicsp/mtl/*.cpp minicsp/core/*.cpp minicsp/xcsp/*.cpp minicsp/xcsp3/*.cpp)
 list(REMOVE_ITEM lib_srcs ${main})
 
 #message(${lib_srcs})
@@ -30,7 +30,9 @@ endif()
 
 include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${ZLIB_INCLUDE_DIR})
+        ${ZLIB_INCLUDE_DIR}
+        "minicsp/xcsp3/include"
+)
 
 link_libraries(${ZLIB_LIBRARY})
 

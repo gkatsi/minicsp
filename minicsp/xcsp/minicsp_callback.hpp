@@ -99,9 +99,6 @@ class minicsp_callback : public CSPParserCallback
   string constraintReference;
   vector<cspvar> current_scope;
 
-  typedef void (minicsp_callback::*post_function)(string const & reference,
-                                                  ASTList const& args);
-  map<string, post_function> posters;
 
   vector<cspvar> ast2vararray(AST const& ast)
   {
