@@ -137,8 +137,29 @@ namespace XCSP3Core {
 
         // ---------------------------- LANGUAGES ------------------------------------------
 
-        virtual void
-        buildConstraintRegular(string id, vector<XVariable *> &list, string st, string final, vector<XTransition> &transitions) override;
+        virtual void buildConstraintRegular(string id, vector<XVariable *> &list, string st, string final, vector<XTransition> &transitions) override {
+            // TODO CHECK
+            throw unsupported();
+
+            map<string,size_t> states;
+            size_t current = 1;
+            for(XTransition xt : transitions) {
+                if(states.find(xt.from) == states.end())
+                    states[xt.from] = current++;
+                if(states.find(xt.to) == states.end())
+                    states[xt.to] = current++;
+            }
+
+            vector<regular::transition> minitransitions;
+            for(XTransition xt : transitions) {
+                regular::transition t(states[xt.from],xt.val,states[xt.to]);
+                minitransitions.push_back(t);
+            }
+            set<int> finals;
+            finals.insert(states[final]);
+            regular::automaton aut(minitransitions, states[st], finals);
+            post_regular(solver, xvars2cspvars(list), aut);
+        }
 
         virtual void buildConstraintMDD(string id, vector<XVariable *> &list, vector<XTransition> &transitions) override;
 
@@ -290,16 +311,12 @@ namespace XCSP3Core {
                 throw unsupported();
             vector<cspvar> vars = xvars2cspvars(list);
             cspvar n;
-            switch(xc.operandType == VARIABLE) {
-                case INTEGER :
+            if(xc.operandType == INTEGER)
                     n = constant(xc.val);
-                    break;
-                case VARIABLE :
-                    n = tocspvars(xc.var);
-                    break;
-                default:
-                    throw unsupported();
-            }
+            else if(xc.operandType == VARIABLE)
+                n = tocspvars[xc.var];
+            else throw unsupported();
+
             post_atmostnvalue(solver, vars, n);
         }
 
