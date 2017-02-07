@@ -48,29 +48,24 @@ namespace XCSP3Core {
 
     class XCSP3MiniCSPCallbacks : public XCSP3CoreCallbacks {
         Solver &solver;
-        map<string, cspvar> vars;
+        map<string, cspvar> tocspvars;
         vector<vector<int>> *previousTuples;
     public:
         XCSP3MiniCSPCallbacks(Solver &s) : XCSP3CoreCallbacks(), solver(s) {}
 
 
-        void print_solution();
-
-
-        vector<cspvar> xvars2cspvars(vector<XVariable *> &xvars) {
-            vector<cspvar> v(xvars.size());
-            for(int i = 0 ; i != xvars.size() ; ++i) {
-                v[i] = vars[xvars[i]->id];
-            }
-            return v;
+        void print_solution() {
+            // TODO
+            throw unsupported();
         }
+
 
         // ---------------------------- VARIABLES ------------------------------------------
 
         vector<cspvar> xvars2cspvars(vector<XVariable *> &xvars) {
             vector<cspvar> v(xvars.size());
             for(int i = 0 ; i != xvars.size() ; ++i) {
-                v[i] = vars[xvars[i]->id];
+                v[i] = tocspvars[xvars[i]->id];
             }
             return v;
         }
@@ -79,7 +74,7 @@ namespace XCSP3Core {
         virtual void buildVariableInteger(string id, int minValue, int maxValue) override {
             cspvar x = solver.newCSPVar(minValue, maxValue);
             solver.setCSPVarName(x, id);
-            vars[id] = x;
+            tocspvars[id] = x;
         }
 
 
@@ -92,7 +87,7 @@ namespace XCSP3Core {
                     x.remove(solver, v++, NO_REASON);
             }
             solver.setCSPVarName(x, id);
-            vars[id] = x;
+            tocspvars[id] = x;
         }
 
         // ---------------------------- EXTENSION ------------------------------------------
@@ -151,7 +146,20 @@ namespace XCSP3Core {
 
         virtual void buildConstraintNotAllEqual(string id, vector<XVariable *> &list) override;
 
-        virtual void buildConstraintOrdered(string id, vector<XVariable *> &list, OrderType order) override;
+        virtual void buildConstraintOrdered(string id, vector<XVariable *> &list, OrderType order) override {
+            vector<cspvar> vars = xvars2cspvars(list);
+            for (int i = 0 ; i < vars.size() - 1 ; i++) {
+                if (order == LE)
+                    post_leq(solver,vars[i],vars[i+1],0);
+                if (order == LT)
+                    post_less(solver,vars[i],vars[i+1],0);
+                if (order == GE)
+                    post_leq(solver,vars[i+1],vars[i],0);
+                if (order == GT)
+                    post_less(solver,vars[i+1],vars[i],0);
+            }
+
+        }
 
         virtual void buildConstraintLex(string id, vector<vector<XVariable *>> &lists, OrderType order) override;
 
@@ -193,7 +201,7 @@ namespace XCSP3Core {
             if(xc.operandType == VARIABLE) {
                 xc.operandType = INTEGER;
                 xc.val = 0;
-                variables.push_back(vars[xc.var]);
+                variables.push_back(tocspvars[xc.var]);
                 coeffs.push_back(-1);
             }
             if(xc.op != IN) {
@@ -210,7 +218,7 @@ namespace XCSP3Core {
         }
 
 
-        virtual void XCSP3MiniCSPCallbacks::buildConstraintSum(string id, vector<XVariable *> &list, XCondition &xc) override {
+        virtual void buildConstraintSum(string id, vector<XVariable *> &list, XCondition &xc) override {
             vector<int> coeffs;
             coeffs.assign(list.size(), 1);
             buildConstraintSum(id, list, coeffs, xc);
