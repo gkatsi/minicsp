@@ -80,9 +80,7 @@ namespace XCSP3Core {
         cspvar constant(int c) {
             if(constants.find(c) == constants.end())
                 constants[c] = solver.newCSPVar(c, c);
-
             return constants[c];
-
         }
 
 
@@ -286,7 +284,25 @@ namespace XCSP3Core {
 
         virtual void buildConstraintNValues(string id, vector<XVariable *> &list, vector<int> &except, XCondition &xc) override;
 
-        virtual void buildConstraintNValues(string id, vector<XVariable *> &list, XCondition &xc) override;
+
+        virtual void buildConstraintNValues(string id, vector<XVariable *> &list, XCondition &xc) override {
+            if(xc.op != LE)
+                throw unsupported();
+            vector<cspvar> vars = xvars2cspvars(list);
+            cspvar n;
+            switch(xc.operandType == VARIABLE) {
+                case INTEGER :
+                    n = constant(xc.val);
+                    break;
+                case VARIABLE :
+                    n = tocspvars(xc.var);
+                    break;
+                default:
+                    throw unsupported();
+            }
+            post_atmostnvalue(solver, vars, n);
+        }
+
 
         virtual void buildConstraintCardinality(string id, vector<XVariable *> &list, vector<int> values, vector<int> &occurs, bool closed) override;
 
