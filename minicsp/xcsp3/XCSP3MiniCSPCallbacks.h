@@ -43,8 +43,11 @@
 
 namespace XCSP3Core {
     using namespace minicsp;
+
     struct unsupported {
         string name;
+
+
         unsupported(string n) : name(n) {}
     };
 
@@ -64,13 +67,14 @@ namespace XCSP3Core {
 
         ~XCSP3MiniCSPCallbacks() {}
 
+
         void print_solution() {
             map<string, cspvar>::const_iterator i, b = tocspvars.begin(), e = tocspvars.end();
-            cout << "<instantiation type='solution'>\n<list>";
-            for(i = b; i != e; ++i)
+            cout << "\n<instantiation type='solution'>\n<list>";
+            for(i = b ; i != e ; ++i)
                 cout << i->first << " ";
             cout << "</list>\n<values>";
-            for(i = b; i != e; ++i)
+            for(i = b ; i != e ; ++i)
                 cout << solver.cspModelValue(i->second) << " ";
 
             cout << "\n</values>\n</instantiation>\n";
@@ -154,7 +158,7 @@ namespace XCSP3Core {
             // TODO CHECK
             throw unsupported("regular in progress");
 
-            map<string,size_t> states;
+            map<string, size_t> states;
             size_t current = 1;
             for(XTransition xt : transitions) {
                 if(states.find(xt.from) == states.end())
@@ -165,7 +169,7 @@ namespace XCSP3Core {
 
             vector<regular::transition> minitransitions;
             for(XTransition xt : transitions) {
-                regular::transition t(states[xt.from],xt.val,states[xt.to]);
+                regular::transition t(states[xt.from], xt.val, states[xt.to]);
                 minitransitions.push_back(t);
             }
             set<int> finals;
@@ -177,8 +181,6 @@ namespace XCSP3Core {
         // ---------------------------- ALLDIFF ALLEQUAL ------------------------------------------
 
         void buildConstraintAlldifferent(string id, vector<XVariable *> &list) override {
-            printf("DD\n");
-            std::cout << list[0]->id << std::endl;
             post_alldiff(solver, xvars2cspvars(list));
         }
 
@@ -242,6 +244,7 @@ namespace XCSP3Core {
         // ---------------------------- SUM ------------------------------------------
 
         void postSum(string id, vector<cspvar> &list, vector<int> &coefs, XCondition &xc) {
+            xc.val = -xc.val;
             switch(xc.op) {
                 case EQ:
                     post_lin_eq(solver, list, coefs, xc.val);
@@ -251,11 +254,11 @@ namespace XCSP3Core {
                     break;
                 case GE:
                     for(int i = 0 ; i != coefs.size() ; ++i) coefs[i] = -coefs[i];
-                    post_lin_leq(solver, list, coefs, -xc.val);
+                    post_lin_leq(solver, list, coefs, xc.val);
                     break;
                 case GT:
                     for(int i = 0 ; i != coefs.size() ; ++i) coefs[i] = -coefs[i];
-                    post_lin_less(solver, list, coefs, -xc.val);
+                    post_lin_less(solver, list, coefs, xc.val);
                     break;
                 case LE:
                     post_lin_leq(solver, list, coefs, xc.val);
@@ -333,9 +336,6 @@ namespace XCSP3Core {
 
 
     };
-
-
-
 
 
 }
