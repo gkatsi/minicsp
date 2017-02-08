@@ -70,23 +70,23 @@ int main(int argc, char *argv[])
   Solver s;
 
   cmdline::parse_solver_options(s, args);
-  bool stat = cmdline::has_option(args, "--stat");
+  bool stat = true;//cmdline::has_option(args, "--stat");
   bool maint = cmdline::has_option(args, "--maint");
   setup_signal_handlers(&s);
 
   double cpu_time = cpuTime();
   XCSP3MiniCSPCallbacks cb(s); // my interface between the parser and the solver
 
-//  try  {
+ try  {
     XCSP3CoreParser parser(&cb);
     parser.parse(args.back().c_str()); // fileName is a string
-//  }
- /* catch (exception &e) {
+  }
+  catch (exception &e) {
     cout.flush();
     cerr << "\n\tUnexpected exception :\n";
     cerr << "\t" << e.what() << endl;
     exit(1);
-  }*/
+  }
 
 
   double parse_time = cpuTime() - cpu_time;

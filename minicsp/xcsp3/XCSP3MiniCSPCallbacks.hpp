@@ -32,17 +32,6 @@
 #include "Tree.hpp"
 
 
-
-/**
- * This is an example that prints useful informations of a XCSP3 instance.
- * You need to create your own class and to override functions of the callback.
- * We suggest to make a map between XVariable and your own variables in order to
- * facilitate the constructions of constraints.
- *
- * see main.cc to show declaration of the parser
- *
- */
-
 namespace XCSP3Core {
     using namespace minicsp;
 
@@ -85,6 +74,12 @@ namespace XCSP3Core {
             cout << "\n</values>\n</instantiation>\n";
         }
 
+        // ---------------------------- StartInstance -------------------------------
+
+        void beginInstance(InstanceType type) override {
+            if(type == COP)
+                throw unsupported("COP is not supported");
+        }
 
         // ---------------------------- XVariable -> minicsp variables -------------------------------
 
@@ -316,6 +311,8 @@ namespace XCSP3Core {
             buildConstraintSum(id, list, coeffs, xc);
         }
 
+
+        // ---------------------------- AtMostNValues ------------------------------------------
 
         void buildConstraintNValues(string id, vector<XVariable *> &list, XCondition &xc) override {
             if(xc.op != LE)
