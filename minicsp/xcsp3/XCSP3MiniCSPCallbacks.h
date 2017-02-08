@@ -212,7 +212,7 @@ namespace XCSP3Core {
             vector<cspvar> vars1, vars2;
             for(int i = 0 ; i < lists.size() - 1 ; i++) {
                 vars1 = xvars2cspvars(lists[i]);
-                vars1 = xvars2cspvars(lists[i + 1]);
+                vars2 = xvars2cspvars(lists[i + 1]);
                 if(order == LE)
                     post_lex_leq(solver, vars1, vars2);
                 if(order == LT)
