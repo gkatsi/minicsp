@@ -154,7 +154,8 @@ template <typename T> inline constexpr int tagged_free_bits()
 // (::[g,s,res]et_bit()). It requires that the alignment requirements
 // for T are strict enough to leave N bits free at the bottom
 template <typename T, int N> struct tagged_pointer_N {
-  static_assert(N <= tagged_free_bits<T>());
+  static_assert(N <= tagged_free_bits<T>(),
+                "pointer type for T does not have N free bits");
   // mask: all pointers satisfy p & ~mask == 0, if N is set to honor
   // the alignment of T
   static constexpr uintptr_t mask = ~uintptr_t(0) << N;
@@ -169,15 +170,15 @@ template <typename T, int N> struct tagged_pointer_N {
   T *get() { return reinterpret_cast<T *>(p & mask); }
   const std::size_t tag() { return p & ~mask; }
   template <int Bit> bool get_bit() {
-    static_assert(Bit <= N);
+    static_assert(Bit <= N, "This type only holds N bits");
     return p & ~(1u << (Bit - 1));
   }
   template <int Bit> void set_bit() {
-    static_assert(Bit <= N);
+    static_assert(Bit <= N, "This type only holds N bits");
     p |= (1u << (Bit - 1));
   }
   template <int Bit> void reset_bit() {
-    static_assert(Bit <= N);
+    static_assert(Bit <= N,  "This type only holds N bits");
     p &= ~(1u << (Bit - 1));
   }
 
@@ -225,8 +226,10 @@ template <typename... Types> struct pointer_variant {
   static constexpr int freebits =
       tagged_pointer_detail::tagged_free_bits_variant<Types...>();
   static constexpr int maxtypes = 1 << (freebits - 1);
-  static_assert(maxtypes > sizeof...(Types));
-  static_assert(!tagged_pointer_detail::has_duplicates<Types...>());
+  static_assert(maxtypes > sizeof...(Types),
+                "Not enough free bits to store this many types");
+  static_assert(!tagged_pointer_detail::has_duplicates<Types...>(),
+                "Cannot differentiate between pointers of the same type");
 
   // default constructor etc
   pointer_variant() = default;
@@ -234,12 +237,14 @@ template <typename... Types> struct pointer_variant {
   template <typename T> pointer_variant(T *p) { set(p); }
 
   template <typename T> void set(T *p) {
-    static_assert(tagged_pointer_detail::contained<T, Types...>());
+    static_assert(tagged_pointer_detail::contained<T, Types...>(),
+                  "T is not one of the pointer types stored");
     data.set(p, 1+ tagged_pointer_detail::indexof<T, Types...>());
   }
   void reset() { data.set(nullptr, 0); }
   template <typename T> T *get() {
-    static_assert(tagged_pointer_detail::contained<T, Types...>());
+    static_assert(tagged_pointer_detail::contained<T, Types...>(),
+                  "T is not one of the pointer types stored");
     if (has<T>())
       return static_cast<T *>(data.get());
     else
@@ -253,7 +258,8 @@ template <typename... Types> struct pointer_variant {
   // right thing even for default constructed instances and to
   // differentiate between (T1*)nullptr and (T2*)nullptr
   template <typename T> bool has() {
-    static_assert(tagged_pointer_detail::contained<T, Types...>());
+    static_assert(tagged_pointer_detail::contained<T, Types...>(),
+                  "T is not one of the pointer types stored");
     return (data.tag() == 1 + tagged_pointer_detail::indexof<T, Types...>());
   }
 
