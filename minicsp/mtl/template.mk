@@ -67,7 +67,7 @@ lib$(LIB)d.a:	$(filter-out Main.od, $(DCOBJS))
 ## Build rule
 %.o %.op %.od %.or %.oc:	%.cpp
 	@echo Compiling: "$@ ( $< )"
-	$(CXX) $(CFLAGS) -c -o $@ $<
+	@$(CXX) $(CFLAGS) -c -o $@ $<
 
 ## Linking rules (standard/profile/debug/release)
 $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static $(EXEC)_cov:

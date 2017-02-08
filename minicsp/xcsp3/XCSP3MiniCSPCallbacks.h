@@ -109,9 +109,13 @@ namespace XCSP3Core {
 
 
         void buildVariableInteger(string id, vector<int> &values) override {
+            for(int i = 0; i < values.size() - 1; i++)
+                if(values[i+1] == values[i])
+                    throw unsupported("Probem : domain with identical value: " + id);
+
             cspvar x = solver.newCSPVar(values[0], values.back());
             int v = values[0];
-            for(int i = 1 ; i < values.back() ; i++) {
+            for(int i = 1 ; i < values.size() ; i++) {
                 v++;
                 while(v != values[i])
                     x.remove(solver, v++, NO_REASON);

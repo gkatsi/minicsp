@@ -2,7 +2,7 @@ MTL       = ../mtl
 CORE      = ../core
 CHDRS     = $(wildcard *.hpp) $(wildcard *.hh) $(wildcard $(MTL)/*.h)
 EXEC      = minicsp-xcsp3
-CFLAGS    = -I../.. -I/usr/include/libxml2 -I/usr/local/include -I/usr/local/opt/libxml2/include/libxml2/ -I../xcsp3/include -Wall -ffloat-store -std=c++1z
+CFLAGS    = -I../.. -I/usr/include/libxml2 -I/usr/local/include -I/usr/local/opt/libxml2/include/libxml2/ -I../xcsp3/include -Wall  -std=c++1z #-ffloat-store
 LFLAGS    = -L../lib -lz -lxml2 $(LIBS) -lparserxcsp3core
 LIBSTDCXXDEBUG = 
 
