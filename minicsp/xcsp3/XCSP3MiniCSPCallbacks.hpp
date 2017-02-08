@@ -165,9 +165,7 @@ namespace XCSP3Core {
 
         // ---------------------------- LANGUAGES ------------------------------------------
 
-        void buildConstraintRegular(string id, vector<XVariable *> &list, string st, string final, vector<XTransition> &transitions) override {
-            // TODO CHECK
-            throw unsupported("regular in progress");
+        void buildConstraintRegular(string id, vector<XVariable *> &list, string st, vector<string> &final, vector<XTransition> &transitions) override {
 
             map<string, size_t> states;
             size_t current = 1;
@@ -184,7 +182,8 @@ namespace XCSP3Core {
                 minitransitions.push_back(t);
             }
             set<int> finals;
-            finals.insert(states[final]);
+            for(string f : final)
+                finals.insert(states[f]);
             regular::automaton aut(minitransitions, states[st], finals);
             post_regular(solver, xvars2cspvars(list), aut);
         }
