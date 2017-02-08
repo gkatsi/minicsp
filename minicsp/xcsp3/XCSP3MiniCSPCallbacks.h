@@ -83,7 +83,7 @@ namespace XCSP3Core {
         }
 
 
-        // ---------------------------- VARIABLES ------------------------------------------
+        // ---------------------------- XVariable -> minicsp variables -------------------------------
 
         vector<cspvar> xvars2cspvars(vector<XVariable *> &xvars) {
             vector<cspvar> v(xvars.size());
@@ -100,6 +100,7 @@ namespace XCSP3Core {
             return constants[c];
         }
 
+        // ---------------------------- VARIABLES ------------------------------------------
 
         void buildVariableInteger(string id, int minValue, int maxValue) override {
             cspvar x = solver.newCSPVar(minValue, maxValue);
