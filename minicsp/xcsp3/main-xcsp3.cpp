@@ -50,7 +50,7 @@ part of the xcsp distribution
 #include "minicsp/core/utils.hpp"
 
 #include "include/XCSP3CoreParser.h"
-#include "XCSP3MiniCSPCallbacks.h"
+#include "XCSP3MiniCSPCallbacks.hpp"
 
 using namespace XCSP3Core;
 using namespace std;
