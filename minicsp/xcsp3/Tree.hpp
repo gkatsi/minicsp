@@ -108,9 +108,9 @@ namespace XCSP3Core {
 
                 string currentElement = current.substr(0, nb);
 
-               /* if(currentElement != "" && nb != posOpenParenthesis)
+                if(currentElement != "" && nb != posOpenParenthesis)
                     createBasicParameter(currentElement, stack, params);
-                */
+
 
                 if(nb == posCloseParenthesis)
                     closeOperator(stack, params);
@@ -127,6 +127,24 @@ namespace XCSP3Core {
             return params.back();
         }
 
+        void createBasicParameter(string currentElement,vector<NodeOperator*> &stack,vector<Node*> &params) {
+            try {
+                int nb = stoi(currentElement);
+                //cout << "Number " << nb << endl;
+                params.push_back(new NodeConstant(nb));
+            } catch (invalid_argument e) {
+                params.push_back(new NodeVariable(currentElement));
+                /*
+                 * bool alreadyInsideList = false;
+                for (int i = 0; i < listOfVariables.size(); i++)
+                    if (listOfVariables[i] == v) {
+                        alreadyInsideList = true;
+                        break;
+                    }
+                if (alreadyInsideList == false) listOfVariables.push(v);
+                 */
+            }
+        }
 
         void createOperator(string currentElement, vector<NodeOperator *> &stack, vector<Node *> &params) {
             NodeOperator *tmp = NULL;
