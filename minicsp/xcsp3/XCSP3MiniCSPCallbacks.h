@@ -31,6 +31,8 @@
 #include "XCSP3Variable.h"
 #include "minicsp/core/cons.hpp"
 
+
+
 /**
  * This is an example that prints useful informations of a XCSP3 instance.
  * You need to create your own class and to override functions of the callback.
@@ -306,13 +308,12 @@ namespace XCSP3Core {
                 throw unsupported("nValues is only supported with atMost");
             vector<cspvar> vars = xvars2cspvars(list);
             cspvar n;
-            if(xc.operandType == INTEGER)
-                n = constant(xc.val);
-            else if(xc.operandType == VARIABLE)
-                n = tocspvars[xc.var];
-            else throw unsupported("nValues with internal is not yet supported");
-            throw unsupported("TODO"); //TODO
-            //post_atmostnvalue(solver, vars, n);
+            switch(xc.operandType) {
+                case INTEGER : n = constant(xc.val); break;
+                case VARIABLE : n = tocspvars[xc.var];break;
+                default : throw unsupported("nValues with interval is not yet supported");
+            }
+            post_atmostnvalue(solver, vars, n);
         }
 
 

@@ -21,7 +21,7 @@ CXX       ?= g++
 CFLAGS    ?= -Wall -std=c++14
 LFLAGS    ?= -Wall -L../lib
 
-COPTIMIZE ?= -O3 --param inline-unit-growth=60
+COPTIMIZE ?= -O3
 
 #GOOGLE_PROFILER ?= -lprofiler
 GOOGLE_PROFILER ?= 

@@ -8,7 +8,7 @@ LIBSTDCXXDEBUG =
 
 
 COREOBJS  = $(CORE)/solver.o $(CORE)/cons.o $(CORE)/setcons.o \
-	    $(CORE)/cmdline.o $(CORE)/utils.o
+	    $(CORE)/cmdline.o $(CORE)/utils.o $(CORE)/nvalue.o
 CSRCS     = $(wildcard *.cpp)
 COBJS     = $(addsuffix .o, $(basename $(CSRCS))) $(COREOBJS)
 
