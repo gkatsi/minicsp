@@ -156,6 +156,7 @@ namespace XCSP3Core {
 
 
         void buildConstraintIntension(string id, string expr) override {
+            cout << expr << endl;
             Tree tree(expr);
             postExpression(tree.root, true);
         }
@@ -165,7 +166,8 @@ namespace XCSP3Core {
 
         // ---------------------------- LANGUAGES ------------------------------------------
 
-        void buildConstraintRegular(string id, vector<XVariable *> &list, string st, vector<string> &final, vector<XTransition> &transitions) override {
+        void
+        buildConstraintRegular(string id, vector<XVariable *> &list, string st, vector<string> &final, vector<XTransition> &transitions) override {
 
             map<string, size_t> states;
             size_t current = 1;
@@ -329,6 +331,51 @@ namespace XCSP3Core {
                     throw unsupported("nValues with interval is not yet supported");
             }
             post_atmostnvalue(solver, vars, n);
+        }
+
+        // ---------------------------- MIN/MAX ------------------------------------------
+        // Use expression to do that, avoid duplication of code....
+
+        string opToString(OrderType o) {
+            if(o == LE) return "le(";
+            if(o == LT) return "lt(";
+            if(o == GE) return "ge(";
+            if(o == GT) return "gt(";
+            if(o == EQ) return "eq(";
+            if(o == NE) return "ne(";
+            throw unsupported("Strange...");
+        }
+
+
+        void createMinMaxExpression(string minmax, vector<XVariable *> &list, XCondition &xc) {
+            string tmp = minmax + "(";
+            for(XVariable *xv : list)
+                tmp += xv->id + (xv == list.back() ? "" : ",");
+            tmp += ")";
+            switch(xc.operandType) {
+                case INTEGER :
+                    buildConstraintIntension("", opToString(xc.op) + tmp + "," + to_string(xc.val) + ")");
+                    break;
+                case VARIABLE :
+                    buildConstraintIntension("", opToString(xc.op) + tmp + "," + xc.var + ")");
+                    break;
+                case INTERVAL :
+                    buildConstraintIntension("", "ge(" + tmp + "," + to_string(xc.min) + ")");
+                    buildConstraintIntension("", "le(" + tmp + "," + to_string(xc.max) + ")");
+                    break;
+            }
+
+
+        }
+
+
+        virtual void buildConstraintMinimum(string id, vector<XVariable *> &list, XCondition &xc) {
+            createMinMaxExpression("min",list,xc);
+        }
+
+
+        virtual void buildConstraintMaximum(string id, vector<XVariable *> &list, XCondition &xc) {
+            createMinMaxExpression("max",list,xc);
         }
 
 
