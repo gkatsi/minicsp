@@ -56,6 +56,7 @@ namespace XCSP3Core {
         XCSP3MiniCSPCallbacks(Solver &s) : XCSP3CoreCallbacks(), solver(s) {
             recognizeSpecialCountCases = false;
             recognizeNValuesCases = false;
+            recognizeSpecialIntensionCases = false;
         }
 
 
@@ -369,12 +370,12 @@ namespace XCSP3Core {
         }
 
 
-        virtual void buildConstraintMinimum(string id, vector<XVariable *> &list, XCondition &xc) {
+        virtual void buildConstraintMinimum(string id, vector<XVariable *> &list, XCondition &xc) override {
             createMinMaxExpression("min",list,xc);
         }
 
 
-        virtual void buildConstraintMaximum(string id, vector<XVariable *> &list, XCondition &xc) {
+        virtual void buildConstraintMaximum(string id, vector<XVariable *> &list, XCondition &xc) override {
             createMinMaxExpression("max",list,xc);
         }
 
