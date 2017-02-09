@@ -267,11 +267,11 @@ namespace XCSP3Core {
                     break;
                 case GE:
                     for(int i = 0 ; i != coefs.size() ; ++i) coefs[i] = -coefs[i];
-                    post_lin_leq(solver, list, coefs, xc.val);
+                    post_lin_leq(solver, list, coefs, -xc.val);
                     break;
                 case GT:
                     for(int i = 0 ; i != coefs.size() ; ++i) coefs[i] = -coefs[i];
-                    post_lin_less(solver, list, coefs, xc.val);
+                    post_lin_less(solver, list, coefs, -xc.val);
                     break;
                 case LE:
                     post_lin_leq(solver, list, coefs, xc.val);
