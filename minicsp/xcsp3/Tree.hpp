@@ -13,7 +13,7 @@ namespace XCSP3Core {
     //-------------------------------------
 
     typedef enum {
-        NT_CONSTANT, NT_VARIABLE, NT_NEG, NT_ABS, NT_ADD, NT_SUB, NT_MULT, NT_DIV, NT_MOD, NT_MIN, NT_MAX, NT_LE, NT_LT, NT_GE, NT_GT, NT_EQ,
+        NT_CONSTANT, NT_VARIABLE, NT_NEG, NT_ABS, NT_ADD, NT_SUB, NT_MULT, NT_DIV, NT_MOD, NT_MIN, NT_MAX, NT_LE, NT_DIST, NT_LT, NT_GE, NT_GT, NT_EQ,
         NT_NE, NT_NOT, NT_AND, NT_OR, NT_XOR, NT_IF, NT_IFF, NT_IMP
     } NodeType;
 
@@ -162,8 +162,7 @@ namespace XCSP3Core {
 
             if(currentElement == "min") tmp = new NodeOperator(NT_MIN, -1);
             if(currentElement == "max") tmp = new NodeOperator(NT_MAX, -1);
-            //if(currentElement == "dist") throw runtime_error("DIST not allowed in expression");//tmp = new NodeDist();
-
+            if(currentElement == "dist") tmp = new NodeOperator(NT_DIST);
             if(currentElement == "le") tmp = new NodeOperator(NT_LE);
             if(currentElement == "lt") tmp = new NodeOperator(NT_LT);
             if(currentElement == "ge") tmp = new NodeOperator(NT_GE);

@@ -157,7 +157,6 @@ namespace XCSP3Core {
 
 
         void buildConstraintIntension(string id, string expr) override {
-            cout << expr << endl;
             Tree tree(expr);
             postExpression(tree.root, true);
         }
@@ -659,6 +658,15 @@ namespace XCSP3Core {
             w[2] = 1;
             v[2] = arg2;
             post_lin_eq(solver, v, w, 0);
+        }
+
+        if(fn->type == NT_DIST) { //Simulate DIST(X,Y) = ABS(SUB(X,Y))
+            fn->type = NT_SUB;
+            // Copy of ABS Op (Above)
+            cspvar arg = postExpression(fn); // call on same node
+            rv = solver.newCSPVar(0, max(abs(arg.min(solver)), abs(arg.max(solver))));
+            post_abs(solver, arg, rv, 0);
+            fn->type = NT_DIST; //Be careful, depend the order,  but NT_SUB can be called two times otherwise :(
         }
 
         if(fn->type == NT_ADD) {
