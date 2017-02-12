@@ -494,6 +494,13 @@ namespace XCSP3Core {
             }
         }
 
+        if(fn->type == NT_IMP) { // IMP(X,Y) = NOT X OR Y
+            NodeOperator* tmp = new NodeOperator(NT_NOT,1);
+            tmp->addParameter(fn->args[0]);
+            fn->args[0] = tmp;
+            fn->type = NT_OR;
+        }
+
         if(fn->type == NT_OR) {
             if(root) {
                 vec<Lit> ps;

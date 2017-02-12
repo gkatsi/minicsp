@@ -175,7 +175,7 @@ namespace XCSP3Core {
             if(currentElement == "and") tmp = new NodeOperator(NT_AND, -1);
             if(currentElement == "or") tmp = new NodeOperator(NT_OR, -1);
             if(currentElement == "xor") tmp = new NodeOperator(NT_XOR);
-            //if(currentElement == "imp") tmp = new NodeOperator(NT_IMP);
+            if(currentElement == "imp") tmp = new NodeOperator(NT_IMP);
             if(currentElement == "if") tmp = new NodeOperator(NT_IF,3);
             if(currentElement == "iff") tmp = new NodeOperator(NT_IFF);
 
