@@ -3889,9 +3889,11 @@ void post_lex_leq(Solver &s, std::vector<cspvar> const& x,
     std::size_t n = x.size();
     std::vector<Var> b(n), c(n);
     for(size_t i = 0; i != n; ++i) {
+          std::cout << x[i].id() << " " << y[i].id() <<" // ";
         b[i] = s.newVar();
         c[i] = s.newVar();
     }
+  std::cout<< std::endl;
     post_lex_common(s, x, y, b, c);
 }
 

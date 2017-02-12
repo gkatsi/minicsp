@@ -242,14 +242,14 @@ namespace XCSP3Core {
             // lines
             buildConstraintLex(id, matrix, order);
 
-            //columns
+            /*//columns
             vector<vector<XVariable *>> tmatrix(matrix[0].size());
             for(int i = 0 ; i < tmatrix.size() ; i++) {
                 tmatrix[i].reserve(matrix.size());
                 for(int j = 0 ; j < matrix.size() ; j++)
                     tmatrix[i][j] = matrix[j][i];
             }
-            buildConstraintLex(id, tmatrix, order);
+            buildConstraintLex(id, tmatrix, order);*/
         }
 
 
@@ -397,6 +397,12 @@ namespace XCSP3Core {
             post_element(solver, tocspvars[value->id], tocspvars[index->id], xvars2cspvars(list), startIndex);
         }
 
+        // ---------------------------- Instantiation ------------------------------------------
+
+        void buildConstraintInstantiation(string id, vector<XVariable *> &list, vector<int> &values) override {
+            for(int i = 0; i < list.size(); i++)
+                tocspvars[list[i]->id].assign(solver,values[i],NO_REASON);
+        }
 
     };
     // -------------------------------------------------------------------------------------------------------
