@@ -139,7 +139,7 @@ namespace XCSP3Core {
 
             cspvar x = tocspvars[variable->id];
             if(support) {
-                for(int v = x.min(solver); v < x.max(solver); v++)
+                for(int v = x.min(solver); v <= x.max(solver); v++)
                     if(x.indomain(solver, v)) {
                         std::vector<int>::iterator it = std::find(tuple.begin(), tuple.end(), v);
                         if(it == tuple.end())
