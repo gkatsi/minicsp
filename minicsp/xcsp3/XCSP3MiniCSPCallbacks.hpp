@@ -45,6 +45,7 @@ namespace XCSP3Core {
         map<int, cspvar> constants;
 
         vector<vector<int>> *previousTuples;
+        vector<int> previousTuplesSize1;
 
 
         XCSP3MiniCSPCallbacks(Solver &s) : XCSP3CoreCallbacks(), solver(s) {
@@ -60,10 +61,10 @@ namespace XCSP3Core {
         void print_solution() {
             map<string, cspvar>::const_iterator i, b = tocspvars.begin(), e = tocspvars.end();
             cout << "\n<instantiation type='solution'>\n<list>";
-            for(i = b ; i != e ; ++i)
+            for(i = b; i != e; ++i)
                 cout << i->first << " ";
             cout << "</list>\n<values>";
-            for(i = b ; i != e ; ++i)
+            for(i = b; i != e; ++i)
                 cout << solver.cspModelValue(i->second) << " ";
 
             cout << "\n</values>\n</instantiation>\n";
@@ -80,7 +81,7 @@ namespace XCSP3Core {
 
         vector<cspvar> xvars2cspvars(vector<XVariable *> &xvars) {
             vector<cspvar> v(xvars.size());
-            for(int i = 0 ; i != xvars.size() ; ++i) {
+            for(int i = 0; i != xvars.size(); ++i) {
                 v[i] = tocspvars[xvars[i]->id];
             }
             return v;
@@ -103,13 +104,13 @@ namespace XCSP3Core {
 
 
         void buildVariableInteger(string id, vector<int> &values) override {
-            for(int i = 0 ; i < values.size() - 1 ; i++)
+            for(int i = 0; i < values.size() - 1; i++)
                 if(values[i + 1] == values[i])
                     throw runtime_error("Probem : domain with identical value: " + id);
 
             cspvar x = solver.newCSPVar(values[0], values.back());
             int v = values[0];
-            for(int i = 1 ; i < values.size() ; i++) {
+            for(int i = 1; i < values.size(); i++) {
                 v++;
                 while(v != values[i])
                     x.remove(solver, v++, NO_REASON);
@@ -132,16 +133,30 @@ namespace XCSP3Core {
 
 
         void buildConstraintExtension(string id, XVariable *variable, vector<int> &tuple, bool support, bool hasStar) override {
-            vector<XVariable *> list;
-            list.push_back(variable);
-            vector<vector<int>> tuples;
-            tuples.push_back(tuple);
-            buildConstraintExtension(id, list, tuples, support, hasStar);
+            if(hasStar)
+                throw runtime_error("* not supported in extensional constraints");
+            previousTuplesSize1 = tuple;
+
+            cspvar x = tocspvars[variable->id];
+            if(support) {
+                for(int v = x.min(solver); v < x.max(solver); v++)
+                    if(x.indomain(solver, v)) {
+                        std::vector<int>::iterator it = std::find(tuple.begin(), tuple.end(), v);
+                        if(it == tuple.end())
+                            x.remove(solver, v, NO_REASON);
+                    }
+            } else {
+                for(int v : tuple)
+                    if(x.indomain(solver, v)) x.remove(solver, v, NO_REASON);
+            }
         }
 
 
         void buildConstraintExtensionAs(string id, vector<XVariable *> list, bool support, bool hasStar) override {
-            buildConstraintExtension(id, list, *previousTuples, support, hasStar);
+            if(list.size() == 1)
+                buildConstraintExtension(id, list[0], previousTuplesSize1, support, hasStar);
+            else
+                buildConstraintExtension(id, list, *previousTuples, support, hasStar);
         }
 
 
@@ -193,7 +208,7 @@ namespace XCSP3Core {
 
         void buildConstraintAllEqual(string id, vector<XVariable *> &list) override {
             vector<cspvar> vars = xvars2cspvars(list);
-            for(int i = 0 ; i < vars.size() - 1 ; i++)
+            for(int i = 0; i < vars.size() - 1; i++)
                 post_eq(solver, vars[i], vars[i + 1], 0);
         }
 
@@ -201,7 +216,7 @@ namespace XCSP3Core {
 
         void buildConstraintOrdered(string id, vector<XVariable *> &list, OrderType order) override {
             vector<cspvar> vars = xvars2cspvars(list);
-            for(int i = 0 ; i < vars.size() - 1 ; i++) {
+            for(int i = 0; i < vars.size() - 1; i++) {
                 if(order == LE)
                     post_leq(solver, vars[i], vars[i + 1], 0);
                 if(order == LT)
@@ -216,7 +231,7 @@ namespace XCSP3Core {
 
         void buildConstraintLex(string id, vector<vector<XVariable *>> &lists, OrderType order) override {
             vector<cspvar> vars1, vars2;
-            for(int i = 0 ; i < lists.size() - 1 ; i++) {
+            for(int i = 0; i < lists.size() - 1; i++) {
                 vars1 = xvars2cspvars(lists[i]);
                 vars2 = xvars2cspvars(lists[i + 1]);
                 if(order == LE)
@@ -259,11 +274,11 @@ namespace XCSP3Core {
                     post_lin_neq(solver, list, coefs, xc.val);
                     break;
                 case GE:
-                    for(int i = 0 ; i != coefs.size() ; ++i) coefs[i] = -coefs[i];
+                    for(int i = 0; i != coefs.size(); ++i) coefs[i] = -coefs[i];
                     post_lin_leq(solver, list, coefs, -xc.val);
                     break;
                 case GT:
-                    for(int i = 0 ; i != coefs.size() ; ++i) coefs[i] = -coefs[i];
+                    for(int i = 0; i != coefs.size(); ++i) coefs[i] = -coefs[i];
                     post_lin_less(solver, list, coefs, -xc.val);
                     break;
                 case LE:
@@ -364,12 +379,12 @@ namespace XCSP3Core {
 
 
         virtual void buildConstraintMinimum(string id, vector<XVariable *> &list, XCondition &xc) override {
-            createMinMaxExpression("min",list,xc);
+            createMinMaxExpression("min", list, xc);
         }
 
 
         virtual void buildConstraintMaximum(string id, vector<XVariable *> &list, XCondition &xc) override {
-            createMinMaxExpression("max",list,xc);
+            createMinMaxExpression("max", list, xc);
         }
 
 
@@ -395,7 +410,7 @@ namespace XCSP3Core {
 
         void buildConstraintInstantiation(string id, vector<XVariable *> &list, vector<int> &values) override {
             for(int i = 0; i < list.size(); i++)
-                tocspvars[list[i]->id].assign(solver,values[i],NO_REASON);
+                tocspvars[list[i]->id].assign(solver, values[i], NO_REASON);
         }
 
     };
@@ -489,7 +504,7 @@ namespace XCSP3Core {
         }
 
         if(fn->type == NT_IMP) { // IMP(X,Y) = NOT X OR Y
-            NodeOperator* tmp = new NodeOperator(NT_NOT,1);
+            NodeOperator *tmp = new NodeOperator(NT_NOT, 1);
             tmp->addParameter(fn->args[0]);
             fn->args[0] = tmp;
             fn->type = NT_OR;
@@ -498,7 +513,7 @@ namespace XCSP3Core {
         if(fn->type == NT_OR) {
             if(root) {
                 vec<Lit> ps;
-                for(int i = 0 ; i != fn->args.size() ; ++i) {
+                for(int i = 0; i != fn->args.size(); ++i) {
                     cspvar arg = postExpression(fn->args[i]);
                     ps.push(arg.r_eq(solver, 0));
                 }
@@ -507,7 +522,7 @@ namespace XCSP3Core {
                 vec<Lit> ps;
                 rv = solver.newCSPVar(0, 1);
                 ps.push(rv.e_eq(solver, 0));
-                for(int i = 0 ; i != fn->args.size() ; ++i) {
+                for(int i = 0; i != fn->args.size(); ++i) {
                     cspvar arg = postExpression(fn->args[i]);
 
                     vec<Lit> ps1;
@@ -523,13 +538,13 @@ namespace XCSP3Core {
 
         if(fn->type == NT_AND) {
             if(root) {
-                for(int i = 0 ; i != fn->args.size() ; ++i)
+                for(int i = 0; i != fn->args.size(); ++i)
                     postExpression(fn->args[i]);
             } else {
                 vec<Lit> ps;
                 rv = solver.newCSPVar(0, 1);
                 ps.push(rv.r_eq(solver, 0));
-                for(int i = 0 ; i != fn->args.size() ; ++i) {
+                for(int i = 0; i != fn->args.size(); ++i) {
                     cspvar arg = postExpression(fn->args[i]);
 
                     vec<Lit> ps1;
@@ -681,7 +696,7 @@ namespace XCSP3Core {
             int min = 0, max = 0;
             vector<int> w;
             vector<cspvar> v;
-            for(int q = 0 ; q != fn->args.size() ; ++q) {
+            for(int q = 0; q != fn->args.size(); ++q) {
                 cspvar arg = postExpression(fn->args[q]);
                 w.push_back(-1);
                 v.push_back(arg);
@@ -696,7 +711,7 @@ namespace XCSP3Core {
         if(fn->type == NT_MULT) {
             assert(!root);
             cspvar arg0 = postExpression(fn->args[0]);
-            for(int q = 1 ; q != fn->args.size() ; ++q) {
+            for(int q = 1; q != fn->args.size(); ++q) {
                 cspvar arg1 = postExpression(fn->args[q]);
                 int minv = min(min(arg0.min(solver) * arg1.min(solver),
                                    arg0.min(solver) * arg1.max(solver)),
@@ -716,7 +731,7 @@ namespace XCSP3Core {
         if(fn->type == NT_MIN) {
             assert(!root);
             cspvar arg0 = postExpression(fn->args[0]);
-            for(int q = 1 ; q != fn->args.size() ; ++q) {
+            for(int q = 1; q != fn->args.size(); ++q) {
                 cspvar arg1 = postExpression(fn->args[q]);
                 int minv = min(arg0.min(solver), arg1.min(solver)),
                         maxv = min(arg0.max(solver), arg1.max(solver));
@@ -729,7 +744,7 @@ namespace XCSP3Core {
         if(fn->type == NT_MAX) {
             assert(!root);
             cspvar arg0 = postExpression(fn->args[0]);
-            for(int q = 1 ; q != fn->args.size() ; ++q) {
+            for(int q = 1; q != fn->args.size(); ++q) {
                 cspvar arg1 = postExpression(fn->args[q]);
                 int minv = max(arg0.min(solver), arg1.min(solver)),
                         maxv = max(arg0.max(solver), arg1.max(solver));
