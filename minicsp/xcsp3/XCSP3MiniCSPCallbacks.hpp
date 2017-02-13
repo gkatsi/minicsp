@@ -35,12 +35,6 @@
 namespace XCSP3Core {
     using namespace minicsp;
 
-    struct unsupported {
-        string name;
-
-
-        unsupported(string n) : name(n) {}
-    };
 
     class XCSP3MiniCSPCallbacks : public XCSP3CoreCallbacks {
 
@@ -79,7 +73,7 @@ namespace XCSP3Core {
 
         void beginInstance(InstanceType type) override {
             if(type == COP)
-                throw unsupported("COP is not supported");
+                throw runtime_error("COP is not supported");
         }
 
         // ---------------------------- XVariable -> minicsp variables -------------------------------
@@ -111,7 +105,7 @@ namespace XCSP3Core {
         void buildVariableInteger(string id, vector<int> &values) override {
             for(int i = 0 ; i < values.size() - 1 ; i++)
                 if(values[i + 1] == values[i])
-                    throw unsupported("Probem : domain with identical value: " + id);
+                    throw runtime_error("Probem : domain with identical value: " + id);
 
             cspvar x = solver.newCSPVar(values[0], values.back());
             int v = values[0];
@@ -128,7 +122,7 @@ namespace XCSP3Core {
 
         void buildConstraintExtension(string id, vector<XVariable *> list, vector<vector<int>> &tuples, bool support, bool hasStar) override {
             if(hasStar)
-                throw unsupported("* not supported in extensional constraints");
+                throw runtime_error("* not supported in extensional constraints");
             previousTuples = &tuples;
             if(support)
                 post_positive_table(solver, xvars2cspvars(list), tuples);
@@ -279,7 +273,7 @@ namespace XCSP3Core {
                     post_lin_less(solver, list, coefs, xc.val);
                     break;
                 default:
-                    throw unsupported("this sum is not supported");
+                    throw runtime_error("this sum is not supported");
             }
         }
 
@@ -317,7 +311,7 @@ namespace XCSP3Core {
 
         void buildConstraintNValues(string id, vector<XVariable *> &list, XCondition &xc) override {
             if(xc.op != LE)
-                throw unsupported("nValues is only supported with atMost");
+                throw runtime_error("nValues is only supported with atMost");
             vector<cspvar> vars = xvars2cspvars(list);
             cspvar n;
             switch(xc.operandType) {
@@ -328,7 +322,7 @@ namespace XCSP3Core {
                     n = tocspvars[xc.var];
                     break;
                 default :
-                    throw unsupported("nValues with interval is not yet supported");
+                    throw runtime_error("nValues with interval is not yet supported");
             }
             post_atmostnvalue(solver, vars, n);
         }
@@ -343,7 +337,7 @@ namespace XCSP3Core {
             if(o == GT) return "gt(";
             if(o == EQ) return "eq(";
             if(o == NE) return "ne(";
-            throw unsupported("Strange...");
+            throw runtime_error("Strange...");
         }
 
 
@@ -385,7 +379,7 @@ namespace XCSP3Core {
         void
         buildConstraintElement(string id, vector<XVariable *> &list, int startIndex, XVariable *index, RankType rank, int value) override {
             if(rank != ANY)
-                throw unsupported("Basic element is only supported");
+                throw runtime_error("Basic element is only supported");
             post_element(solver, constant(value), tocspvars[index->id], xvars2cspvars(list), startIndex);
         }
 
@@ -393,7 +387,7 @@ namespace XCSP3Core {
         void
         buildConstraintElement(string id, vector<XVariable *> &list, int startIndex, XVariable *index, RankType rank, XVariable *value) override {
             if(rank != ANY)
-                throw unsupported("Basic element is only supported");
+                throw runtime_error("Basic element is only supported");
             post_element(solver, tocspvars[value->id], tocspvars[index->id], xvars2cspvars(list), startIndex);
         }
 
