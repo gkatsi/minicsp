@@ -251,14 +251,15 @@ namespace XCSP3Core {
             // lines
             buildConstraintLex(id, matrix, order);
 
-            /*//columns
-            vector<vector<XVariable *>> tmatrix(matrix[0].size());
-            for(int i = 0 ; i < tmatrix.size() ; i++) {
-                tmatrix[i].reserve(matrix.size());
+            //columns
+            vector<vector<XVariable *>> tmatrix;
+            for(int i = 0 ; i < matrix[0].size() ; i++) {
+                vector<XVariable *>tmp;
                 for(int j = 0 ; j < matrix.size() ; j++)
-                    tmatrix[i][j] = matrix[j][i];
+                    tmp.push_back(matrix[j][i]);
+                tmatrix.push_back(tmp);
             }
-            buildConstraintLex(id, tmatrix, order);*/
+            buildConstraintLex(id, tmatrix, order);
         }
 
 
