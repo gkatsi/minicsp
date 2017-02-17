@@ -22,8 +22,9 @@ namespace XCSP3Core {
     public:
         NodeType type;
 
-
         Node(NodeType n) : type(n) {}
+
+        virtual ~Node() {}
     };
 
 
@@ -63,6 +64,11 @@ namespace XCSP3Core {
             if(maxParameters != -1 && args.size() > maxParameters)
                 throw runtime_error("Too many parameters in expression");
         }
+
+        virtual ~NodeOperator() {
+            for(Node *n : args)
+                delete n;
+        }
     };
 
 
@@ -91,6 +97,10 @@ namespace XCSP3Core {
 
         Tree(std::string e) : expr(e) {
             root = fromStringToTree(expr);
+        }
+
+        void dispose() {
+            delete root;
         }
 
 

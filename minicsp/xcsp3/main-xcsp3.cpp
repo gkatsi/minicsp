@@ -49,7 +49,7 @@ part of the xcsp distribution
 #include "minicsp/core/cmdline.hpp"
 #include "minicsp/core/utils.hpp"
 
-#include "include/XCSP3CoreParser.h"
+#include "XCSP3CoreParser.h"
 #include "XCSP3MiniCSPCallbacks.hpp"
 
 using namespace XCSP3Core;
