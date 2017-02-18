@@ -7,14 +7,16 @@ set(CMAKE_CXX_FLAGS "-std=c++1z")
 include_directories("/usr/local/include/")
 include_directories(/usr/local/opt/libxml2/include/libxml2/)
 
-# Dependencies {{{
 find_package(ZLIB REQUIRED)
-# }}}
-set(main "minicsp/xcsp/main-xcsp.cpp")
 
+set(main "minicsp/xcsp3/main-xcsp3.cpp")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/minicsp/xcsp3")
 # Basic Library
-file(GLOB lib_srcs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} minicsp/mtl/*.cpp minicsp/core/*.cpp minicsp/xcsp/*.cpp minicsp/xcsp3/*.cpp)
-list(REMOVE_ITEM lib_srcs ${main})
+file(GLOB  SRC_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} minicsp/mtl/*.cpp minicsp/core/*.cpp minicsp/xcsp3/*.cpp)
+#file(GLOB_RECURSE SRC_FILES ${PROJECT_SOURCE_DIR}/*.cpp)
+#list(REMOVE_ITEM lib_srcs ${main})
+
+list(REMOVE_ITEM SRC_FILES minicsp/core/main.cpp)
 
 include(ExternalProject)
 ExternalProject_Add(XCSP3-CPP-Parser
@@ -42,14 +44,15 @@ endif()
 include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${ZLIB_INCLUDE_DIR}
-        "minicsp/xcsp3/include"
+        #"/Users/audemard/csp/XCSP3-CPP-Parser/include/"
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake-build-debug/parser/src/XCSP3-CPP-Parser/include/
 )
 
 link_libraries(${ZLIB_LIBRARY})
+link_libraries(parserxcsp3core)
+link_libraries(xml2)
 
-
-#add_library(minicsp ${lib_type} ${lib_srcs})
-
-add_executable(minicsp ${main})
-target_link_libraries(minicsp)
+add_executable(minicsp ${main} ${SRC_FILES})
+add_dependencies(minicsp XCSP3-CPP-Parser)
+#target_link_libraries(minicsp)
 
