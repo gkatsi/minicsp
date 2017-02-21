@@ -297,6 +297,40 @@ namespace XCSP3Core {
         }
 
 
+        // Simulate scalar sum with instension constraint.
+        
+        void buildConstraintSum(string id, vector<XVariable *> &list, vector<XVariable *> &coeffs, XCondition &xc) override {
+            string tmp = "add(";
+            assert(list.size() == coeffs.size());
+            for(int i = 0 ; i < list.size() ; i++) {
+                tmp = tmp + "mul(" + list[i]->id + "," + coeffs[i]->id + ")";
+                if(i < list.size() - 1) tmp = tmp + ",";
+            }
+            if(xc.operandType == VARIABLE) {
+                xc.operandType = INTEGER;
+                xc.val = 0;
+                tmp = tmp + ",neg(" + xc.var + ")";
+            }
+            tmp = tmp + ")";
+            if(xc.op != IN) {
+                if(xc.op == EQ) tmp = "eq(" + tmp;
+                if(xc.op == NE) tmp = "ne(" + tmp;
+                if(xc.op == LE) tmp = "le(" + tmp;
+                if(xc.op == LT) tmp = "lt(" + tmp;
+                if(xc.op == GE) tmp = "ge(" + tmp;
+                if(xc.op == GT) tmp = "gt(" + tmp;
+                tmp = tmp + "," + std::to_string(xc.val) + ")";
+                buildConstraintIntension(id,tmp);
+                return;
+            }
+
+            // Intervals
+            buildConstraintIntension(id,"ge("+tmp+","+std::to_string(xc.min));
+            buildConstraintIntension(id,"le("+tmp+","+std::to_string(xc.max));
+        }
+
+
+
         // ---------------------------- AtMostNValues ------------------------------------------
 
         void buildConstraintNValues(string id, vector<XVariable *> &list, XCondition &xc) override {
