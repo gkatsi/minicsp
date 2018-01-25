@@ -1801,7 +1801,12 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                   for (int i = 1; i < decisionLevel(); ++i)
                       learnt_clause.push(~decisionAtLevel(i));
                   for (auto& f : clause_callbacks)
-                      f(learnt_clause, decisionLevel() - 1);
+                      if (f(learnt_clause, decisionLevel() - 1))
+                          interrupt_requested = true;
+                  if (interrupt_requested || !withinBudget()) {
+                      cancelUntil(0);
+                      return l_Undef;
+                  }
               }
               Lit flip = trail[ trail_lim[ decisionLevel() - 1 ] ];
               cancelUntil( decisionLevel() - 1 );
@@ -1813,7 +1818,12 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             analyze(confl, learnt_clause, backtrack_level);
 
             for (auto& f : clause_callbacks)
-                f(learnt_clause, backtrack_level);
+                if (f(learnt_clause, backtrack_level))
+                    interrupt_requested = true;
+            if (interrupt_requested || !withinBudget()) {
+                cancelUntil(0);
+                return l_Undef;
+            }
 
             cancelUntil(backtrack_level);
 
@@ -1959,14 +1969,27 @@ double Solver::progressEstimate() const
     return progress / nVars();
 }
 
-
 bool Solver::solve(const vec<Lit>& assumps)
+{
+    conflict_lim = -1;
+    // uninterruptible, because we do not know how to report interruption.
+    lbool status{l_Undef};
+    while ((status = solveBudget(assumps)) == l_Undef) {
+        cerr << "c WARNING: a callback requested interrupt but solver was not "
+                "invoked with solveBudget(). Continuing...\n";
+        interrupt_requested = false;
+    }
+    return (status == l_True);
+}
+
+lbool Solver::solveBudget(const vec<Lit>& assumps)
 {
     model.clear();
     conflict.clear();
 
     if (!ok) return false;
 
+    interrupt_requested = false;
     assumps.copyTo(assumptions);
 
     double  nof_conflicts = restart_first;
@@ -1985,7 +2008,7 @@ bool Solver::solve(const vec<Lit>& assumps)
     int lubymult = 1;
 
     // Search:
-    while (status == l_Undef && conflict_lim > 0 && conflicts < conflict_lim){
+    while (status == l_Undef && !interrupt_requested && withinBudget()) {
         if (verbosity >= 1)
             reportf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", (int)conflicts, order_heap.size(), nClauses(), (int)clauses_literals, (int)nof_learnts, nLearnts(), (double)learnts_literals/nLearnts(), progress_estimate*100), fflush(stdout);
         if( !lubybits ) {
@@ -2043,16 +2066,13 @@ bool Solver::solve(const vec<Lit>& assumps)
 #ifndef NDEBUG
         verifyModel();
 #endif
-    } else if( conflict_lim > 0 && conflicts >= conflict_lim) {
-      ; // nothing
-    } else {
-        assert(status == l_False);
+    } else if (status == l_False) {
         if (conflict.size() == 0)
             ok = false;
     }
 
     cancelUntil(0);
-    return status == l_True;
+    return status;
 }
 
 void Solver::excludeLast()

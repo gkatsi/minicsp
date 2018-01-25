@@ -46,6 +46,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <cstring>
 #include <string>
 #include <functional>
+#include <optional>
 
 #include "minicsp/mtl/Vec.h"
 #include "minicsp/mtl/Heap.h"
@@ -146,8 +147,10 @@ public:
     // Solving:
     //
     bool    simplify     ();                        // Removes already satisfied clauses.
-    bool    solve        (const vec<Lit>& assumps); // Search for a model that respects a given set of assumptions.
+    bool    solve        (const vec<Lit>& assumps); // Search for a model that respects a given set of assumptions. Cannot be interrupted
     bool    solve        ();                        // Search without assumptions.
+    lbool   solveBudget  (const vec<Lit>& assumps); // Try to solve with assumptions within a budget, return l_Undef if unable
+    lbool   solveBudget  ();                        // As above, without assumptions
     bool    okay         () const;                  // FALSE means solver is in a conflicting state
     void    excludeLast  ();                        // add a clause that excludes the last solution
 
@@ -190,7 +193,7 @@ public:
     // user callback to be notified of every learned clause. gets the
     // clause and the backtrack level
     // XXX: the great vec<> vs std::vector<> divide. ugh.
-    using clause_callback_t = std::function<void(vec<Lit> const&, int)>;
+    using clause_callback_t = std::function<bool(vec<Lit> const&, int)>;
 
     void use_clause_callback(clause_callback_t cb)
     {
@@ -234,7 +237,8 @@ public:
     bool      solution_phase_saving; // solution phase saving (for opt problems): remember polarity in last solution and use that
     bool      allow_clause_dbg;   // set to 0 when the solver is cloned to avoid infinite recursion
 
-    uint64_t  conflict_lim;       // stop after this many conflicts
+    bool      interrupt_requested{false}; // true if a callback asked us to stop
+    int64_t   conflict_lim{-1};           // stop after this many conflicts
 
     BranchHeuristic varbranch;
     ValBranchHeuristic valbranch;
@@ -408,6 +412,7 @@ protected:
                                                                                        // schedule propagators. Returns conflicting clause or NULL
     Clause*  explicit_reason  (Lit p);                                                 // If a literal has a Clause as reason, return that. Otherwise, use the explainer to create
                                                                                        // a clause, change the reason to that new clause and return that.
+    bool     withinBudget     () const;                                                // if true, we have exceeded the budget
 
     // Constraint queue
     //
@@ -594,8 +599,9 @@ inline int      Solver::nConstraints  ()      const   { return conses.size(); }
 inline void     Solver::setPolarity   (Var v, bool b) { polarity    [v] = (char)b; }
 inline void     Solver::setDecisionVar(Var v, bool b) { decision_var[v] = (char)b; if (b) { insertVarOrder(v); } }
 inline bool     Solver::solve         ()              { vec<Lit> tmp; return solve(tmp); }
+inline lbool    Solver::solveBudget   ()              { vec<Lit> tmp; return solveBudget(tmp); }
 inline bool     Solver::okay          ()      const   { return ok; }
-
+inline bool     Solver::withinBudget  ()      const   { return conflict_lim < 0 || conflicts < static_cast<uint64_t>(conflict_lim); }
 
 
 //=================================================================================================
