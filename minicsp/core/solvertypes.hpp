@@ -333,7 +333,7 @@ public:
 };
 
 
-#define INVALID_CLAUSE ((Clause*)0x4)
+#define INVALID_CLAUSE ((Clause*)0xF0)
 #define NO_REASON ((Clause*)nullptr)
 
 /*_________________________________________________________________________________________________
