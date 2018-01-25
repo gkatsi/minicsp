@@ -2105,6 +2105,42 @@ void Solver::excludeLast()
   addClause(exclude);
 }
 
+std::vector<Lit> Solver::getImpliedLiterals()
+{
+    assert(decisionLevel() == 0);
+    std::vector<Lit> rv;
+    for (int i = 0, e = trail.size(); i != e; ++i)
+        rv.push_back(trail[i]);
+    return rv;
+}
+
+std::optional<std::vector<Lit>> Solver::getImplications(Lit l)
+{
+    assert(decisionLevel() == 0);
+    std::optional<std::vector<Lit>> rv;
+    if (value(l) == l_False)
+        return rv;
+    if (value(l) == l_True) {
+        rv = vector<Lit>{};
+        return rv;
+    }
+
+    newDecisionLevel();
+    uncheckedEnqueue(l);
+    auto confl = propagate();
+    if (confl) {
+        cancelUntil(0);
+        return rv;
+    }
+
+    std::vector<Lit> impl;
+    for (int i = trail_lim[0], e = trail.size(); i != e; ++i)
+        impl.push_back(trail[i]);
+    cancelUntil(0);
+    rv = impl;
+    return rv;
+}
+
 //==================================================
 // output
 

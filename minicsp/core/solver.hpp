@@ -154,6 +154,18 @@ public:
     bool    okay         () const;                  // FALSE means solver is in a conflicting state
     void    excludeLast  ();                        // add a clause that excludes the last solution
 
+    // Get information from the solver:
+    // the set of implied literals at the root
+    std::vector<Lit> getImpliedLiterals();
+    // the set of all literals newly implied by propagation after
+    // setting l to true, meaning this does not include the literals
+    // that are already true anyway. Returns an empty optional if
+    // setting to true causes a conflict (contrast to an optional
+    // containing an empty vector if it has no implications). Note
+    // that even if setting l to true causes a conflict, this will not
+    // automatically set l to false at the root.
+    std::optional<std::vector<Lit>> getImplications(Lit l);
+
     // Explaining
     void    addInactiveClause(Clause *c);           // add a clause that will not be propagated, just as a reason or a conflict clause
 
