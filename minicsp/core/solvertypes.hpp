@@ -873,6 +873,9 @@ struct setevent_printer {
 
 std::ostream& operator<<(std::ostream& os, setevent_printer lp);
 
+inline bool is_invalid(Clause const* c) { return c == INVALID_CLAUSE; }
+inline bool is_invalid(vec<Lit> const* v) { return false; }
+
 template<typename T>
 struct clause_printer {
   Solver& _s;
@@ -886,6 +889,9 @@ std::ostream& operator<<(std::ostream& os, clause_printer<T> cp)
 {
   if( !cp._c ) {
     os << "NO_REASON";
+    return os;
+  } else if (is_invalid(cp._c)) {
+    os << "INVALID_CLAUSE";
     return os;
   }
   os << "( ";
