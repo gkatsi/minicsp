@@ -1307,6 +1307,26 @@ struct push_temp_p {
 #endif
 
 //==================================================
+// more usable backtrackables
+template <typename T> struct backtrackable {
+  static_assert(std::is_pod_v<T>, "Only POD types can be backtrackable");
+  Solver &s;
+  btptr p;
+
+  backtrackable(const backtrackable &) = default;
+  backtrackable(Solver &s, const T &t = T{})
+      : s(s), p(s.alloc_backtrackable(sizeof(T))) {
+    T &st = s.deref<T>(p);
+    new (&st) T(t);
+  }
+
+  T &operator*() { return s.deref<T>(p); }
+  const T &operator*() const { return s.deref<T>(p); }
+  T *operator->() { return &s.deref<T>(p); }
+  const T *operator->() const { return &s.deref<T>(p); }
+};
+
+//==================================================
 // a trick to avoid branching
 // returns a1 if w >= 0, otherwise a2
 
