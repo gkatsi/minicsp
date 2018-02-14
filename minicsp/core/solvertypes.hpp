@@ -274,7 +274,7 @@ template <typename... Types> struct pointer_variant {
 class Clause;
 
 template<class V>
-Clause* Clause_new(const V& ps, bool learnt = false,
+Clause* Clause_new(V&& ps, bool learnt = false,
                    Lit effect = lit_Undef);
 
 class Clause {
@@ -291,7 +291,7 @@ public:
 
     // NOTE: This constructor cannot be used directly (doesn't allocate enough memory).
     template<class V>
-    Clause(const V& ps, bool learnt, Lit effect) {
+    Clause(V&& ps, bool learnt, Lit effect) {
         size_etc = (ps.size() << 3) | (uint32_t)learnt;
         for (int i = 0; i < ps.size(); i++) {
           data[i] = ps[i];
@@ -301,7 +301,7 @@ public:
 
     // -- use this function instead:
     template<class V>
-    friend Clause* Clause_new(const V& ps, bool learnt, Lit effect) {
+    friend Clause* Clause_new(V&& ps, bool learnt, Lit effect) {
         assert(sizeof(Lit)      == sizeof(uint32_t));
         assert(sizeof(float)    == sizeof(uint32_t));
         void* mem = malloc(sizeof(Clause) + sizeof(uint32_t)*(ps.size()));

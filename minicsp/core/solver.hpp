@@ -168,6 +168,13 @@ public:
 
     // Explaining
     void    addInactiveClause(Clause *c);           // add a clause that will not be propagated, just as a reason or a conflict clause
+    // add a clause from a container. Accepts rvalue reference, so can
+    // be called with a temporary,
+    // i.e. addInactiveClause(vector<Lit>{x, ~y, z}). Returns the
+    // added clause, but it is owned by the solver and can be removed
+    // at any time. The only safe thing to do with this pointer is to
+    // give it back to the solver as the reason for failure/pruning
+    template <typename veclit> Clause *addInactiveClause(veclit &&c);
 
     // Variable mode:
     //
@@ -617,6 +624,14 @@ inline lbool    Solver::solveBudget   ()              { vec<Lit> tmp; return sol
 inline bool     Solver::okay          ()      const   { return ok; }
 inline bool     Solver::withinBudget  ()      const   { return conflict_lim < 0 || conflicts < static_cast<uint64_t>(conflict_lim); }
 
+template <typename veclit>
+inline Clause *Solver::addInactiveClause(veclit &&ps) {
+  for (Lit l : ps)
+    assert(var(l) != var_Undef);
+  Clause *r = Clause_new(ps);
+  addInactiveClause(r);
+  return r;
+}
 
 //=================================================================================================
 // Debug + etc:
