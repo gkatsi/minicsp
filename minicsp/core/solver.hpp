@@ -178,6 +178,7 @@ public:
     //
     lbool   value      (Var x) const;       // The current value of a variable.
     lbool   value      (Lit p) const;       // The current value of a literal.
+    lbool   modelValue (Var x) const;       // The value of a variable in the last model. The last call to solve must have been satisfiable.
     lbool   modelValue (Lit p) const;       // The value of a literal in the last model. The last call to solve must have been satisfiable.
     std::pair<int,int>  cspModelRange(cspvar x) const; // Range in last model
     int     cspModelValue(cspvar x) const;  // Assigned value in last model
@@ -601,6 +602,7 @@ inline int Solver::varLevel(Lit l) const { return level[var(l)]; }
 inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level[x] & 31); }
 inline lbool    Solver::value         (Var x) const   { return toLbool(assigns[x]); }
 inline lbool    Solver::value         (Lit p) const   { return toLbool(assigns[var(p)]) ^ sign(p); }
+inline lbool    Solver::modelValue    (Var x) const   { return model[x]; }
 inline lbool    Solver::modelValue    (Lit p) const   { return model[var(p)] ^ sign(p); }
 inline int      Solver::nAssigns      ()      const   { return trail.size(); }
 inline int      Solver::nClauses      ()      const   { return clauses.size(); }
