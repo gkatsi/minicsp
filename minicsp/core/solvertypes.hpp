@@ -331,10 +331,6 @@ public:
     Lit const *end() { return begin() + size(); }
 };
 
-
-#define INVALID_CLAUSE ((Clause*)0xF0)
-#define NO_REASON ((Clause*)nullptr)
-
 /*_________________________________________________________________________________________________
 |
 |  subsumes : (other : const Clause&)  ->  Lit
@@ -557,6 +553,10 @@ inline std::ostream& operator<<(std::ostream& os, explainer& e)
 }
 
 using explanation_ptr = pointer_variant<Clause, explainer>;
+
+inline Clause* INVALID_CLAUSE{(Clause*)(0x1 << explanation_ptr::freebits)};
+inline Clause* NO_REASON{nullptr};
+
 
 /* The class from which all propagators derive */
 class cons
