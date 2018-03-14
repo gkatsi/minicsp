@@ -661,8 +661,13 @@ void Solver::analyze(Clause* inconfl, vec<Lit>& out_learnt, int& out_btlevel)
     int maxlvl = 0;
     for (int i = 0; i != inconfl->size(); ++i) {
         Lit l = (*inconfl)[i];
+        assert(value(l) == l_False);
         if (level[var(l)] > maxlvl)
             maxlvl = level[var(l)];
+    }
+    if (trace && maxlvl < decisionLevel()) {
+      cout << "clause failed at level" << maxlvl
+           << " backtracking before analysis\n";
     }
     cancelUntil(maxlvl);
     if (maxlvl == 0) {
@@ -1172,10 +1177,12 @@ void Solver::uncheckedEnqueue_common(Lit p, explanation_ptr from)
             cout << domevent_printer(*this, pevent);
         else
             cout << lit_printer(*this, p);
-        cout << " forced by ";
-        if (active_constraint)
-            cout << cons_state_printer(*this, *active_constraint);
+        if (active_constraint) {
+            cout << " forced by "
+                 << cons_state_printer(*this, *active_constraint);
+        }
         if (from) {
+            cout << " forced by ";
             if (from.has<Clause>())
                 cout << " clause " << print(*this, from.get<Clause>());
             else
@@ -1337,7 +1344,15 @@ void Solver::uncheckedEnqueueDeferred(Lit p, explainer *from)
 Clause *Solver::enqueueFill(Lit p, vec<Lit>& ps)
 {
   if( value(p) == l_True ) return 0L;
-  ps.push( p );
+  if (debugclauses)
+    for (int i = 0; i != ps.size(); ++i) {
+      if (value(ps[i]) != l_False) {
+        cout << "Trying to force " << lit_printer(*this, p)
+             << " with invalid clause " << print(*this, &ps) << endl;
+        assert(value(ps[i]) == l_False);
+      }
+    }
+  ps.push(p);
   Clause *r = Clause_new(ps, false, p);
   ps.pop();
   addInactiveClause(r);
@@ -1349,7 +1364,19 @@ Clause *Solver::enqueueFill(Lit p, vec<Lit>& ps)
 void Solver::nonMonotoneEnqueue(Lit p, Clause *from)
 {
     assert(value(p) == l_Undef);
+    assert(from);
     assert((*from)[0] == p);
+    if (trace) {
+      int maxlevel =
+          from->size() == 1
+              ? 0
+              : varLevel(*std::max_element(
+                    begin(*from) + 1, end(*from), [&](auto l1, auto l2) {
+                      return this->varLevel(l1) < this->varLevel(l2);
+                    }));
+      cout << "Backpruning " << lit_printer(*this, p) << " to level "
+           << maxlevel << " with clause " << print(*this, from) << "\n";
+    }
     newDecisionLevel();
     uncheckedEnqueue(~p, NO_REASON);
 }
@@ -1498,7 +1525,7 @@ Clause* Solver::propagate_inner()
             if( trace ) {
               cout << "Constraint "
                    << cons_state_printer(*this, *con) << " failed, "
-                   << "clause " << print(*this, confl) << "\n";
+                   << "clause " << print(*this, confl) << endl;
             }
             if( debugclauses )
               debugclause(confl, con);
