@@ -196,8 +196,9 @@ public:
     int     nClauses   ()      const;       // The current number of original clauses.
     int     nLearnts   ()      const;       // The current number of learnt clauses.
     int     nVars      ()      const;       // The current number of variables.
-    int     nCSPVars   ()      const;        // The number of CSP variables
-    int     nConstraints()     const;        // The number of original constraints
+    int     nCSPVars   ()      const;       // The number of CSP variables
+    int     nConstraints()     const;       // The number of original constraints
+    int     nLiveVars()        const;       // Number of vars not fixed at the root
 
     // Only useful during solving
     int      decisionLevel    ()      const; // Gives the current decisionlevel.
@@ -211,9 +212,11 @@ public:
     lbool currentVarPhase(Var x) const; // give out info to user branchers
 
     // user callback to be notified of every learned clause. gets the
-    // clause and the backtrack level
+    // clause and the backtrack level. The user can modify the clause,
+    // as long as it is correct
     // XXX: the great vec<> vs std::vector<> divide. ugh.
-    using clause_callback_t = std::function<bool(vec<Lit> const&, int)>;
+    enum callback_result_t { CCB_OK, CCB_INTERRUPT, CCB_MODIFIED };
+    using clause_callback_t = std::function<callback_result_t(vec<Lit>&, int)>;
 
     void use_clause_callback(clause_callback_t cb)
     {
@@ -618,6 +621,13 @@ inline int      Solver::nLearnts      ()      const   { return learnts.size(); }
 inline int      Solver::nVars         ()      const   { return assigns.size(); }
 inline int      Solver::nCSPVars      ()      const   { return cspvars.size(); }
 inline int      Solver::nConstraints  ()      const   { return conses.size(); }
+inline int Solver::nLiveVars() const
+{
+    if (decisionLevel() > 0)
+        return nVars() - trail_lim[0];
+    else
+        return nVars() - trail.size();
+}
 inline void     Solver::setPolarity   (Var v, bool b) { polarity    [v] = (char)b; }
 inline void     Solver::setDecisionVar(Var v, bool b) { decision_var[v] = (char)b; if (b) { insertVarOrder(v); } }
 inline bool     Solver::solve         ()              { vec<Lit> tmp; return solve(tmp); }

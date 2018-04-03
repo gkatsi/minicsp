@@ -599,15 +599,17 @@ Lit Solver::pickBranchLitLex()
 
 Lit Solver::pickBranchLitDom()
 {
-  int max{0};
-  int maxv{-1};
+  int mind{0};
+  int minv{-1};
   for(int i = 0; i != cspvars.size(); ++i) {
     cspvar x(i);
-    if( x.min(*this) != x.max(*this) && x.domsize(*this) > max)
-      maxv = i;
+    if(x.min(*this) != x.max(*this) && (minv == -1 || x.domsize(*this) < mind)) {
+      minv = i;
+      mind = x.domsize(*this);
+    }
   }
-  if (maxv != -1)
-    return pickBranchLitFrom(cspvar{maxv});
+  if (minv != -1)
+    return pickBranchLitFrom(cspvar{minv});
   return pickBranchLitVSIDS(polarity_mode, random_var_freq);
 }
 
