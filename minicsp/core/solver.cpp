@@ -597,6 +597,20 @@ Lit Solver::pickBranchLitLex()
   return pickBranchLitVSIDS(polarity_mode, random_var_freq);
 }
 
+Lit Solver::pickBranchLitDom()
+{
+  int max{0};
+  int maxv{-1};
+  for(int i = 0; i != cspvars.size(); ++i) {
+    cspvar x(i);
+    if( x.min(*this) != x.max(*this) && x.domsize(*this) > max)
+      maxv = i;
+  }
+  if (maxv != -1)
+    return pickBranchLitFrom(cspvar{maxv});
+  return pickBranchLitVSIDS(polarity_mode, random_var_freq);
+}
+
 Lit Solver::pickBranchLitFrom(cspvar x)
 {
   switch(valbranch) {
@@ -612,7 +626,7 @@ Lit Solver::pickBranchLit(int polarity_mode, double random_var_freq)
   switch(varbranch) {
   case VAR_VSIDS: return pickBranchLitVSIDS(polarity_mode, random_var_freq);
   case VAR_LEX:   return pickBranchLitLex();
-  case VAR_DOM:
+  case VAR_DOM:   return pickBranchLitDom();
   case VAR_DOMWDEG:
     assert(0);
   case VAR_USER: {

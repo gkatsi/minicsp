@@ -418,6 +418,7 @@ protected:
     Lit      pickBranchLit     (int polarity_mode, double random_var_freq);            // Return the next decision variable.
     Lit      pickBranchLitVSIDS(int polarity_mode, double random_var_freq);            // ...using VSIDS
     Lit      pickBranchLitLex  ();                                                     // ...Lex order of the CSP vars
+    Lit      pickBranchLitDom  ();                                                     // ...mindom among csp vars
     Lit      pickBranchLitFrom (cspvar x);                                             // Branch within a chosen variable
     void     analyze          (Clause* confl, vec<Lit>& out_learnt, int& out_btlevel); // (bt = backtrack)
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
