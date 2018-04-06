@@ -167,7 +167,9 @@ public:
     std::optional<std::vector<Lit>> getImplications(Lit l);
 
     // Explaining
-    void    addInactiveClause(Clause *c);           // add a clause that will not be propagated, just as a reason or a conflict clause
+    // add a clause that will not be propagated, just as a reason or a
+    // conflict clause
+    void    addInactiveClause(Clause *c);
     // add a clause from a container. Accepts rvalue reference, so can
     // be called with a temporary,
     // i.e. addInactiveClause(vector<Lit>{x, ~y, z}). Returns the
@@ -207,6 +209,13 @@ public:
     int      varLevel  (Var x) const; // the level where x was assigned. Assumes (but does not assert) value(x) != l_Undef
     int      varLevel  (Lit l) const; // shortcut for varLevel(var(l))
 
+    // the clause that forced x. This is not const because it may
+    // require asking an explainer to generate an explicit clause
+    Clause *varReason(Var x);
+    // shortcut for varReason(var(l)). the clause may have forced ~l
+    // instead of l
+    Clause *varReason(Lit l);
+
     // user branching heuristics
     std::function<void(std::vector<Lit>&)> user_brancher; // if user sets varbranch == VAR_USER, this must be non-empty and generate a set of candidates
     lbool currentVarPhase(Var x) const; // give out info to user branchers
@@ -215,8 +224,9 @@ public:
     // clause and the backtrack level. The user can modify the clause,
     // as long as it is correct
     // XXX: the great vec<> vs std::vector<> divide. ugh.
-    enum callback_result_t { CCB_OK, CCB_INTERRUPT, CCB_MODIFIED };
-    using clause_callback_t = std::function<callback_result_t(vec<Lit>&, int)>;
+    enum clause_callback_result_t { CCB_OK, CCB_INTERRUPT, CCB_MODIFIED };
+    using clause_callback_t =
+        std::function<clause_callback_result_t(vec<Lit> &, int)>;
 
     void use_clause_callback(clause_callback_t cb)
     {
@@ -609,6 +619,9 @@ inline Lit      Solver::decisionAtLevel(int lvl) const
 
 inline int Solver::varLevel(Var x) const { return level[x]; }
 inline int Solver::varLevel(Lit l) const { return level[var(l)]; }
+
+inline Clause *Solver::varReason(Var x) { return explicit_reason(Lit(x)); }
+inline Clause *Solver::varReason(Lit l) { return explicit_reason(l); }
 
 inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level[x] & 31); }
 inline lbool    Solver::value         (Var x) const   { return toLbool(assigns[x]); }

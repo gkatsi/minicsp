@@ -500,6 +500,7 @@ void Solver::cancelUntil(int level) {
             if( phase_saving )
               phase[x]   = toLbool(assigns[x]);
             assigns[x] = toInt(l_Undef);
+            reason[x].reset();
             insertVarOrder(x);
             domevent const &pevent = events[toInt(trail[c])];
             if( noevent(pevent) ) continue;
@@ -682,8 +683,8 @@ void Solver::analyze(Clause* inconfl, vec<Lit>& out_learnt, int& out_btlevel)
             maxlvl = level[var(l)];
     }
     if (trace && maxlvl < decisionLevel()) {
-      cout << "clause failed at level" << maxlvl
-           << " backtracking before analysis\n";
+      cout << "clause failed at level " << maxlvl
+           << ", backtracking before analysis\n";
     }
     cancelUntil(maxlvl);
     if (maxlvl == 0) {
@@ -752,7 +753,6 @@ void Solver::analyze(Clause* inconfl, vec<Lit>& out_learnt, int& out_btlevel)
         while (!seen[var(trail[index--])]);
         p     = trail[index+1];
         confl = reason[var(p)];
-        reason[var(p)].reset();
         seen[var(p)] = 0;
         pathC--;
 
@@ -1835,7 +1835,7 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                 return l_False;
             }
 
-            if( !learning ) {
+            if (!learning) {
               if (!clause_callbacks.empty()) {
                   // we learn no clause, only implicitly the set of
                   // all decisions
@@ -1843,9 +1843,14 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                   learnt_clause.push(~decisionAtLevel(decisionLevel()));
                   for (int i = 1; i < decisionLevel(); ++i)
                       learnt_clause.push(~decisionAtLevel(i));
-                  for (auto& f : clause_callbacks)
-                      if (f(learnt_clause, decisionLevel() - 1))
-                          interrupt_requested = true;
+                  for (auto& f : clause_callbacks) {
+                      auto r = f(learnt_clause, decisionLevel() - 1);
+                      if (r != CCB_OK)
+                        interrupt_requested = true;
+                      if (r == CCB_MODIFIED)
+                        cout << "Warning: clause modified but learning not "
+                                "enabled\n";
+                  }
                   if (interrupt_requested || !withinBudget()) {
                       cancelUntil(0);
                       return l_Undef;
@@ -1857,23 +1862,51 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
               continue;
             }
 
-            learnt_clause.clear();
-            analyze(confl, learnt_clause, backtrack_level);
+            bool reanalyze{false};
+            do {
+              reanalyze = false;
+              learnt_clause.clear();
+              analyze(confl, learnt_clause, backtrack_level);
 
-            for (auto& f : clause_callbacks)
-                if (f(learnt_clause, backtrack_level))
-                    interrupt_requested = true;
+              for (auto &f : clause_callbacks) {
+                auto r = f(learnt_clause, backtrack_level);
+                switch (r) {
+                case CCB_OK:
+                  break;
+                case CCB_INTERRUPT:
+                  interrupt_requested = true;
+                  break;
+                case CCB_MODIFIED:
+                  for (Lit l : learnt_clause)
+                    assert(value(l) == l_False);
+                  std::partial_sort(
+                      begin(learnt_clause), begin(learnt_clause) + 2,
+                      end(learnt_clause),
+                      [&](Lit a, Lit b) { return varLevel(a) > varLevel(b); });
+                  if (backtrack_level != varLevel(learnt_clause[1]))
+                    backtrack_level = varLevel(learnt_clause[1]);
+                  if (learnt_clause.size() >= 2 &&
+                      varLevel(learnt_clause[0]) ==
+                          varLevel(learnt_clause[1])) {
+                    confl = addInactiveClause(learnt_clause);
+                    reanalyze = true;
+                  }
+                  break;
+                }
+              }
+            } while (reanalyze);
+
             if (interrupt_requested || !withinBudget()) {
-                cancelUntil(0);
-                return l_Undef;
+              cancelUntil(0);
+              return l_Undef;
             }
 
             cancelUntil(backtrack_level);
 
             if (learnt_clause.size() == 0) {
-                if (trace)
-                    cout << "UNSAT with empty explanation clause\n";
-                return l_False;
+              if (trace)
+                cout << "UNSAT with empty explanation clause\n";
+              return l_False;
             }
             assert(value(learnt_clause[0]) == l_Undef);
 
