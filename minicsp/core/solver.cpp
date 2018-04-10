@@ -1526,14 +1526,11 @@ Clause* Solver::propagate_inner()
           break;
 
         /* Now propagate constraints that wake on this literal */
-        vec< wake_stub >& pwakes = wakes_on_lit[var(p)];
-        for(wake_stub *ci = &pwakes[0],
-              *ciend = ci+pwakes.size();
-            ci != ciend; ++ci) {
-          cons *con = (*ci).first;
+        for (wake_stub &ws : wakes_on_lit[var(p)]) {
+          cons *con = ws.first;
           active_constraint = con;
-          if( (*ci).second )
-            confl = con->wake_advised(*this, p, (*ci).second);
+          if (ws.second)
+            confl = con->wake_advised(*this, p, ws.second);
           else
             confl = con->wake(*this, p);
           active_constraint = 0L;
@@ -1553,10 +1550,8 @@ Clause* Solver::propagate_inner()
         if(confl)
           break;
 
-        for( int *si = &(sched_on_lit[var(p)][0]),
-               *siend = si+sched_on_lit[var(p)].size();
-             si != siend; ++si)
-          schedule(*si);
+        for (int consid : sched_on_lit[var(p)])
+            schedule(consid);
 
         domevent const & pe = events[toInt(p)];
         vec< pair<cons*, void*> > *dewakes = 0L;
@@ -1586,13 +1581,11 @@ Clause* Solver::propagate_inner()
         case domevent::NONE: assert(0);
         }
         if( !dewakes ) goto SetPropagation;
-        for( wake_stub *ci = &((*dewakes)[0]),
-               *ciend = ci+dewakes->size();
-             ci != ciend; ++ci) {
-          cons *con = (*ci).first;
+        for (wake_stub &ws : *dewakes) {
+          cons *con = ws.first;
           active_constraint = con;
-          if( (*ci).second )
-            confl = con->wake_advised(*this, p, (*ci).second);
+          if( ws.second )
+            confl = con->wake_advised(*this, p, ws.second);
           else
             confl = con->wake(*this, p);
           active_constraint = 0L;
@@ -1612,9 +1605,8 @@ Clause* Solver::propagate_inner()
         if(confl)
           break;
 
-        for( int *si = &((*desched)[0]),*siend = si+desched->size();
-             si != siend; ++si)
-          schedule(*si);
+        for (int consid : *desched)
+          schedule(consid);
 
     SetPropagation:
         setevent const & se = setevents[toInt(p)];
@@ -1632,13 +1624,11 @@ Clause* Solver::propagate_inner()
           break;
         case setevent::NONE: assert(0);
         }
-        for( wake_stub *ci = &((*sewakes)[0]),
-               *ciend = ci+sewakes->size();
-             ci != ciend; ++ci) {
-          cons *con = (*ci).first;
+        for (wake_stub ws : *sewakes) {
+          cons *con = ws.first;
           active_constraint = con;
-          if( (*ci).second )
-            confl = con->wake_advised(*this, p, (*ci).second);
+          if( ws.second )
+            confl = con->wake_advised(*this, p, ws.second);
           else
             confl = con->wake(*this, p);
           active_constraint = 0L;
@@ -1658,9 +1648,8 @@ Clause* Solver::propagate_inner()
         if( confl )
           break;
 
-        for( int *si = &((*sesched)[0]),*siend = si+sesched->size();
-             si != siend; ++si)
-          schedule(*si);
+        for (int sconsid : *sesched)
+          schedule(sconsid);
     }
     propagations += num_props;
     simpDB_props -= num_props;
