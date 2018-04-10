@@ -84,6 +84,13 @@ enum ValBranchHeuristic {
 
 class Solver {
 public:
+    struct VarOrderLt {
+        const vec<double>&  activity;
+        bool operator () (Var x, Var y) const { return activity[x] > activity[y]; }
+        VarOrderLt(const vec<double>&  act) : activity(act) { }
+    };
+
+public:
 
     // Constructor/Destructor:
     //
@@ -220,6 +227,12 @@ public:
     std::function<void(std::vector<Lit>&)> user_brancher; // if user sets varbranch == VAR_USER, this must be non-empty and generate a set of candidates
     lbool currentVarPhase(Var x) const; // give out info to user branchers
 
+    // a fairly dangerous API: get the VSIDS heap with a non-const
+    // reference. Useful for implementing variants of VSIDS, but the
+    // caller has to maintain the invariant that all unassigned
+    // decisions variables are in the heap and that it is a heap
+    Heap<VarOrderLt>& vsids_heap();
+
     // user callback to be notified of every learned clause. gets the
     // clause and the backtrack level. The user can modify the clause,
     // as long as it is correct
@@ -341,12 +354,6 @@ protected:
 
     // Helper structures:
     //
-    struct VarOrderLt {
-        const vec<double>&  activity;
-        bool operator () (Var x, Var y) const { return activity[x] > activity[y]; }
-        VarOrderLt(const vec<double>&  act) : activity(act) { }
-    };
-
     friend class VarFilter;
     struct VarFilter {
         const Solver& s;
@@ -567,6 +574,8 @@ inline void Solver::claBumpActivity (Clause& c) {
             for (int i = 0; i < learnts.size(); i++)
                 learnts[i]->activity() *= 1e-20;
             cla_inc *= 1e-20; } }
+
+inline Heap<Solver::VarOrderLt>& Solver::vsids_heap() { return order_heap; }
 
 inline bool Solver::enqueue(Lit p, Clause* from)
 {
