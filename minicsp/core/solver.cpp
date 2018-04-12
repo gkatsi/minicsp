@@ -1593,7 +1593,7 @@ Clause* Solver::propagate_inner()
             if( trace ) {
               cout << "Constraint "
                    << cons_state_printer(*this, *con) << " failed, "
-                   << "clause @ " << confl << "\n";
+                   << "clause @ " << print(*this, confl) << "\n";
             }
             if( debugclauses )
               debugclause(confl, con);
@@ -1636,7 +1636,7 @@ Clause* Solver::propagate_inner()
             if( trace ) {
               cout << "Constraint "
                    << cons_state_printer(*this, *con) << " failed, "
-                   << "clause @ " << confl << "\n";
+                   << "clause @ " << print(*this, confl) << "\n";
             }
             if( debugclauses )
               debugclause(confl, con);
@@ -1671,7 +1671,7 @@ Clause *Solver::propagate()
         if( trace ) {
           cout << "Constraint "
                << cons_state_printer(*this, *consqs[next].c) << " failed, "
-               << "clause @ " << confl << "\n";
+               << "clause @ " << print(*this, confl) << "\n";
         }
         if( debugclauses )
           debugclause(confl, consqs[next].c);
