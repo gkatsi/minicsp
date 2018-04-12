@@ -1868,17 +1868,24 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                 case CCB_MODIFIED:
                   for (Lit l : learnt_clause)
                     assert(value(l) == l_False);
-                  std::partial_sort(
-                      begin(learnt_clause), begin(learnt_clause) + 2,
-                      end(learnt_clause),
-                      [&](Lit a, Lit b) { return varLevel(a) > varLevel(b); });
-                  if (backtrack_level != varLevel(learnt_clause[1]))
-                    backtrack_level = varLevel(learnt_clause[1]);
-                  if (learnt_clause.size() >= 2 &&
-                      varLevel(learnt_clause[0]) ==
-                          varLevel(learnt_clause[1])) {
-                    confl = addInactiveClause(learnt_clause);
-                    reanalyze = true;
+
+                  if (learnt_clause.size() == 0)
+                    return l_False;
+                  if (learnt_clause.size() == 1)
+                    backtrack_level = 0;
+                  else {
+                    std::partial_sort(begin(learnt_clause),
+                                      begin(learnt_clause) + 2,
+                                      end(learnt_clause), [&](Lit a, Lit b) {
+                                        return varLevel(a) > varLevel(b);
+                                      });
+                    if (backtrack_level != varLevel(learnt_clause[1]))
+                      backtrack_level = varLevel(learnt_clause[1]);
+                    if (varLevel(learnt_clause[0]) ==
+                        varLevel(learnt_clause[1])) {
+                      confl = addInactiveClause(learnt_clause);
+                      reanalyze = true;
+                    }
                   }
                   break;
                 }
