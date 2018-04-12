@@ -310,9 +310,10 @@ public:
     DO_OR_THROW(neq::neq_initialize(s, _x, _y, _c, _reason));
   }
 
-  virtual Clause *wake(Solver& s, Lit p);
-  virtual void clone(Solver& other);
-  virtual ostream& print(Solver &s, ostream& os) const;
+  virtual Clause *wake(Solver& s, Lit p) override;
+  virtual void clone(Solver& other) override;
+  virtual ostream& print(Solver &s, ostream& os) const override;
+  virtual ostream &printstate(Solver &s, ostream &os) const override;
 };
 
 Clause *cons_neq::wake(Solver& s, Lit event)
@@ -334,6 +335,15 @@ ostream& cons_neq::print(Solver &s, ostream& os) const
     os << " + " << _c;
   else if( _c < 0 )
     os << " - " << -_c;
+  return os;
+}
+
+ostream& cons_neq::printstate(Solver &s, ostream& os) const
+{
+  print(s, os);
+  os << " (with " << cspvar_printer(s, _x) << " in " << domain_as_set(s, _x)
+     << ", " << cspvar_printer(s, _y) << " in " << domain_as_set(s, _y)
+     << ")";
   return os;
 }
 
