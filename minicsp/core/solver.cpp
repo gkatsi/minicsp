@@ -1852,6 +1852,7 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
             }
 
             bool reanalyze{false};
+            bool non_asserting{false};
             do {
               reanalyze = false;
               learnt_clause.clear();
@@ -1880,12 +1881,16 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                                         return varLevel(a) > varLevel(b);
                                       });
                     if (backtrack_level != varLevel(learnt_clause[1]))
-                      backtrack_level = varLevel(learnt_clause[1]);
-                    if (varLevel(learnt_clause[0]) ==
-                        varLevel(learnt_clause[1])) {
+                      backtrack_level =
+                          std::min(backtrack_level, varLevel(learnt_clause[1]));
+                    cancelUntil(backtrack_level);
+                    if (value(learnt_clause[0]) == l_False &&
+                        varLevel(learnt_clause[0]) ==
+                            varLevel(learnt_clause[1])) {
                       confl = addInactiveClause(learnt_clause);
                       reanalyze = true;
-                    }
+                    } else if (value(learnt_clause[1]) != l_False)
+                        non_asserting = true;
                   }
                   break;
                 }
@@ -1914,7 +1919,11 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                 attachClause(*c);
                 claBumpActivity(*c);
 
-                uncheckedEnqueue(learnt_clause[0], c);
+                // a user provided rewriting function can produce
+                // non-asserting clauses
+                assert(non_asserting || value(learnt_clause[1]) == l_False);
+                if (value(learnt_clause[1]) == l_False)
+                    uncheckedEnqueue(learnt_clause[0], c);
             }
 
             if(trace) {
