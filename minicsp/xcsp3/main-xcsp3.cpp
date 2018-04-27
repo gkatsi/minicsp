@@ -68,8 +68,7 @@ int main(int argc, char *argv[]) {
     Solver s;
 
     cmdline::parse_solver_options(s, args);
-    bool stat = true;//cmdline::has_option(args, "--stat");
-    bool maint = cmdline::has_option(args, "--maint");
+    bool stat = true;
     setup_signal_handlers(&s);
 
     double cpu_time = cpuTime();
@@ -94,7 +93,7 @@ int main(int argc, char *argv[]) {
 
 
     double parse_time = cpuTime() - cpu_time;
-    cout << parse_time << " s to parse instance\n";
+    cout << parse_time << " s to parse instance" << endl;
 
     bool findall = cmdline::has_option(args, "--all");
 

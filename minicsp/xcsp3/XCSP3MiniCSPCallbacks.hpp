@@ -54,9 +54,8 @@ namespace XCSP3Core {
 
         vector<cspvar> xvars2cspvars(vector<XVariable *> &xvars) {
             vector<cspvar> v(xvars.size());
-            for(int i = 0; i != xvars.size(); ++i) {
-                v[i] = tocspvars[xvars[i]->id];
-            }
+            std::transform(xvars.begin(), xvars.end(), v.begin(),
+                           [this](XVariable *x) { return tocspvars[x->id]; });
             return v;
         }
 
@@ -77,13 +76,13 @@ namespace XCSP3Core {
 
 
         void buildVariableInteger(string id, vector<int> &values) override {
-            for(int i = 0; i < values.size() - 1; i++)
+            for(size_t i = 0; i < values.size() - 1; i++)
                 if(values[i + 1] == values[i])
                     throw runtime_error("Probem : domain with identical value: " + id);
 
             cspvar x = solver.newCSPVar(values[0], values.back());
             int v = values[0];
-            for(int i = 1; i < values.size(); i++) {
+            for(size_t i = 1; i < values.size(); i++) {
                 v++;
                 while(v != values[i])
                     x.remove(solver, v++, NO_REASON);
@@ -141,7 +140,6 @@ namespace XCSP3Core {
         void buildConstraintIntension(string id, string expr) override {
             Tree tree(expr);
             postExpression(tree.root, true);
-            tree.dispose();
         }
 
 //        void buildConstraintPrimitive(string id, OrderType op, XVariable *x, int k, XVariable *y) override;
@@ -182,7 +180,7 @@ namespace XCSP3Core {
 
         void buildConstraintAllEqual(string id, vector<XVariable *> &list) override {
             vector<cspvar> vars = xvars2cspvars(list);
-            for(int i = 0; i < vars.size() - 1; i++)
+            for(size_t i = 0; i < vars.size() - 1; i++)
                 post_eq(solver, vars[i], vars[i + 1], 0);
         }
 
@@ -190,7 +188,7 @@ namespace XCSP3Core {
 
         void buildConstraintOrdered(string id, vector<XVariable *> &list, OrderType order) override {
             vector<cspvar> vars = xvars2cspvars(list);
-            for(int i = 0; i < vars.size() - 1; i++) {
+            for(size_t i = 0; i < vars.size() - 1; i++) {
                 if(order == LE)
                     post_leq(solver, vars[i], vars[i + 1], 0);
                 if(order == LT)
@@ -205,7 +203,7 @@ namespace XCSP3Core {
 
         void buildConstraintLex(string id, vector<vector<XVariable *>> &lists, OrderType order) override {
             vector<cspvar> vars1, vars2;
-            for(int i = 0; i < lists.size() - 1; i++) {
+            for(size_t i = 0; i < lists.size() - 1; i++) {
                 vars1 = xvars2cspvars(lists[i]);
                 vars2 = xvars2cspvars(lists[i + 1]);
                 if(order == LE)
@@ -227,9 +225,9 @@ namespace XCSP3Core {
 
             //columns
             vector<vector<XVariable *>> tmatrix;
-            for(int i = 0 ; i < matrix[0].size() ; i++) {
+            for(size_t i = 0 ; i < matrix[0].size() ; i++) {
                 vector<XVariable *>tmp;
-                for(int j = 0 ; j < matrix.size() ; j++)
+                for(size_t j = 0 ; j < matrix.size() ; j++)
                     tmp.push_back(matrix[j][i]);
                 tmatrix.push_back(tmp);
             }
@@ -249,11 +247,11 @@ namespace XCSP3Core {
                     post_lin_neq(solver, list, coefs, xc.val);
                     break;
                 case GE:
-                    for(int i = 0; i != coefs.size(); ++i) coefs[i] = -coefs[i];
+                    for(size_t i = 0; i != coefs.size(); ++i) coefs[i] = -coefs[i];
                     post_lin_leq(solver, list, coefs, -xc.val);
                     break;
                 case GT:
-                    for(int i = 0; i != coefs.size(); ++i) coefs[i] = -coefs[i];
+                    for(size_t i = 0; i != coefs.size(); ++i) coefs[i] = -coefs[i];
                     post_lin_less(solver, list, coefs, -xc.val);
                     break;
                 case LE:
@@ -298,11 +296,11 @@ namespace XCSP3Core {
 
 
         // Simulate scalar sum with instension constraint.
-        
+
         void buildConstraintSum(string id, vector<XVariable *> &list, vector<XVariable *> &coeffs, XCondition &xc) override {
             string tmp = "add(";
             assert(list.size() == coeffs.size());
-            for(int i = 0 ; i < list.size() ; i++) {
+            for(size_t i = 0 ; i < list.size() ; i++) {
                 tmp = tmp + "mul(" + list[i]->id + "," + coeffs[i]->id + ")";
                 if(i < list.size() - 1) tmp = tmp + ",";
             }
@@ -418,7 +416,7 @@ namespace XCSP3Core {
         // ---------------------------- Instantiation ------------------------------------------
 
         void buildConstraintInstantiation(string id, vector<XVariable *> &list, vector<int> &values) override {
-            for(int i = 0; i < list.size(); i++)
+            for(size_t i = 0; i < list.size(); i++)
                 tocspvars[list[i]->id].assign(solver, values[i], NO_REASON);
         }
 
@@ -430,13 +428,13 @@ namespace XCSP3Core {
 
     cspvar XCSP3MiniCSPCallbacks::postExpression(Node *n, bool root) {
         cspvar rv;
-        if(n->type == NT_VARIABLE) {
+        if(n->type == OVAR) {
             assert(!root);
             NodeVariable *nv = (NodeVariable *) n;
             return tocspvars[nv->var];
         }
 
-        if(n->type == NT_CONSTANT) {
+        if(n->type == ODECIMAL) {
             assert(!root);
             NodeConstant *nc = (NodeConstant *) n;
             return constant(nc->val);
@@ -445,9 +443,9 @@ namespace XCSP3Core {
 
         NodeOperator *fn = (NodeOperator *) n;
 
-        if(fn->type == NT_EQ) {
-            cspvar x1 = postExpression(fn->args[0]);
-            cspvar x2 = postExpression(fn->args[1]);
+        if(fn->type == OEQ) {
+            cspvar x1 = postExpression(fn->parameters[0]);
+            cspvar x2 = postExpression(fn->parameters[1]);
             if(root)
                 post_eq(solver, x1, x2, 0);
             else {
@@ -456,9 +454,9 @@ namespace XCSP3Core {
             }
         }
 
-        if(fn->type == NT_NE) {
-            cspvar x1 = postExpression(fn->args[0]);
-            cspvar x2 = postExpression(fn->args[1]);
+        if(fn->type == ONE) {
+            cspvar x1 = postExpression(fn->parameters[0]);
+            cspvar x2 = postExpression(fn->parameters[1]);
             if(root)
                 post_neq(solver, x1, x2, 0);
             else {
@@ -467,9 +465,9 @@ namespace XCSP3Core {
             }
         }
 
-        if(fn->type == NT_GE) {
-            cspvar x1 = postExpression(fn->args[0]);
-            cspvar x2 = postExpression(fn->args[1]);
+        if(fn->type == OGE) {
+            cspvar x1 = postExpression(fn->parameters[0]);
+            cspvar x2 = postExpression(fn->parameters[1]);
             if(root)
                 post_leq(solver, x2, x1, 0);
             else {
@@ -478,9 +476,9 @@ namespace XCSP3Core {
             }
         }
 
-        if(fn->type == NT_GT) {
-            cspvar x1 = postExpression(fn->args[0]);
-            cspvar x2 = postExpression(fn->args[1]);
+        if(fn->type == OGT) {
+            cspvar x1 = postExpression(fn->parameters[0]);
+            cspvar x2 = postExpression(fn->parameters[1]);
             if(root)
                 post_less(solver, x2, x1, 0);
             else {
@@ -490,9 +488,9 @@ namespace XCSP3Core {
         }
 
 
-        if(fn->type == NT_LE) {
-            cspvar x1 = postExpression(fn->args[0]);
-            cspvar x2 = postExpression(fn->args[1]);
+        if(fn->type == OLE) {
+            cspvar x1 = postExpression(fn->parameters[0]);
+            cspvar x2 = postExpression(fn->parameters[1]);
             if(root)
                 post_leq(solver, x1, x2, 0);
             else {
@@ -501,9 +499,9 @@ namespace XCSP3Core {
             }
         }
 
-        if(fn->type == NT_LT) {
-            cspvar x1 = postExpression(fn->args[0]);
-            cspvar x2 = postExpression(fn->args[1]);
+        if(fn->type == OLT) {
+            cspvar x1 = postExpression(fn->parameters[0]);
+            cspvar x2 = postExpression(fn->parameters[1]);
             if(root)
                 post_less(solver, x1, x2, 0);
             else {
@@ -512,18 +510,18 @@ namespace XCSP3Core {
             }
         }
 
-        if(fn->type == NT_IMP) { // IMP(X,Y) = NOT X OR Y
-            NodeOperator *tmp = new NodeOperator(NT_NOT, 1);
-            tmp->addParameter(fn->args[0]);
-            fn->args[0] = tmp;
-            fn->type = NT_OR;
+        if(fn->type == OIMP) { // IMP(X,Y) = NOT X OR Y
+            NodeOperator *tmp = new NodeNot();
+            tmp->addParameter(fn->parameters[0]);
+            fn->parameters[0] = tmp;
+            fn->type = OOR;
         }
 
-        if(fn->type == NT_OR) {
+        if(fn->type == OOR) {
             if(root) {
                 vec<Lit> ps;
-                for(int i = 0; i != fn->args.size(); ++i) {
-                    cspvar arg = postExpression(fn->args[i]);
+                for(size_t i = 0; i != fn->parameters.size(); ++i) {
+                    cspvar arg = postExpression(fn->parameters[i]);
                     ps.push(arg.r_eq(solver, 0));
                 }
                 solver.addClause(ps);
@@ -531,8 +529,8 @@ namespace XCSP3Core {
                 vec<Lit> ps;
                 rv = solver.newCSPVar(0, 1);
                 ps.push(rv.e_eq(solver, 0));
-                for(int i = 0; i != fn->args.size(); ++i) {
-                    cspvar arg = postExpression(fn->args[i]);
+                for(size_t i = 0; i != fn->parameters.size(); ++i) {
+                    cspvar arg = postExpression(fn->parameters[i]);
 
                     vec<Lit> ps1;
                     ps1.push(rv.r_eq(solver, 0));
@@ -545,16 +543,16 @@ namespace XCSP3Core {
             }
         }
 
-        if(fn->type == NT_AND) {
+        if(fn->type == OAND) {
             if(root) {
-                for(int i = 0; i != fn->args.size(); ++i)
-                    postExpression(fn->args[i]);
+                for(size_t i = 0; i != fn->parameters.size(); ++i)
+                    postExpression(fn->parameters[i]);
             } else {
                 vec<Lit> ps;
                 rv = solver.newCSPVar(0, 1);
                 ps.push(rv.r_eq(solver, 0));
-                for(int i = 0; i != fn->args.size(); ++i) {
-                    cspvar arg = postExpression(fn->args[i]);
+                for(size_t i = 0; i != fn->parameters.size(); ++i) {
+                    cspvar arg = postExpression(fn->parameters[i]);
 
                     vec<Lit> ps1;
                     ps1.push(rv.e_eq(solver, 0));
@@ -567,14 +565,14 @@ namespace XCSP3Core {
             }
         }
 
-        if(fn->type == NT_NOT) {
+        if(fn->type == ONOT) {
             if(root) {
-                cspvar x = postExpression(fn->args[0]);
+                cspvar x = postExpression(fn->parameters[0]);
                 DO_OR_THROW(x.assign(solver, 0, NO_REASON));
             } else {
                 vec<Lit> ps;
                 rv = solver.newCSPVar(0, 1);
-                cspvar arg = postExpression(fn->args[0]);
+                cspvar arg = postExpression(fn->parameters[0]);
                 vec<Lit> ps1, ps2;
                 ps1.push(rv.r_eq(solver, 0));
                 ps1.push(arg.e_neq(solver, 0));
@@ -584,10 +582,10 @@ namespace XCSP3Core {
                 solver.addClause(ps2);
             }
         }
-        if(fn->type == NT_IFF) {
+        if(fn->type == OIFF) {
             if(root) {
-                cspvar arg1 = postExpression(fn->args[0]),
-                        arg2 = postExpression(fn->args[1]);
+                cspvar arg1 = postExpression(fn->parameters[0]),
+                        arg2 = postExpression(fn->parameters[1]);
                 vec<Lit> ps1, ps2;
                 ps1.push(arg1.r_eq(solver, 0));
                 ps1.push(arg2.e_eq(solver, 0));
@@ -598,8 +596,8 @@ namespace XCSP3Core {
             } else {
                 vec<Lit> ps;
                 rv = solver.newCSPVar(0, 1);
-                cspvar arg1 = postExpression(fn->args[0]),
-                        arg2 = postExpression(fn->args[1]);
+                cspvar arg1 = postExpression(fn->parameters[0]),
+                        arg2 = postExpression(fn->parameters[1]);
                 vec<Lit> ps1, ps2, ps3, ps4;
                 ps1.push(rv.r_neq(solver, 0));
                 ps1.push(arg1.r_eq(solver, 0));
@@ -621,10 +619,10 @@ namespace XCSP3Core {
             }
         }
 
-        if(fn->type == NT_XOR) {
+        if(fn->type == OXOR) {
             if(root) {
-                cspvar arg1 = postExpression(fn->args[0]),
-                        arg2 = postExpression(fn->args[1]);
+                cspvar arg1 = postExpression(fn->parameters[0]),
+                        arg2 = postExpression(fn->parameters[1]);
                 vec<Lit> ps1, ps2;
                 ps1.push(arg1.r_eq(solver, 0));
                 ps1.push(arg2.e_neq(solver, 0));
@@ -635,8 +633,8 @@ namespace XCSP3Core {
             } else {
                 vec<Lit> ps;
                 rv = solver.newCSPVar(0, 1);
-                cspvar arg1 = postExpression(fn->args[0]),
-                        arg2 = postExpression(fn->args[1]);
+                cspvar arg1 = postExpression(fn->parameters[0]),
+                        arg2 = postExpression(fn->parameters[1]);
                 vec<Lit> ps1, ps2, ps3, ps4;
                 ps1.push(rv.r_neq(solver, 0));
                 ps1.push(arg1.r_eq(solver, 0));
@@ -659,24 +657,24 @@ namespace XCSP3Core {
         }
 
         // function stuff
-        if(fn->type == NT_NEG) {
+        if(fn->type == ONEG) {
             assert(!root);
-            cspvar arg = postExpression(fn->args[0]);
+            cspvar arg = postExpression(fn->parameters[0]);
             rv = solver.newCSPVar(-arg.max(solver), -arg.min(solver));
             post_neg(solver, arg, rv, 0);
         }
 
-        if(fn->type == NT_ABS) {
+        if(fn->type == OABS) {
             assert(!root);
-            cspvar arg = postExpression(fn->args[0]);
+            cspvar arg = postExpression(fn->parameters[0]);
             rv = solver.newCSPVar(0, max(abs(arg.min(solver)), abs(arg.max(solver))));
             post_abs(solver, arg, rv, 0);
         }
 
-        if(fn->type == NT_SUB) {
+        if(fn->type == OSUB) {
             assert(!root);
-            cspvar arg1 = postExpression(fn->args[0]);
-            cspvar arg2 = postExpression(fn->args[1]);
+            cspvar arg1 = postExpression(fn->parameters[0]);
+            cspvar arg2 = postExpression(fn->parameters[1]);
             int min = arg1.min(solver) - arg2.max(solver);
             int max = arg1.max(solver) - arg2.min(solver);
             rv = solver.newCSPVar(min, max);
@@ -691,22 +689,22 @@ namespace XCSP3Core {
             post_lin_eq(solver, v, w, 0);
         }
 
-        if(fn->type == NT_DIST) { //Simulate DIST(X,Y) = ABS(SUB(X,Y))
-            fn->type = NT_SUB;
+        if(fn->type == ODIST) { //Simulate DIST(X,Y) = ABS(SUB(X,Y))
+            fn->type = OSUB;
             // Copy of ABS Op (Above)
             cspvar arg = postExpression(fn); // call on same node
             rv = solver.newCSPVar(0, max(abs(arg.min(solver)), abs(arg.max(solver))));
             post_abs(solver, arg, rv, 0);
-            fn->type = NT_DIST; //Be careful, depend the order,  but NT_SUB can be called two times otherwise :(
+            fn->type = ODIST; //Be careful, depend the order,  but OSUB can be called two times otherwise :(
         }
 
-        if(fn->type == NT_ADD) {
+        if(fn->type == OADD) {
             assert(!root);
             int min = 0, max = 0;
             vector<int> w;
             vector<cspvar> v;
-            for(int q = 0; q != fn->args.size(); ++q) {
-                cspvar arg = postExpression(fn->args[q]);
+            for(size_t q = 0; q != fn->parameters.size(); ++q) {
+                cspvar arg = postExpression(fn->parameters[q]);
                 w.push_back(-1);
                 v.push_back(arg);
                 min += arg.min(solver);
@@ -717,11 +715,11 @@ namespace XCSP3Core {
             w.push_back(1);
             post_lin_eq(solver, v, w, 0);
         }
-        if(fn->type == NT_MULT) {
+        if(fn->type == OMUL) {
             assert(!root);
-            cspvar arg0 = postExpression(fn->args[0]);
-            for(int q = 1; q != fn->args.size(); ++q) {
-                cspvar arg1 = postExpression(fn->args[q]);
+            cspvar arg0 = postExpression(fn->parameters[0]);
+            for(size_t q = 1; q != fn->parameters.size(); ++q) {
+                cspvar arg1 = postExpression(fn->parameters[q]);
                 int minv = min(min(arg0.min(solver) * arg1.min(solver),
                                    arg0.min(solver) * arg1.max(solver)),
                                min(arg0.max(solver) * arg1.min(solver),
@@ -737,11 +735,11 @@ namespace XCSP3Core {
             rv = arg0;
         }
 
-        if(fn->type == NT_MIN) {
+        if(fn->type == OMIN) {
             assert(!root);
-            cspvar arg0 = postExpression(fn->args[0]);
-            for(int q = 1; q != fn->args.size(); ++q) {
-                cspvar arg1 = postExpression(fn->args[q]);
+            cspvar arg0 = postExpression(fn->parameters[0]);
+            for(size_t q = 1; q != fn->parameters.size(); ++q) {
+                cspvar arg1 = postExpression(fn->parameters[q]);
                 int minv = min(arg0.min(solver), arg1.min(solver)),
                         maxv = min(arg0.max(solver), arg1.max(solver));
                 cspvar res = solver.newCSPVar(minv, maxv);
@@ -750,11 +748,11 @@ namespace XCSP3Core {
             }
             rv = arg0;
         }
-        if(fn->type == NT_MAX) {
+        if(fn->type == OMAX) {
             assert(!root);
-            cspvar arg0 = postExpression(fn->args[0]);
-            for(int q = 1; q != fn->args.size(); ++q) {
-                cspvar arg1 = postExpression(fn->args[q]);
+            cspvar arg0 = postExpression(fn->parameters[0]);
+            for(size_t q = 1; q != fn->parameters.size(); ++q) {
+                cspvar arg1 = postExpression(fn->parameters[q]);
                 int minv = max(arg0.min(solver), arg1.min(solver)),
                         maxv = max(arg0.max(solver), arg1.max(solver));
                 cspvar res = solver.newCSPVar(minv, maxv);
@@ -764,12 +762,12 @@ namespace XCSP3Core {
             rv = arg0;
         }
 
-        if(fn->type == NT_IF) {
+        if(fn->type == OIF) {
             assert(!root);
-            assert(fn->args.size() == 3);
-            cspvar argif = postExpression(fn->args[0]);
-            cspvar arg1 = postExpression(fn->args[1]);
-            cspvar arg2 = postExpression(fn->args[2]);
+            assert(fn->parameters.size() == 3);
+            cspvar argif = postExpression(fn->parameters[0]);
+            cspvar arg1 = postExpression(fn->parameters[1]);
+            cspvar arg2 = postExpression(fn->parameters[2]);
             int minv = min(arg1.min(solver), arg2.min(solver)),
                     maxv = max(arg1.max(solver), arg2.max(solver));
             rv = solver.newCSPVar(minv, maxv);
