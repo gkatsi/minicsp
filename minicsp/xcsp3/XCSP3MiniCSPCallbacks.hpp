@@ -413,19 +413,92 @@ namespace XCSP3Core {
             post_element(solver, tocspvars[value->id], tocspvars[index->id], xvars2cspvars(list), startIndex);
         }
 
-        // ---------------------------- Instantiation ------------------------------------------
+        // ---------------------------- CHANNEL -------------------------------
+        void buildConstraintChannel(string id, vector<XVariable *> &list,
+                                    int startIndex) override {
+          auto vs = xvars2cspvars(list);
 
-        void buildConstraintInstantiation(string id, vector<XVariable *> &list, vector<int> &values) override {
-            for(size_t i = 0; i < list.size(); i++)
-                tocspvars[list[i]->id].assign(solver, values[i], NO_REASON);
+          for (size_t i = 0; i != vs.size(); ++i) {
+            vs[i].setmin(solver, startIndex, NO_REASON);
+            vs[i].setmax(solver, vs.size() + startIndex, NO_REASON);
+            for (size_t j = 0; j != vs.size(); ++j) {
+              if (!vs[i].indomain(solver, j + startIndex))
+                continue;
+              else if (!vs[j].indomain(solver, i + startIndex))
+                vs[i].remove(solver, j, NO_REASON);
+              else {
+                solver.addClause(
+                    std::vector<Lit>({vs[i].r_eq(solver, j + startIndex),
+                                      vs[j].e_eq(solver, i + startIndex)}));
+              }
+            }
+          }
         }
 
+        void buildConstraintChannel(string id, vector<XVariable *> &list1,
+                                    int startIndex1, vector<XVariable *> &list2,
+                                    int startIndex2) override {
+          auto xs = xvars2cspvars(list1);
+          auto ys = xvars2cspvars(list2);
+
+          for (size_t i = 0; i != xs.size(); ++i) {
+            xs[i].setmin(solver, startIndex2, NO_REASON);
+            xs[i].setmax(solver, ys.size() + startIndex2, NO_REASON);
+          }
+          for (size_t i = 0; i != ys.size(); ++i) {
+            ys[i].setmin(solver, startIndex2, NO_REASON);
+            ys[i].setmax(solver, xs.size() + startIndex1, NO_REASON);
+          }
+
+          for (size_t i = 0; i != xs.size(); ++i) {
+            for (size_t j = 0; j != ys.size(); ++j) {
+              if (!xs[i].indomain(solver, j + startIndex2))
+                continue;
+              else if (!ys[j].indomain(solver, i + startIndex1))
+                xs[i].remove(solver, j, NO_REASON);
+              else {
+                solver.addClause(
+                    std::vector<Lit>({xs[i].r_eq(solver, j + startIndex2),
+                                      ys[j].e_eq(solver, i + startIndex1)}));
+              }
+            }
+          }
+        }
+
+        void buildConstraintChannel(string id, vector<XVariable *> &list,
+                                    int startIndex, XVariable *value) override {
+          auto bs = xvars2cspvars(list);
+          auto x = tocspvars[value->id];
+
+          x.setmin(solver, startIndex, NO_REASON);
+          x.setmax(solver, startIndex + bs.size(), NO_REASON);
+          for (size_t i = 0; i != bs.size(); ++i) {
+            if (!x.indomain(solver, i + startIndex))
+              bs[i].setmax(solver, 0, NO_REASON);
+            else if (bs[i].max(solver) == 0)
+              x.remove(solver, i + startIndex, NO_REASON);
+            else if (bs[i].min(solver) == 1)
+              x.assign(solver, i + startIndex, NO_REASON);
+            else {
+              solver.addClause(std::vector<Lit>{x.r_eq(solver, i + startIndex),
+                                                bs[i].e_eq(solver, 1)});
+              solver.addClause(std::vector<Lit>{x.r_neq(solver, i + startIndex),
+                                                bs[i].e_eq(solver, 0)});
+            }
+          }
+        }
+
+        // ---------------------------- Instantiation -----------------------
+        void buildConstraintInstantiation(string id, vector<XVariable *> &list,
+                                          vector<int> &values) override {
+          for (size_t i = 0; i < list.size(); i++)
+            tocspvars[list[i]->id].assign(solver, values[i], NO_REASON);
+        }
     };
-    // -------------------------------------------------------------------------------------------------------
-    // ---------------------------- INTENSIONAL : POST EXPRESSION ! ------------------------------------------
-    // -------------------------------------------------------------------------------------------------------
 
-
+    // -----------------------------------------------------------------------
+    // ---------------------------- INTENSIONAL : POST EXPRESSION ! ----------
+    // -----------------------------------------------------------------------
     cspvar XCSP3MiniCSPCallbacks::postExpression(Node *n, bool root) {
         cspvar rv;
         if(n->type == OVAR) {
@@ -777,7 +850,5 @@ namespace XCSP3Core {
 
         return rv;
     }
-
-
 }
 #endif //COSOCO_XCSP3MiniCSPCallbacks_H
