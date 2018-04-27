@@ -105,6 +105,8 @@ public:
     setvar  newSetVar (int min, int max);                       // Add a CSP (multi-valued) var with the given lower and upper bounds
     std::vector<setvar> newSetVarArray(int n, int min, int max);// Add a number of identical CSP vars
     void    addClause (vec<Lit>& ps);                           // Add a clause to the solver. NOTE! 'ps' may be shrunk by this method!
+    template<typename veclit>
+    void    addClause (veclit&& ps);                           // Add a clause to the solver. NOTE! 'ps' may be shrunk by this method!
     bool    addConstraint(cons *c);                             // Add a constraint. For transfer of ownership only, everything else in the constructor
 
     /* Waking means that the constraint is called immediately when we
@@ -664,6 +666,15 @@ inline Clause *Solver::addInactiveClause(veclit &&ps) {
   Clause *r = Clause_new(ps);
   addInactiveClause(r);
   return r;
+}
+
+template <typename veclit> void Solver::addClause(veclit &&v)
+{
+    add_tmp.clear();
+    using std::begin;
+    using std::end;
+    std::copy(begin(v), end(v), std::back_inserter(add_tmp));
+    addClause(add_tmp);
 }
 
 //=================================================================================================
