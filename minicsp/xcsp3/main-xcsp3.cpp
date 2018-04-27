@@ -68,7 +68,6 @@ int main(int argc, char *argv[]) {
     Solver s;
 
     cmdline::parse_solver_options(s, args);
-    bool stat = true;
     setup_signal_handlers(&s);
 
     double cpu_time = cpuTime();
@@ -122,10 +121,8 @@ int main(int argc, char *argv[]) {
     else
         cout << "unsat\n";
 
-    if(stat) {
-        printStats(s, "%% ");
-        reportf("%sParse time            : %g s\n", "%% ", parse_time);
-    }
+    printStats(s, "%% ");
+    reportf("%sParse time            : %g s\n", "%% ", parse_time);
 
     return 0;
 }
