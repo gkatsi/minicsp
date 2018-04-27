@@ -50,7 +50,10 @@ class vec {
         int mask = (y-x) >> (sizeof(int)*8-1);
         return (x&mask) + (y&(~mask)); }
 
-public:
+ public:
+    using value_type = T;
+
+ public:
     // Types:
     typedef int Key;
     typedef T   Datum;
@@ -104,6 +107,8 @@ public:
     T const *begin() const { return data; }
     T *end() { return begin() + size(); }
     T const *end() const { return begin() + size(); }
+
+    void push_back(const T& e) { push(e); }
 };
 
 template<class T>
