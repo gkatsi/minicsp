@@ -3798,19 +3798,27 @@ namespace table {
     return a;
   }
 
-  // Fahiem's one-variable-per-tuple encoding. I don't know why I called it ac4
-  void post_positive_table_ac4(Solver &s, std::vector<cspvar> const& x,
-                               std::vector< std::vector<int> > const& tuples)
-  {
+  // Fahiem's one-variable-per-tuple encoding. I don't know why I
+  // called it ac4. Also enforces GAC for short tables (tables with
+  // STAR_CONSTANT instead of a value in some tuples/positions)
+  void post_positive_table_ac4(Solver &s, std::vector<cspvar> const &x,
+                               std::vector<std::vector<int>> const &tuples) {
     vector< map<int, set<Var> > > valtuples(x.size());
+    vec<Lit> ps;
     for(size_t i = 0; i != tuples.size(); ++i) {
       if(tuples[i].size() != x.size())
         throw non_table();
       Var is = s.newVar();
-      for(size_t j = 0; j != tuples[i].size(); ++j) {
-        vec<Lit> ps;
-        ps.push( ~Lit(is) );
-        ps.push( x[j].e_eq( s, tuples[i][j] ) );
+      for (size_t j = 0; j != tuples[i].size(); ++j) {
+        if (tuples[i][j] == STAR_CONSTANT) {
+          for (int q = x[j].min(s); q <= x[j].max(s); ++q)
+            if (x[j].indomain(s, q))
+              valtuples[j][q].insert(is);
+          continue;
+        }
+        ps.clear();
+        ps.push(~Lit(is));
+        ps.push(x[j].e_eq(s, tuples[i][j]));
         s.addClause(ps);
         valtuples[j][tuples[i][j]].insert(is);
       }
@@ -3853,7 +3861,8 @@ void post_negative_table(Solver &s, std::vector<cspvar> const& x,
       throw non_table();
     vec<Lit> ps;
     for(size_t j = 0; j != tuples[i].size(); ++j)
-      ps.push( x[j].r_eq( s, tuples[i][j] ) );
+      if (tuples[i][j] != STAR_CONSTANT)
+        ps.push( x[j].r_eq( s, tuples[i][j] ) );
     s.addClause(ps);
   }
 }

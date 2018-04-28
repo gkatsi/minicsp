@@ -23,6 +23,7 @@ along with minicsp.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "solver.hpp"
 #include <vector>
+#include <climits>
 
 namespace minicsp {
 
@@ -312,6 +313,12 @@ void post_cumulative(Solver& s, std::vector<cspvar> const& start,
 
 // exception thrown for invalid tuplesets
 struct non_table{};
+
+// tuples can contain this constant instead of an actual value. It
+// means "*", which matches any value. So a positive (negative) tuple
+// <1,2,*> means the constraint is satisfied (falsified) by assigning
+// x1 = 1, x2 = 2, regardless of the assignment we make to x3.
+static const int STAR_CONSTANT = INT_MAX;
 
 void post_positive_table(Solver &s, std::vector<cspvar> const& x,
                          std::vector< std::vector<int> > const& tuples);
