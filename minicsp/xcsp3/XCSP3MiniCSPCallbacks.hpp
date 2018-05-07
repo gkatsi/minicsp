@@ -198,14 +198,24 @@ namespace XCSP3Core {
 
         // ---------------------------- EXTENSION ------------------------------------------
 
-        void buildConstraintExtension(string id, vector<XVariable *> list, vector<vector<int>> &tuples, bool support, bool hasStar) override {
-            if(hasStar)
-                throw runtime_error("* not supported in extensional constraints");
-            previousTuples = &tuples;
-            if(support)
-                post_positive_table(solver, xvars2cspvars(list), tuples);
-            else
-                post_negative_table(solver, xvars2cspvars(list), tuples);
+        void buildConstraintExtension(string id, vector<XVariable *> list,
+                                      vector<vector<int>> &tuples, bool support,
+                                      bool hasStar) override {
+          if (hasStar) {
+            // this should be a no-op transformation, but we map from
+            // STAR to STAR_CONSTANT in case either of these changes
+            // in the future
+            for (auto &t : tuples) {
+              for (auto &v : t)
+                if (v == STAR)
+                  v = STAR_CONSTANT;
+            }
+          }
+          previousTuples = &tuples;
+          if (support)
+            post_positive_table(solver, xvars2cspvars(list), tuples);
+          else
+            post_negative_table(solver, xvars2cspvars(list), tuples);
         }
 
 
