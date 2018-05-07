@@ -2,6 +2,7 @@
 #define _MINICSP_XCSP3_CALLBAKCS_H
 
 #include <map>
+#include <variant>
 #include "XCSP3CoreCallbacks.h"
 #include "XCSP3Variable.h"
 #include "minicsp/core/cons.hpp"
@@ -11,6 +12,11 @@
 namespace XCSP3Core {
     using namespace minicsp;
 
+    struct ConstantObjective {};
+    struct MinimizeObjective { cspvar var; };
+    struct MaximizeObjective { cspvar var; };
+
+    enum ObjectiveSense { SENSE_MINIMIZE, SENSE_MAXIMIZE };
 
     class XCSP3MiniCSPCallbacks : public XCSP3CoreCallbacks {
 
@@ -23,6 +29,8 @@ namespace XCSP3Core {
         vector<vector<int>> *previousTuples;
         vector<int> previousTuplesSize1;
 
+        std::variant<ConstantObjective, MinimizeObjective, MaximizeObjective>
+            objective{ConstantObjective{}};
 
         XCSP3MiniCSPCallbacks(Solver &s) : XCSP3CoreCallbacks(), solver(s) {
             recognizeSpecialCountCases = false;
@@ -33,37 +41,33 @@ namespace XCSP3Core {
 
         void print_solution() {
             map<string, cspvar>::const_iterator i, b = tocspvars.begin(), e = tocspvars.end();
-            cout << "\n<instantiation type='solution'>\n<list>";
+            cout << "\nv <instantiation type='solution'>\nv <list>";
             for(i = b; i != e; ++i)
                 cout << i->first << " ";
-            cout << "</list>\n<values>";
+            cout << "v </list>\nv <values>";
             for(i = b; i != e; ++i)
                 cout << solver.cspModelValue(i->second) << " ";
 
-            cout << "\n</values>\n</instantiation>\n";
+            cout << "\nv </values>\n</instantiation>\n";
         }
 
         // ---------------------------- StartInstance -------------------------------
 
-        void beginInstance(InstanceType type) override {
-            if(type == COP)
-                throw runtime_error("COP is not supported");
-        }
+        void beginInstance(InstanceType type) override {}
 
         // ---------------------------- XVariable -> minicsp variables -------------------------------
 
-        vector<cspvar> xvars2cspvars(vector<XVariable *> &xvars) {
-            vector<cspvar> v(xvars.size());
-            std::transform(xvars.begin(), xvars.end(), v.begin(),
-                           [this](XVariable *x) { return tocspvars[x->id]; });
-            return v;
+        vector<cspvar> xvars2cspvars(const vector<XVariable *> &xvars) {
+          vector<cspvar> v(xvars.size());
+          std::transform(xvars.begin(), xvars.end(), v.begin(),
+                         [this](XVariable *x) { return tocspvars[x->id]; });
+          return v;
         }
 
-
         cspvar constant(int c) {
-            if(constants.find(c) == constants.end())
-                constants[c] = solver.newCSPVar(c, c);
-            return constants[c];
+          if (constants.find(c) == constants.end())
+            constants[c] = solver.newCSPVar(c, c);
+          return constants[c];
         }
 
         // ---------------------------- VARIABLES ------------------------------------------
@@ -89,6 +93,107 @@ namespace XCSP3Core {
             }
             solver.setCSPVarName(x, id);
             tocspvars[id] = x;
+        }
+
+        // -------------------- OBJECTIVE --------------------
+        void buildObjectiveMinimizeExpression(string expr) override {
+            objective = MinimizeObjective{varFromExpression(expr)};
+        }
+
+        void buildObjectiveMaximizeExpression(string expr) override {
+            objective = MaximizeObjective{varFromExpression(expr)};
+        }
+
+        void buildObjectiveMinimizeVariable(XVariable *x) override {
+            objective = MinimizeObjective{tocspvars[x->id]};
+        }
+
+        void buildObjectiveMaximizeVariable(XVariable *x) override {
+            objective = MaximizeObjective{tocspvars[x->id]};
+        }
+
+        // build up a variable that holds the value of the special
+        // form objective and return that value. We get coefs by
+        // value, because we may modify them
+        cspvar special_form_objective(ObjectiveSense sense,
+                                      ExpressionObjective type,
+                                      vector<XVariable *> const &list,
+                                      vector<int> coefs) {
+          if (list.size() != coefs.size())
+            throw runtime_error("number of coefficients does not match "
+                                "number of variables in objective");
+          cspvar rv;
+          auto xs = xvars2cspvars(list);
+          switch (type) {
+          case EXPRESSION_O:
+            throw runtime_error(
+                "expression objective used as special form objective");
+          case SUM_O: {
+            int omin{0}, omax{0};
+            for (size_t i = 0; i != list.size(); ++i) {
+              auto x = xs[i];
+              if (coefs[i] > 0) {
+                omin += coefs[i] * x.min(solver);
+                omax += coefs[i] * x.max(solver);
+              } else if (coefs[i] < 0) {
+                omin += coefs[i] * x.max(solver);
+                omax += coefs[i] * x.min(solver);
+              }
+            }
+            rv = solver.newCSPVar(omin, omax);
+            xs.push_back(rv);
+            coefs.push_back(-1);
+            if (sense == SENSE_MAXIMIZE) {
+              for (auto &c : coefs)
+                c = -c;
+            }
+            post_lin_leq(solver, xs, coefs, 0);
+
+          } break;
+          case PRODUCT_O:
+            throw runtime_error(
+                "product with special form objective not supported");
+          case MINIMUM_O: // fallthrough
+          case MAXIMUM_O: {
+            int omin{INT_MAX}, omax{INT_MIN};
+            for (size_t i = 0; i != list.size(); ++i) {
+              auto x = xs[i];
+              if (coefs[i] > 0) {
+                omin = std::min(omin, coefs[i] * x.min(solver));
+                omax = std::max(omax, coefs[i] * x.max(solver));
+              } else if (coefs[i] < 0) {
+                omax = std::min(omin, coefs[i] * x.min(solver));
+                omin = std::max(omax, coefs[i] * x.max(solver));
+              }
+            }
+            rv = solver.newCSPVar(omin, omax);
+            for (size_t i = 0; i != list.size(); ++i) {
+              // need view variables here
+              assert(0);
+            }
+          } break;
+          case NVALUES_O:
+            throw runtime_error(
+                "nvalues special form objective not supported");
+          case LEX_O:
+            throw runtime_error(
+                "lexicographic objective not supported");
+          }
+          return rv;
+        }
+
+        void buildObjectiveMinimize(ExpressionObjective type,
+                                    vector<XVariable *> &list,
+                                    vector<int> &coefs) override {
+          cspvar obj{special_form_objective(SENSE_MINIMIZE, type, list, coefs)};
+          objective = MinimizeObjective{obj};
+        }
+
+        void buildObjectiveMaximize(ExpressionObjective type,
+                                    vector<XVariable *> &list,
+                                    vector<int> &coefs) override {
+          cspvar obj{special_form_objective(SENSE_MAXIMIZE, type, list, coefs)};
+          objective = MaximizeObjective{obj};
         }
 
         // ---------------------------- EXTENSION ------------------------------------------
@@ -136,14 +241,19 @@ namespace XCSP3Core {
 
         cspvar postExpression(Node *n, bool isRoot = false);
 
+        cspvar varFromExpression(string expr) {
+            Tree tree(expr);
+            return postExpression(tree.root, true);
+        }
 
         void buildConstraintIntension(string id, string expr) override {
             Tree tree(expr);
             postExpression(tree.root, true);
         }
 
-//        void buildConstraintPrimitive(string id, OrderType op, XVariable *x, int k, XVariable *y) override;
-
+        void buildConstraintIntension(string id, Tree* tree) override {
+            postExpression(tree->root, true);
+        }
 
         // ---------------------------- LANGUAGES ------------------------------------------
 

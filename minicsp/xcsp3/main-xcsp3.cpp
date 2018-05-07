@@ -56,6 +56,9 @@ using namespace XCSP3Core;
 using namespace std;
 using namespace minicsp;
 
+// helper for variant, from cppreference
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 int main(int argc, char *argv[]) {
     list<string> args(argv + 1, argv + argc);
@@ -96,33 +99,63 @@ int main(int argc, char *argv[]) {
 
     bool findall = cmdline::has_option(args, "--all");
 
+    bool optimization = !holds_alternative<ConstantObjective>(cb.objective);
+
     bool sat = false, next;
+    bool optimum = false;
     int ns = 0;
     do {
-        next = s.solve();
-        sat = sat || next;
-        if(next) {
-            ++ns;
-            cout << "solution " << ns << ": ";
-            cb.print_solution();
-            if(findall) {
-                try {
-                    s.excludeLast();
-                } catch(unsat &e) {
-                    next = false;
-                }
-            }
+      next = s.solve();
+      if (!next)
+          optimum = true;
+      sat = sat || next;
+      if (next) {
+        ++ns;
+        cout << "c solution " << ns << ": ";
+        cb.print_solution();
+        try {
+          visit(overloaded{[&](ConstantObjective) {
+                             if (findall) {
+                               s.excludeLast();
+                               next = findall;
+                             }
+                           },
+                           [&](MinimizeObjective obj) {
+                             int curval = s.cspModelValue(obj.var);
+                             cout << "o " << curval << "\n";
+                             obj.var.setmax(s, curval - 1, NO_REASON);
+                             next = true;
+                           },
+                           [&](MaximizeObjective obj) {
+                             int curval = s.cspModelValue(obj.var);
+                             cout << "o " << curval << "\n";
+                             obj.var.setmin(s, curval + 1, NO_REASON);
+                             next = true;
+                           }},
+                cb.objective);
+        } catch (unsat &e) {
+          next = false;
+          optimum = true;
         }
-        next = next && findall;
-    } while(next);
+      }
+    } while (next);
 
-    if(sat)
-        cout << "sat\n";
-    else
-        cout << "unsat\n";
+    if (!optimization) {
+      if (sat)
+        cout << "s SATISFIABLE\n";
+      else
+        cout << "s UNSATISFIABLE\n";
+    } else {
+      if (sat && optimum)
+        cout << "s OPTIMUM FOUND\n";
+      else if (sat && !optimum)
+        cout << "s SATISFIABLE\n";
+      else if (!sat)
+        cout << "s UNSATISFIABLE\n";
+    }
 
-    printStats(s, "%% ");
-    reportf("%sParse time            : %g s\n", "%% ", parse_time);
+    printStats(s, "c ");
+    reportf("%sParse time            : %g s\n", "c ", parse_time);
 
     return 0;
 }
