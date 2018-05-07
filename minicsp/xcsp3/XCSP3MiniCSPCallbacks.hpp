@@ -304,6 +304,57 @@ namespace XCSP3Core {
                 post_eq(solver, vars[i], vars[i + 1], 0);
         }
 
+        // ---------------------------- COUNT ------------------------------------------
+        void buildConstraintCount(string id, vector<XVariable *> &list,
+                                  vector<int> &vals, XCondition &xc) override {
+          auto xs = xvars2cspvars(list);
+
+          vector<Var> vars;
+          vector<Lit> ps;
+          for (auto x : xs) {
+            if (vals.size() == 1) {
+              vars.push_back(x.eqi(solver, vals[0]));
+              continue;
+            }
+            Var var = solver.newVar();
+            vars.push_back(var);
+            ps.clear();
+            ps.push_back(~Lit(var));
+            for (auto v : vals) {
+              if (!x.indomain(solver, v))
+                continue;
+              ps.push_back(x.r_neq(solver, v));
+              solver.addClause(vector<Lit>{x.r_eq(solver, v), Lit(var)});
+            }
+            solver.addClause(ps);
+          }
+
+          vector<int> poscoeff(vars.size(), 1), negcoeff(vars.size(), -1);
+          if (xc.op == IN) {
+            if (xc.operandType == INTERVAL) {
+              post_pb(solver, vars, poscoeff, xc.min);
+              post_pb(solver, vars, negcoeff, -xc.max);
+            } else {
+              auto rhs = tocspvars[xc.var];
+              post_pb(solver, vars, poscoeff, 0, rhs);
+              assert(0);
+              post_pb(solver, vars, negcoeff, 0, rhs /* XXX: but negated */);
+            }
+          } else {
+            int correction{0};
+            if (xc.op == LT || xc.op == GT)
+              correction = 1;
+            if (xc.op == LT || xc.op == LE || xc.op == EQ)
+              post_pb(solver, vars, negcoeff, -(xc.val + correction));
+            if (xc.op == GT || xc.op == GE || xc.op == EQ)
+              post_pb(solver, vars, poscoeff, xc.val + correction);
+            if (xc.op == NE) {
+              // build an automaton
+              throw runtime_error("count() != constant not supported");
+            }
+          }
+        }
+
         // ---------------------------- ORDERED ------------------------------------------
 
         void buildConstraintOrdered(string id, vector<XVariable *> &list, OrderType order) override {
