@@ -235,6 +235,10 @@ public:
     // decisions variables are in the heap and that it is a heap
     Heap<VarOrderLt>& vsids_heap();
 
+    // more mild version of the above: just get the current vsids
+    // score of a variable.
+    double var_activity(Var x);
+
     // user callback to be notified of every learned clause. gets the
     // clause and the backtrack level. The user can modify the clause,
     // as long as it is correct
@@ -578,6 +582,8 @@ inline void Solver::claBumpActivity (Clause& c) {
             cla_inc *= 1e-20; } }
 
 inline Heap<Solver::VarOrderLt>& Solver::vsids_heap() { return order_heap; }
+
+inline double Solver::var_activity(Var x) { return activity[x]; }
 
 inline bool Solver::enqueue(Lit p, Clause* from)
 {
