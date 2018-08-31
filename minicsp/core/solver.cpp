@@ -1808,7 +1808,7 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
         Clause *confl;
         try {
           confl = propagate();
-        } catch( unsat ) {
+        } catch( unsat& ) {
           assert(decisionLevel() == 0);
           ++conflicts;
           if (trace)
