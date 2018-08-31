@@ -678,6 +678,7 @@ void Solver::analyze(Clause* inconfl, vec<Lit>& out_learnt, int& out_btlevel)
     int maxlvl = 0;
     for (int i = 0; i != inconfl->size(); ++i) {
         Lit l = (*inconfl)[i];
+        assert(var(l) != var_Undef);
         assert(value(l) == l_False);
         if (level[var(l)] > maxlvl)
             maxlvl = level[var(l)];

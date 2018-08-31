@@ -294,6 +294,7 @@ public:
     Clause(V&& ps, bool learnt, Lit effect) {
         size_etc = (ps.size() << 3) | (uint32_t)learnt;
         for (int i = 0; i < ps.size(); i++) {
+          assert(var(ps[i]) != var_Undef);
           data[i] = ps[i];
           if( data[i] == effect ) std::swap(data[0], data[i]);
         }

@@ -770,7 +770,7 @@ std::ostream& operator<<(std::ostream& os, lit_printer lp)
 {
   Solver &s(lp._s);
   Lit l = lp._p;
-  if (l == lit_Undef) {
+  if (var(l) == var_Undef) {
     os << "lit_Undef";
     return os;
   }
