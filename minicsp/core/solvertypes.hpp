@@ -875,6 +875,7 @@ std::ostream& operator<<(std::ostream& os, setevent_printer lp);
 
 inline bool is_invalid(Clause const* c) { return c == INVALID_CLAUSE; }
 inline bool is_invalid(vec<Lit> const* v) { return false; }
+inline bool is_invalid(std::vector<Lit> const* v) { return false; }
 
 template<typename T>
 struct clause_printer {
