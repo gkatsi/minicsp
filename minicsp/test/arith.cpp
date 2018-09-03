@@ -177,7 +177,7 @@ namespace {
     bool caught=false;
     try {
       post_neq(s, z, w, 0);
-    } catch(unsat) {
+    } catch(unsat&) {
       caught = true;
     }
     assert(caught);
@@ -344,7 +344,7 @@ namespace {
     bool caught = false;
     try {
       post_neg(s, x, y, 0);
-    } catch( unsat ) {
+    } catch( unsat& ) {
       caught = true;
     }
     assert(caught);

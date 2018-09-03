@@ -43,7 +43,7 @@ void assert_num_solutions(Solver &s, int ns);
 
 #define MUST_BE_UNSAT(x) do {                           \
     bool BOOST_PP_CAT(thrown, __LINE__) = false;        \
-    try { x; } catch( unsat ) {                         \
+    try { x; } catch( unsat& ) {                        \
       BOOST_PP_CAT(thrown, __LINE__) = true; }          \
     assert(BOOST_PP_CAT(thrown, __LINE__));             \
   } while(0)

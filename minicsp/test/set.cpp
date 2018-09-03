@@ -28,7 +28,7 @@ namespace {
   void encoding01()
   {
     Solver s;
-    setvar x = s.newSetVar(1, 3);
+    s.newSetVar(1, 3);
     assert_num_solutions(s, 8);
   }
   REGISTER_TEST(encoding01);

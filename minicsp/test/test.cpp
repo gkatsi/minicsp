@@ -87,7 +87,7 @@ void assert_num_solutions(Solver &s, int ns)
       ++numsol;
       try {
         s.excludeLast();
-      } catch(unsat) {
+      } catch(unsat&) {
         next = false;
       }
     }
