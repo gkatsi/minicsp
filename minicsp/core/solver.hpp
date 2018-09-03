@@ -380,9 +380,18 @@ protected:
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
     double              var_inc;          // Amount to bump next variable with.
 
-    vec<vec<Clause*> >  watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
-    vec<vec<wake_stub> >wakes_on_lit;     // 'wakes_on_lit[var(lit)]' is a list of csp constraints that wake when var is set
-    vec<vec<int> >      sched_on_lit;     // 'wakes_on_lit[var(lit)]' is a list of csp constraints that wake when var is set
+    struct watch {
+      Clause *c{nullptr};
+      Lit block{lit_Undef};
+
+      bool operator==(const watch &w) const { return c == w.c; }
+      bool operator!=(const watch &w) const { return c != w.c; }
+    };
+
+    vec<vec<watch>>     watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
+    vec<vec<watch>>     binwatches;       // same, for binary clauses
+    vec<vec<wake_stub>> wakes_on_lit;     // 'wakes_on_lit[var(lit)]' is a list of csp constraints that wake when var is set
+    vec<vec<int>>       sched_on_lit;     // 'wakes_on_lit[var(lit)]' is a list of csp constraints that wake when var is set
 
     vec<char>           assigns;          // The current assignments (lbool:s stored as char:s).
     vec<char>           polarity;         // The preferred polarity of each variable.
@@ -519,7 +528,6 @@ public:
 
     void    setrandomseed(double s) { random_seed = s; }
 };
-
 
 //=================================================================================================
 // Implementation of inline methods:

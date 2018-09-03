@@ -364,18 +364,30 @@ void Solver::addInactiveClause(Clause* c)
 
 void Solver::attachClause(Clause& c) {
     assert(c.size() > 1);
-    watches[toInt(~c[0])].push(&c);
-    watches[toInt(~c[1])].push(&c);
+    if (c.size() == 2) {
+        binwatches[toInt(~c[0])].push({&c, c[1]});
+        binwatches[toInt(~c[1])].push({&c, c[0]});
+    } else {
+        watches[toInt(~c[0])].push({&c, c[1]});
+        watches[toInt(~c[1])].push({&c, c[0]});
+    }
     if (c.learnt()) learnts_literals += c.size();
     else            clauses_literals += c.size(); }
 
 
 void Solver::detachClause(Clause& c) {
     assert(c.size() > 1);
-    assert(find(watches[toInt(~c[0])], &c));
-    assert(find(watches[toInt(~c[1])], &c));
-    remove(watches[toInt(~c[0])], &c);
-    remove(watches[toInt(~c[1])], &c);
+    if (c.size() == 2) {
+      assert(find(binwatches[toInt(~c[0])], watch{&c, lit_Undef}));
+      assert(find(binwatches[toInt(~c[1])], watch{&c, lit_Undef}));
+      remove(binwatches[toInt(~c[0])], watch{&c, lit_Undef});
+      remove(binwatches[toInt(~c[1])], watch{&c, lit_Undef});
+    } else {
+      assert(find(watches[toInt(~c[0])], watch{&c, lit_Undef}));
+      assert(find(watches[toInt(~c[1])], watch{&c, lit_Undef}));
+      remove(watches[toInt(~c[0])], watch{&c, lit_Undef});
+      remove(watches[toInt(~c[1])], watch{&c, lit_Undef});
+    }
     if (c.learnt()) learnts_literals -= c.size();
     else            clauses_literals -= c.size(); }
 
@@ -1479,46 +1491,71 @@ Clause* Solver::propagate_inner()
     int     num_props = 0;
 
     while (qhead < trail.size()){
-        Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
-        vec<Clause*>&  ws  = watches[toInt(p)];
-        Clause         **i, **j, **end;
+        Lit p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
+
+        // binary clauses first
+        vec<watch>& bws = binwatches[toInt(p)];
+        for(watch w : bws) {
+            Lit other = w.block;
+            assert(other != lit_Undef);
+            if (value(other) == l_False)
+                return w.c;
+            else if (value(other) != l_True)
+                uncheckedEnqueue(other, w.c);
+        }
+
+
+        vec<watch>& ws  = watches[toInt(p)];
+        vec<watch>::iterator i, j, end;
         num_props++;
 
-        for (i = j = (Clause**)ws, end = i + ws.size();  i != end;){
-            Clause& c = **i++;
+        for (i = j = ws.begin(), end = ws.end(); i != end;) {
+          watch &w = *i;
 
-            // Make sure the false literal is data[1]:
-            Lit false_lit = ~p;
-            if (c[0] == false_lit)
-                c[0] = c[1], c[1] = false_lit;
+          Lit blocker = w.block;
+          if (blocker != lit_Undef && value(blocker) == l_True) {
+            *j++ = *i++;
+            continue;
+          }
 
-            assert(c[1] == false_lit);
+          ++i;
+          Clause &c = *w.c;
 
-            // If 0th watch is true, then clause is already satisfied.
-            Lit first = c[0];
-            if (value(first) == l_True){
-                *j++ = &c;
-            }else{
-                // Look for new watch:
-                for (int k = 2; k < c.size(); k++)
-                    if (value(c[k]) != l_False){
-                        c[1] = c[k]; c[k] = false_lit;
-                        watches[toInt(~c[1])].push(&c);
-                        goto FoundWatch; }
+          // Make sure the false literal is data[1]:
+          Lit false_lit = ~p;
+          if (c[0] == false_lit)
+            std::swap(c[0], c[1]);
 
-                // Did not find watch -- clause is unit under assignment:
-                *j++ = &c;
-                if (value(first) == l_False){
-                    if( trace )
-                      cout << "Clause " << print(*this, &c) << " failed\n";
-                    confl = &c;
-                    qhead = trail.size();
-                    // Copy the remaining watches:
-                    while (i < end)
-                        *j++ = *i++;
-                }else
-                    uncheckedEnqueue(first, &c);
+          assert(c[1] == false_lit);
+
+          // If 0th watch is true, then clause is already satisfied.
+          Lit first = c[0];
+          if (first != blocker && value(first) == l_True) {
+            *j++ = w;
+            continue;
+          }
+
+          // Look for new watch:
+          for (int k = 2; k < c.size(); k++)
+            if (value(c[k]) != l_False) {
+              c[1] = c[k];
+              c[k] = false_lit;
+              watches[toInt(~c[1])].push(w);
+              goto FoundWatch;
             }
+
+          // Did not find watch -- clause is unit under assignment:
+          *j++ = w;
+          if (value(first) == l_False) {
+            if (trace)
+              cout << "Clause " << print(*this, &c) << " failed\n";
+            confl = w.c;
+            qhead = trail.size();
+            // Copy the remaining watches:
+            while (i < end)
+              *j++ = *i++;
+          } else
+            uncheckedEnqueue(first, &c);
         FoundWatch:;
         }
         ws.shrink(i - j);
