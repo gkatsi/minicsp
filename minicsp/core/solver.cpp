@@ -220,8 +220,8 @@ cspvar Solver::newCSPVar(int min, int max)
   for(int i = 0; i != xf.dsize; ++i) {
     if( unary ) continue;
     vec<Lit> ps1, ps2, ps3, ps4;
-    ps1.push( ~Lit(xf.leqi(i+xf.omin)) );
-    ps1.push( Lit(xf.leqi(i+1+xf.omin)) );
+    pushifdef(ps1,  ~Lit(xf.leqi(i+xf.omin)) );
+    pushifdef(ps1, Lit(xf.leqi(i + 1 + xf.omin)));
     Clause *c1 = Clause_new(ps1);
     xf.ps1[i] = c1;
 
