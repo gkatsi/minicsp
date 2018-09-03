@@ -103,10 +103,13 @@ class vec {
     void copyTo(vec<T>& copy) const { copy.clear(); copy.growTo(sz); for (int i = 0; i < sz; i++) new (&copy[i]) T(data[i]); }
     void moveTo(vec<T>& dest) { dest.clear(true); dest.data = data; dest.sz = sz; dest.cap = cap; data = NULL; sz = 0; cap = 0; }
 
-    T *begin() { return data; }
-    T const *begin() const { return data; }
-    T *end() { return begin() + size(); }
-    T const *end() const { return begin() + size(); }
+    using iterator = T*;
+    using const_iterator = const T*;
+
+    iterator begin() { return data; }
+    const_iterator begin() const { return data; }
+    iterator end() { return begin() + size(); }
+    const_iterator end() const { return begin() + size(); }
 
     void push_back(const T& e) { push(e); }
 };
