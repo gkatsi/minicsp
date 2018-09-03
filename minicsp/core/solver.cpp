@@ -139,6 +139,8 @@ Var Solver::newVar(bool sign, bool dvar)
     int v = nVars();
     watches   .push();          // (list for positive literal)
     watches   .push();          // (list for negative literal)
+    binwatches   .push();          // (list for positive literal)
+    binwatches   .push();          // (list for negative literal)
 
     wakes_on_lit.push();
     sched_on_lit.push();
