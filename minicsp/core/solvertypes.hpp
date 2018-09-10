@@ -555,8 +555,8 @@ inline std::ostream& operator<<(std::ostream& os, explainer& e)
 
 using explanation_ptr = pointer_variant<Clause, explainer>;
 
-inline Clause* INVALID_CLAUSE{(Clause*)(0x1 << explanation_ptr::freebits)};
-inline Clause* NO_REASON{nullptr};
+static Clause* const INVALID_CLAUSE{(Clause*)(0x1 << explanation_ptr::freebits)};
+static Clause* const NO_REASON{nullptr};
 
 
 /* The class from which all propagators derive */
