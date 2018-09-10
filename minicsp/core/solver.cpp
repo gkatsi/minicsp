@@ -1470,6 +1470,32 @@ void Solver::reset_queue()
   }
 }
 
+Clause *Solver::propagate_wakes(Lit p, const vec<wake_stub>& wakes)
+{
+  Clause *confl = NO_REASON;
+  /* Now propagate constraints that wake on this literal */
+  for (const wake_stub &ws : wakes) {
+    cons *con = ws.first;
+    active_constraint = con;
+    if (ws.second)
+      confl = con->wake_advised(*this, p, ws.second);
+    else
+      confl = con->wake(*this, p);
+    active_constraint = 0L;
+    if (confl) {
+      if (trace) {
+        cout << "Constraint " << cons_state_printer(*this, *con) << " failed, "
+             << "clause " << print(*this, confl) << endl;
+      }
+      if (debugclauses)
+        debugclause(confl, con);
+      qhead = trail.size();
+      break;
+    }
+  }
+  return confl;
+}
+
 /*_________________________________________________________________________________________________
 |
 |  propagate : [void]  ->  [Clause*]
@@ -1538,13 +1564,25 @@ Clause* Solver::propagate_inner()
           }
 
           // Look for new watch:
-          for (int k = 2; k < c.size(); k++)
-            if (value(c[k]) != l_False) {
-              c[1] = c[k];
-              c[k] = false_lit;
-              watches[toInt(~c[1])].push(w);
-              goto FoundWatch;
-            }
+          if (UP_callback) {
+              UP_result upr = UP_callback(p, c);
+              if (upr.newwatchidx >= 0) {
+                  if (upr.newwatchidx <= 1)
+                    throw std::logic_error(
+                        "New watch cannot be one of the existing watches");
+                  std::swap(c[1], c[upr.newwatchidx]);
+                  watches[toInt(~c[1])].push(w);
+                  goto FoundWatch;
+              }
+          } else {
+            for (int k = 2; k < c.size(); k++)
+              if (value(c[k]) != l_False) {
+                c[1] = c[k];
+                c[k] = false_lit;
+                watches[toInt(~c[1])].push(w);
+                goto FoundWatch;
+              }
+          }
 
           // Did not find watch -- clause is unit under assignment:
           *j++ = w;
@@ -1565,28 +1603,7 @@ Clause* Solver::propagate_inner()
         if(confl)
           break;
 
-        /* Now propagate constraints that wake on this literal */
-        for (wake_stub &ws : wakes_on_lit[var(p)]) {
-          cons *con = ws.first;
-          active_constraint = con;
-          if (ws.second)
-            confl = con->wake_advised(*this, p, ws.second);
-          else
-            confl = con->wake(*this, p);
-          active_constraint = 0L;
-          if( confl ) {
-            if( trace ) {
-              cout << "Constraint "
-                   << cons_state_printer(*this, *con) << " failed, "
-                   << "clause " << print(*this, confl) << endl;
-            }
-            if( debugclauses )
-              debugclause(confl, con);
-            qhead = trail.size();
-            break;
-          }
-        }
-
+        confl = propagate_wakes(p, wakes_on_lit[var(p)]);
         if(confl)
           break;
 
@@ -1596,7 +1613,6 @@ Clause* Solver::propagate_inner()
         domevent const & pe = events[toInt(p)];
         vec< pair<cons*, void*> > *dewakes = 0L;
         vec<int> *desched = 0L;
-        if( noevent(pe) ) goto SetPropagation;
         switch(pe.type) {
         case domevent::NEQ:
           dewakes=&(cspvars[pe.x._id].wake_on_dom);
@@ -1618,78 +1634,45 @@ Clause* Solver::propagate_inner()
             desched=&(cspvars[pe.x._id].schedule_on_lb);
           }
           break;
-        case domevent::NONE: assert(0);
-        }
-        if( !dewakes ) goto SetPropagation;
-        for (wake_stub &ws : *dewakes) {
-          cons *con = ws.first;
-          active_constraint = con;
-          if( ws.second )
-            confl = con->wake_advised(*this, p, ws.second);
-          else
-            confl = con->wake(*this, p);
-          active_constraint = 0L;
-          if( confl ) {
-            if( trace ) {
-              cout << "Constraint "
-                   << cons_state_printer(*this, *con) << " failed, "
-                   << "clause @ " << print(*this, confl) << "\n";
-            }
-            if( debugclauses )
-              debugclause(confl, con);
-            qhead = trail.size();
-            break;
-          }
-        }
-
-        if(confl)
+        case domevent::NONE:
           break;
+        }
 
-        for (int consid : *desched)
-          schedule(consid);
+        if (dewakes) {
+          confl = propagate_wakes(p, *dewakes);
+          if (confl)
+            break;
 
-    SetPropagation:
-        setevent const & se = setevents[toInt(p)];
-        if( noevent(se) ) continue;
+          for (int consid : *desched)
+            schedule(consid);
+        }
+
+        setevent const &se = setevents[toInt(p)];
+        if (noevent(se))
+          continue;
         vec<wake_stub> *sewakes = 0L;
         vec<int> *sesched = 0L;
-        switch(se.type) {
+        switch (se.type) {
         case setevent::IN:
-          sewakes=&(setvars[se.x._id].wake_on_in);
-          sesched=&(setvars[se.x._id].schedule_on_in);
+          sewakes = &(setvars[se.x._id].wake_on_in);
+          sesched = &(setvars[se.x._id].schedule_on_in);
           break;
         case setevent::EX:
-          sewakes=&(setvars[se.x._id].wake_on_ex);
-          sesched=&(setvars[se.x._id].schedule_on_ex);
+          sewakes = &(setvars[se.x._id].wake_on_ex);
+          sesched = &(setvars[se.x._id].schedule_on_ex);
           break;
-        case setevent::NONE: assert(0);
+        case setevent::NONE:
+          assert(0);
         }
-        for (wake_stub ws : *sewakes) {
-          cons *con = ws.first;
-          active_constraint = con;
-          if( ws.second )
-            confl = con->wake_advised(*this, p, ws.second);
-          else
-            confl = con->wake(*this, p);
-          active_constraint = 0L;
-          if( confl ) {
-            if( trace ) {
-              cout << "Constraint "
-                   << cons_state_printer(*this, *con) << " failed, "
-                   << "clause @ " << print(*this, confl) << "\n";
-            }
-            if( debugclauses )
-              debugclause(confl, con);
-            qhead = trail.size();
+
+        if (sewakes) {
+          confl = propagate_wakes(p, *sewakes);
+          if (confl)
             break;
-          }
+
+          for (int sconsid : *sesched)
+            schedule(sconsid);
         }
-
-        if( confl )
-          break;
-
-        for (int sconsid : *sesched)
-          schedule(sconsid);
     }
     propagations += num_props;
     simpDB_props -= num_props;

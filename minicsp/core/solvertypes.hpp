@@ -328,8 +328,8 @@ public:
     Lit          subsumes    (const Clause& other) const;
     void         strengthen  (Lit p);
 
-    Lit const *begin() { return static_cast<Lit const*>(*this); }
-    Lit const *end() { return begin() + size(); }
+    Lit const *begin() const { return static_cast<Lit const*>(*this); }
+    Lit const *end() const { return begin() + size(); }
 };
 
 /*_________________________________________________________________________________________________

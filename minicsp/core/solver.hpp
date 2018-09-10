@@ -259,6 +259,22 @@ public:
         decision_callbacks.push_back(cb);
     }
 
+    /* User callback to replace the part of UP which finds a new
+       watch. It returns UP_result which will have either newwatchidx
+       >= 1 (an index into the clause) or < 0, indicating the clause
+       is failed. It is not allowed to be 0 or 1
+
+       The callback is allowed to propagate. */
+    struct UP_result {
+        int newwatchidx;
+    };
+    using UP_callback_t = std::function<UP_result(Lit, const Clause&)>;
+
+    void use_UP_callback(UP_callback_t cb)
+    {
+        UP_callback = cb;
+    }
+
     // Extra results: (read-only member variable)
     //
     vec<lbool> model;                   // If problem is satisfiable, this vector contains the model (if any).
@@ -424,6 +440,7 @@ protected:
 
     std::vector<clause_callback_t> clause_callbacks; // all clause callbacks
     std::vector<decision_callback_t> decision_callbacks; // all decision callbacks
+    UP_callback_t       UP_callback;
 
     // names. for tracing output etc
     std::vector<std::string>  varnames;
@@ -466,6 +483,7 @@ protected:
     void     uncheckedEnqueue_np(Lit p, explanation_ptr from);                         // uncheckedEnqueue with no CSP propagation
     Clause*  propagate_inner  ();                                                      // Perform unit propagation, wake propagators,
                                                                                        // schedule propagators. Returns conflicting clause or NULL
+    Clause*  propagate_wakes  (Lit p, const vec<wake_stub>& wakes);                    // wake all constraints that are registered in this list
     Clause*  explicit_reason  (Lit p);                                                 // If a literal has a Clause as reason, return that. Otherwise, use the explainer to create
                                                                                        // a clause, change the reason to that new clause and return that.
     bool     withinBudget     () const;                                                // if true, we have exceeded the budget
