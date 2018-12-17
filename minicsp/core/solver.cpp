@@ -1892,6 +1892,12 @@ lbool Solver::search(int nof_conflicts, double* nof_learnts)
                 case CCB_MODIFIED:
                   for (Lit l : learnt_clause)
                     assert(value(l) == l_False);
+                  assert(
+                      std::none_of(begin(learnt_clause), end(learnt_clause),
+                                   [&](Lit l) { return value(l) == l_True; }));
+                  erase_if(learnt_clause, [&](Lit l) {
+                    return (value(l) != l_Undef && varLevel(l) == 0);
+                  });
 
                   if (learnt_clause.size() == 0)
                     return l_False;
